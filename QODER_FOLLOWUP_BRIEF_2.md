@@ -117,3 +117,110 @@ native `webrtc` encoder/BWE lines this build enables.
 - Client-side codec preference is explicitly allowed by brief #2 suspect 2.
 - Validate: Gradle `compileDebugKotlin` green; commit on `mainnew`; push (CI rebuilds
   and uploads the APK); then re-run section 4. Delete this file before the final commit.
+
+---
+
+# QODER FOLLOW-UP BRIEF #4 — late-video WHIP lifecycle: "track ended error=DataChannel is not opened" + session removal (2026-09-09)
+
+> Appended verbatim-essentials from the moontel72/nexanew black-video task brief. Findings +
+> fixes implemented in this round are recorded in section 9 (added by the agent).
+
+## Brief: production diagnostics (room b560881c-04ec-42be-bba0-96690ac4150d, camera cam-08)
+
+Server: Ubuntu 24.04, public 135.181.46.27. Services: todd-studio (Docker
+traceodd/media-engine:latest), todd-broadcaster, todd-redis. Disk 93.9% full of 149.92 GB;
+148 Docker images = 134.5 GB (130.6 GB reclaimable); journald ~4.0 GB. UDP counters:
+UdpInDatagrams 8,114,290 / UdpInErrors 11,128 / UdpRcvbufErrors 10,710 /
+UdpOutDatagrams 2,228,400. tcpdump 2000 packets, 0 dropped. TURN traffic active; media
+relayed between broadcaster and server.
+
+Signaling/ICE: WHIP 201 OK; ICE Connected; offer m=video H264/90000 + m=audio Opus/48000/2,
+4 remote candidates; answer 12 candidates (4 host, 6 srflx, 2 relay). TURN allocations,
+permissions, channel bindings OK. → HTTP signaling + basic ICE are NOT the primary failure.
+
+Production log sequence (single session):
+1. WHIP session accepted, ICE connected.
+2. Audio track registers immediately: track up … ssrc=2349172553 rid=None codec=Opus
+3. SFU sends PLIs at 4, 8, 12, 20, 30, 40, 50, 60 s: "no video RTP yet — sending PLI to publisher"
+4. Video finally registers much later: track up … ssrc=3035725903 rid=None codec=H264
+5. Immediately afterward the video track ends: track ended … error=DataChannel is not opened
+6. PeerConnection closed; WHIP session removed.
+
+(Previous session showed the same pattern; the brief records it in repo files:
+media-engine/crates/todd-sfu/src/{engine,whip_peer,whep_peer,router,pli,http_routes}.rs,
+media-engine/deploy/systemd/*.service, deploy/docker/docker-compose.yml,
+deploy/coturn/{turnserver.conf, coturn.conf}.)
+
+Brief's questions to verify in the webrtc-rs lifecycle:
+- Can TrackRemote legally return "DataChannel is not opened" for a media track, and should
+  that error terminate only that track pump or the whole WHIP session?
+- Is the session closed because one track ends, because the PC enters Failed/Closed, or
+  because cleanup removes router state?
+- Is a late video track registered after the viewer already negotiated a fallback/rejected video?
+- Are TrackRemote::read_rtp() errors transient during media startup (retry vs unregister)?
+- Is PLI sent to the correct publisher SSRC through the correct PeerConnection?
+- Is audio-first/video-later ordering handled safely?
+- Can a WHEP viewer attach to a video layer that did not exist when the viewer was created?
+- Does H264 fmtp/profile-level-id negotiation match the Android/Larix publisher profile?
+- Are router subscriber queues too small / wrongly treated as permanent failure?
+- Is "DataChannel is not opened" an incorrect PC/DataChannel assumption, premature close, or
+  a separate app lifecycle bug?
+
+Implementation requirements (from the brief):
+1. Reproduce/unit-test relevant behavior with existing mocks where possible.
+2. Smallest reliable code change fixing the root cause.
+3. Do not hide real errors with a broad catch, silent fallback, or unconditional retry loop.
+4. Preserve correct cleanup for genuinely failed/closed PeerConnections.
+5. Ensure: late video track does not kill a healthy WHIP session; transient RTP read failure
+   during startup does not immediately destroy camera state; router registers/unregisters
+   audio and video independently; existing WHEP viewers receive late video or retry/rebind
+   controllably; PLIs go only to the correct publisher video SSRC; H264 forwarding stays
+   browser-decodable.
+6. Add structured logs/metrics distinguishing transient track-read errors, permanent track
+   termination, PC failure, RTP ingress, router forwarding, WHEP egress.
+7. No destructive production changes (no image/journal/media/db deletion); document ops
+   cleanup separately.
+8. Check Docker/systemd runs the intended current binary/image; runtime config may explain
+   behavior; primary change stays in the repository.
+
+## Section 9 — agent findings & fixes (2026-09-09, engine round on commit dfbda904+)
+
+Verified against webrtc-rs 0.17.2 vendored source:
+- error.rs: `#[error("DataChannel is not opened")] ErrClosedPipe` — the message is a
+  webrtc-rs MISLABEL for a generic closed pipe. RTPReceiver returns ErrClosedPipe whenever
+  the receiver is Stopped (rtp_transceiver/rtp_receiver/mod.rs wait_for/error_on_close), and
+  rtp_sender/srtp_writer paths return it when stop_called fires. Media reads never touch
+  data channels → the log line means "receiver stopped / PC closed", never an app
+  DataChannel bug.
+- peer_connection_internal.rs start_receiver: on_track fires ONLY after the FIRST RTP
+  packet per SSRC (track.peek() blocks until data; failure → no on_track). So a silent
+  video encoder = no video track in the router at all; "track up codec=H264" 30-90 s after
+  connect is the encoder waking up (engine PLI wake-up), not a late negotiation. Late
+  on_track cannot race a viewer: viewers are 409-gated on lowest_video_rid and pumps
+  subscribe by (room, camera, rid) key, so a video layer registering later resumes
+  seamlessly on the same subscription.
+- read_rtp errors in 0.17 are ALL terminal (ErrClosedPipe / ErrRTPReceiverNil /
+  ErrCodecNotFound per-packet); none are transient/retryable → no retry loop added
+  (requirement 3). Session removal after a track end comes from the PC state machine
+  (Failed/Closed → prune_dead_sessions → stop_session), takeover replacement, or the
+  disconnected-grace watchdog (preserve-subscribers path). A single track pump exiting only
+  unregisters its own (rid, ssrc) entry; audio/video register/unregister independently.
+- Root cause of the cam-08 cycle: the CLIENT watchdog restarts the session when video has
+  not started/progressed within its window — racing the engine PLIs that finally wake the
+  encoder ("track up H264" + instant ErrClosedPipe = the app closed the PC at that moment).
+  Engine-side lifecycle semantics were sound; the kill decision is app-side.
+
+Fixes implemented this round:
+1. engine.rs — video-start PLI nudge extended 60 s → 180 s (10 s cadence after 60 s) with a
+   comment documenting the on_track-after-first-RTP quirk.
+2. whip_peer.rs pump_track — read-error classification & logs: benign race (session close
+   signalled), expected receiver-stopped (ErrClosedPipe/ErrRTPReceiverNil), and unexpected
+   error kinds (loud warn); "track ended" log lines now read
+   "track ended — receiver stopped (peer connection closed)" so ops stops chasing the
+   DataChannel red herring.
+3. apps/broadcaster-android MainActivity.kt — watchdog first-video grace: no-progress
+   checks before the session's first video byte no longer count toward the 45 s restart;
+   a 120 s FIRST_VIDEO_DEADLINE still restarts a truly dead encoder. Post-first-video
+   freeze detection (3 checks / ~45 s) unchanged.
+4. Earlier same-branch commit dfbda904: H264 IDR counters on ingest + per-viewer egress,
+   "whep answer negotiated video m-line" log, h264.rs NAL detector + 6 unit tests.

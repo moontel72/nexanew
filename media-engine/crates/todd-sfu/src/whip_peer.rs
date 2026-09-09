@@ -493,7 +493,47 @@ async fn pump_track(
                     }
                 }
                 Err(e) => {
-                    tracing::info!(room = room_id, camera = camera_id, error = %e, "track ended");
+                    // webrtc-rs 0.17 stops the RTP receiver when the
+                    // PeerConnection is closed, and TrackRemote::read_rtp
+                    // then fails with ErrClosedPipe — whose Display text is
+                    // "DataChannel is not opened", a webrtc-rs mislabel
+                    // (media reads never touch data channels). The receiver
+                    // also stops when the ENGINE closes the session
+                    // (takeover reconnect, disconnected-grace, prune), which
+                    // can race an in-flight read. Either way this is
+                    // terminal for THIS track — never a transient condition
+                    // to retry in 0.17 — and the pump exits below without
+                    // touching the other track's registration or the
+                    // session's router state.
+                    if shutdown.is_cancelled() {
+                        tracing::debug!(
+                            room = room_id,
+                            camera = camera_id,
+                            error = %e,
+                            "track pump read error raced session close (benign)"
+                        );
+                    } else if matches!(
+                        &e,
+                        webrtc::Error::ErrClosedPipe | webrtc::Error::ErrRTPReceiverNil
+                    ) {
+                        tracing::info!(
+                            room = room_id,
+                            camera = camera_id,
+                            error = %e,
+                            "track ended — receiver stopped (peer connection closed)"
+                        );
+                    } else {
+                        // Unexpected error kind: surface it loudly so a
+                        // future webrtc-rs change that makes read errors
+                        // retryable is not silently masked. 0.17 has no
+                        // recoverable track-read errors, so end the pump.
+                        tracing::warn!(
+                            room = room_id,
+                            camera = camera_id,
+                            error = %e,
+                            "track ended — unexpected read error (not a closed receiver)"
+                        );
+                    }
                     break;
                 }
             },

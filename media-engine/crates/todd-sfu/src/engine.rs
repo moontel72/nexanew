@@ -397,18 +397,29 @@ impl Engine {
         // This closes the "audio egress flows, tile 409s forever"
         // failure mode.
         //
-        // The nudge cadence spans 60s: idle encoders (especially cold
-        // H.264 hardware encoders on Android) may not respond to the
-        // first few PLIs. A 20s window gave up before some encoders ever
-        // started — the perpetual 409 the Studio saw was exactly that
-        // gap. Every 5s up to 60s covers even the slowest warmups.
+        // NOTE: in webrtc-rs 0.17 `on_track` fires only after the FIRST
+        // RTP packet of an SSRC arrives (the receiver peeks before
+        // surfacing the track), so a silent video encoder means no
+        // video track in the router at all — `track up codec=H264`
+        // appearing 30-90 s after connect is the encoder waking up, not
+        // a late negotiation. The PLIs below target the offer-declared
+        // SSRC for exactly that window.
+        //
+        // Cadence: every 4-12s early (a sleeping encoder usually wakes
+        // on the first few PLIs), then every 10s out to 180s for cold
+        // H.264 hardware encoders that ignore early PLIs (their send
+        // stream does not exist yet). A 20s window gave up before some
+        // encoders ever started — the perpetual 409 the Studio saw was
+        // exactly that gap.
         if offer_video_ssrc.is_some() || offer_has_video {
             let engine = self.clone();
             let room = room_id.to_string();
             let camera = camera_id.to_string();
             let sid = session_id.clone();
             tokio::spawn(async move {
-                for delay in [4u64, 8, 12, 20, 30, 40, 50, 60] {
+                let mut delays: Vec<u64> = vec![4, 8, 12, 20, 30, 40, 50, 60];
+                delays.extend((70..=180).step_by(10));
+                for delay in delays {
                     tokio::time::sleep(Duration::from_secs(delay)).await;
                     if !engine.sessions.contains_key(&sid) {
                         break;

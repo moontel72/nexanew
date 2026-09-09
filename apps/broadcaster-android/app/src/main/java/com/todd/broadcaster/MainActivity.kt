@@ -68,6 +68,16 @@ class MainActivity : AppCompatActivity() {
         private const val TURN_DEFAULT_PASS = "traceodd-turn-2026"
         private const val WATCHDOG_INTERVAL_MS = 15_000L
         private const val MAX_WATCHDOG_RESTARTS = 3
+
+        /**
+         * How long a session may run with zero video bytes before the
+         * watchdog restarts it. Cold hardware H.264 encoders (Samsung
+         * A22/J-series) can take 30-90 s to emit their first frame after
+         * the engine's PLI nudges wake them — restarting sooner kills the
+         * session in the exact instant the video starts (the observed
+         * "video starts, session restarts" loop).
+         */
+        private const val FIRST_VIDEO_DEADLINE_MS = 120_000L
     }
 
     // ── Views ──
@@ -101,6 +111,8 @@ class MainActivity : AppCompatActivity() {
     private var noProgressChecks = 0
     private var lastCheckFrames = -1L
     private var lastCheckBytes = -1L
+    /** Timestamp of the current GO LIVE — arms the first-video deadline. */
+    private var liveStartedAtMs = 0L
     private var phase = "idle"
 
     // ── Config ──
@@ -328,6 +340,7 @@ class MainActivity : AppCompatActivity() {
                     lastCheckBytes = -1L
                     lastBytesSent = 0L
                     lastBytesSentAt = 0L
+                    liveStartedAtMs = System.currentTimeMillis()
                     updatePhase("live")
                     showNotice("")
                     startWatchdog()
@@ -436,10 +449,28 @@ class MainActivity : AppCompatActivity() {
         )
         telemetry?.updateHealth(health)
 
-        // ── Stall detection: restart only on NO progress across three
-        // consecutive checks (~45 s). Some encoders take up to ~30 s to emit
-        // their first frame; killing the session on the first slow check
-        // starves them forever (the observed 41 s restart loop).
+        // ── Stall detection ──
+        // Restart ONLY on sustained no-progress AFTER this session has
+        // produced its first video bytes:
+        //  - Pre-first-video: cold hardware H.264 encoders can take 30-90 s
+        //    to emit their first frame (the engine's PLI nudges wake them
+        //    gradually). Counting those checks would restart the session in
+        //    the same instant the encoder finally starts — the observed
+        //    "video starts 30-60 s late, session restarts right then, repeat"
+        //    loop (engine log: `track up H264` + `track ended` back-to-back).
+        //    A deadline restart is still armed so a truly dead encoder does
+        //    not run forever.
+        //  - Post-start: 3 consecutive no-progress checks (~45 s) = genuine
+        //    freeze (encoder died mid-stream) — restart as before.
+        val firstVideoSeen = framesEncoded > 0L || bytesSent > 0L
+        if (!firstVideoSeen) {
+            noProgressChecks = 0
+            if (now - liveStartedAtMs >= FIRST_VIDEO_DEADLINE_MS) {
+                handleVideoStall("No video started after ${FIRST_VIDEO_DEADLINE_MS / 1000}s")
+            }
+            return
+        }
+
         val progressed = framesEncoded > lastCheckFrames || bytesSent > lastCheckBytes
         lastCheckFrames = framesEncoded
         lastCheckBytes = bytesSent
