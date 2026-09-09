@@ -15,7 +15,13 @@ export const env = {
     import.meta.env.VITE_API_BASE_URL ||
     "",
   stunUrl: import.meta.env.VITE_STUN_URL ?? "",
-  turnUrl: import.meta.env.VITE_TURN_URL || "",
+  // VPS coturn relay defaults (media-engine/deploy/coturn/turnserver.conf).
+  // The viewer must reach the engine's media from carrier-CGNAT networks
+  // too — without a relay its WHEP media can silently fail while WHIP
+  // ingest works. Custom VITE_TURN_* build-time env still overrides.
+  turnUrl: import.meta.env.VITE_TURN_URL || "turn:135.181.46.27:3478",
+  turnUsername: import.meta.env.VITE_TURN_USERNAME || "traceodd",
+  turnPassword: import.meta.env.VITE_TURN_PASSWORD || "traceodd-turn-2026",
   gfxAssetUrl: import.meta.env.VITE_GFX_ASSET_URL || "",
 };
 

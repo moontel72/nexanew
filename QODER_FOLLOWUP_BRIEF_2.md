@@ -224,3 +224,44 @@ Fixes implemented this round:
    freeze detection (3 checks / ~45 s) unchanged.
 4. Earlier same-branch commit dfbda904: H264 IDR counters on ingest + per-viewer egress,
    "whep answer negotiated video m-line" log, h264.rs NAL detector + 6 unit tests.
+
+---
+
+# QODER FOLLOW-UP BRIEF #5 — viewer-side relay + watchdog blind spot (2026-09-09 field run)
+
+Live evidence 2026-09-09 19:33-19:41 UTC (room f6ad27bd, camera mobile-09):
+- Engine (NEW image, deploy 17:07): PLI nudges now visible at delay_secs 70/80/90 → the
+  extended 180 s schedule is live on the VPS. `docker ps` shows
+  `traceodd/media-engine-broadcaster:latest` — deploy yml pulls
+  ghcr.io/moontel72/... and re-tags locally as traceodd/... → image is current, not stale.
+- Session: Opus track up instantly; video never registers for 8+ min; NO app restart
+  appeared (old watchdog = 45 s, new = 120 s deadline — neither fired).
+- coturn usage: phone→TURN≈1.44 MB/2 min (~96 kbps) = audio-only; engine receives it, sees
+  no video. So the phone's video sender never produced a packet today.
+- Root cause of the missing restart: MainActivity.checkEncoderHealth had
+  `val stats = engine.getVideoStats() ?: return` — a video sender that has never sent a
+  packet has NO outbound-rtp stats entry, so getVideoStats() returns null forever, the
+  watchdog returns early, and the session lives forever audio-only with zero recovery.
+- A second agent (different session) reported 4 intended changes — blank-config TURN
+  defaults (app), Studio WHEP viewer TURN relay + credentials, viewer UDP+TCP variants,
+  VITE_TURN_* override — but NOTHING was found in the repo (no commit, no working-tree
+  change). All 4 have been re-implemented here.
+
+Fixes this round (implemented by the repo agent):
+1. MainActivity: watchdog treats null video stats as zero progress (logs "Video sender
+   stats unavailable — encoder has never sent a packet" every 4th check) → 120 s
+   first-video deadline now actually fires and restarts a dead encoder.
+2. MainActivity: blank saved TURN config falls back to VPS coturn defaults
+   (TURN_DEFAULT_URL/USER/PASS) instead of disabling TURN → fresh install can never run
+   relay-less behind carrier CGNAT.
+3. todd-studio-gui src/lib/utils.ts: env.turnUrl/turnUsername/turnPassword default to the
+   VPS coturn relay; VITE_TURN_URL/USERNAME/PASSWORD build-time env still overrides.
+4. todd-studio-gui src/lib/webrtc/whep.ts: viewer iceServers now offer TURN udp + tcp
+   variants with credentials (same pattern as the Android app).
+5. vite-env.d.ts: new env types.
+
+DEPLOY NOTE: no CI workflow builds/deploys the React Studio GUI (frontend-deploy.yml is
+the legacy Flutter deploy). Browser Studio needs `npm run build` + dist upload to the
+nginx root on the VPS; Tauri desktop needs `npm run build:desktop`. The Android APK
+rebuilds automatically on push (broadcaster-apk-native) and uploads to
+traceodd.com/download/broadcaster/todd-broadcaster.apk.

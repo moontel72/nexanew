@@ -109,6 +109,7 @@ class MainActivity : AppCompatActivity() {
     private var lastBytesSent = 0L
     private var lastBytesSentAt = 0L
     private var noProgressChecks = 0
+    private var noVideoStatsChecks = 0
     private var lastCheckFrames = -1L
     private var lastCheckBytes = -1L
     /** Timestamp of the current GO LIVE — arms the first-video deadline. */
@@ -299,9 +300,13 @@ class MainActivity : AppCompatActivity() {
             val offerSdp = try {
                 engine.createOffer(
                     stunUrl = stunUrl,
-                    turnUrl = turnUrl.ifBlank { null },
-                    turnUsername = turnUser.ifBlank { null },
-                    turnPassword = turnPass.ifBlank { null },
+                    // Carrier CGNATs drop the phone's large video packets:
+                    // NEVER run without the relay. Blank saved config
+                    // (fresh install, dialog never saved) falls back to
+                    // the VPS coturn defaults instead of disabling TURN.
+                    turnUrl = turnUrl.ifBlank { TURN_DEFAULT_URL },
+                    turnUsername = turnUser.ifBlank { TURN_DEFAULT_USER },
+                    turnPassword = turnPass.ifBlank { TURN_DEFAULT_PASS },
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Offer creation failed: ${e.message}", e)
@@ -336,6 +341,7 @@ class MainActivity : AppCompatActivity() {
                     isLive = true
                     watchdogRestarts = 0
                     noProgressChecks = 0
+                    noVideoStatsChecks = 0
                     lastCheckFrames = -1L
                     lastCheckBytes = -1L
                     lastBytesSent = 0L
@@ -410,8 +416,27 @@ class MainActivity : AppCompatActivity() {
     private fun checkEncoderHealth() {
         if (!isLive) return
 
-        val stats = engine.getVideoStats() ?: return
-        val (framesEncoded, bytesSent) = stats
+        // A video sender that has never produced a single packet has no
+        // outbound-rtp stats entry at all — getVideoStats() returns null.
+        // That state MUST still drive the watchdog (dead encoder / sender
+        // never created): treat it as zero progress so the first-video
+        // deadline below restarts the session. The old `?: return` left
+        // such sessions alive forever, audio-only, with no recovery (the
+        // 2026-09-09 field run: 8+ min of PLIs, no video, no restart).
+        val stats = engine.getVideoStats()
+        val (framesEncoded, bytesSent) = stats ?: Pair(0L, 0L)
+        if (stats == null) {
+            noVideoStatsChecks++
+            if (noVideoStatsChecks % 4 == 1) {
+                Log.w(
+                    TAG,
+                    "Video sender stats unavailable — encoder has never sent a packet " +
+                        "(check $noVideoStatsChecks)"
+                )
+            }
+        } else {
+            noVideoStatsChecks = 0
+        }
 
         // ── Bitrate calculation ──
         val now = System.currentTimeMillis()

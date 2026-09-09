@@ -59,7 +59,24 @@ export async function startWhepWatch(opts: {
   // Same fallback as the broadcaster app: an empty env STUN leaves the
   // viewer with host-only candidates, which can fail behind strict NATs.
   iceServers.push({ urls: env.stunUrl || "stun:stun.l.google.com:19302" });
-  if (env.turnUrl) iceServers.push({ urls: env.turnUrl });
+  // TURN relay with credentials — same server the broadcaster publishes
+  // through. Offer both transports: libwebrtc/chrome picks UDP first and
+  // falls back to the TCP relay when the UDP path is blocked or drops the
+  // viewer's media (the "WHIP ingress flows, WHEP tile stays black" class
+  // of carrier-CGNAT failures).
+  if (env.turnUrl) {
+    const base = env.turnUrl.trim();
+    const variants = base.includes("?transport=")
+      ? [base]
+      : [`${base}?transport=udp`, `${base}?transport=tcp`];
+    for (const url of variants) {
+      iceServers.push({
+        urls: url,
+        username: env.turnUsername || undefined,
+        credential: env.turnPassword || undefined,
+      });
+    }
+  }
 
   const pc = new RTCPeerConnection({ iceServers });
   pc.addTransceiver("video", { direction: "recvonly" });
