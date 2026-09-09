@@ -36,7 +36,9 @@ use webrtc::{
 };
 use webrtc_util::Unmarshal;
 
+use crate::h264::payload_has_idr;
 use crate::{engine::Engine, router::TrackRouter};
+use todd_telemetry::Telemetry;
 use todd_transcode::media::{MediaCodec, RtpChunk};
 
 /// Which source feeds a viewer's tracks.
@@ -71,6 +73,15 @@ pub(crate) struct ViewerPeer {
     pub answer_sdp: String,
     /// Our outbound video SSRC (the SSRC the viewer PLIs).
     pub viewer_ssrc: Option<u32>,
+}
+
+/// Result of forwarding one chunk into a viewer track.
+struct WriteOutcome {
+    /// True while the pump should keep going (write succeeded).
+    alive: bool,
+    /// True when the chunk carried an H.264 IDR — counted per viewer so
+    /// "keyframes forwarded" is visible next to "egress flows".
+    idr: bool,
 }
 
 pub(crate) async fn create_viewer(
@@ -199,15 +210,25 @@ pub(crate) async fn create_viewer(
         let pump_shutdown = shutdown.clone();
         match &feed {
             TrackFeed::Live { room, camera, rid } => {
-                let (router, room, camera, layer) = (
+                let (router, room, camera, layer, telemetry) = (
                     engine.router.clone(),
                     room.clone(),
                     camera.clone(),
                     rid.clone(),
+                    engine.telemetry.clone(),
                 );
                 tokio::spawn(async move {
-                    pump_live_track(track, router, room, camera, layer, chosen, pump_shutdown)
-                        .await;
+                    pump_live_track(
+                        track,
+                        router,
+                        room,
+                        camera,
+                        layer,
+                        chosen,
+                        telemetry,
+                        pump_shutdown,
+                    )
+                    .await;
                 });
             }
             TrackFeed::Replay {
@@ -244,7 +265,8 @@ pub(crate) async fn create_viewer(
                                     if chunk.codec != chosen {
                                         continue;
                                     }
-                                    if !write_chunk(&track, &chunk).await {
+                                    let outcome = write_chunk(&track, &chunk).await;
+                                    if !outcome.alive {
                                         break;
                                     }
                                 }
@@ -263,7 +285,8 @@ pub(crate) async fn create_viewer(
                                     if chunk.codec != chosen {
                                         continue;
                                     }
-                                    if !write_chunk(&track, &chunk).await {
+                                    let outcome = write_chunk(&track, &chunk).await;
+                                    if !outcome.alive {
                                         break;
                                     }
                                 }
@@ -272,10 +295,11 @@ pub(crate) async fn create_viewer(
                     });
                 } else {
                     // Fallback: the PGM camera's live router audio.
-                    let (router, room, camera) = (
+                    let (router, room, camera, telemetry) = (
                         engine.router.clone(),
                         audio_room.to_string(),
                         audio_camera.to_string(),
+                        engine.telemetry.clone(),
                     );
                     tokio::spawn(async move {
                         pump_live_track(
@@ -285,6 +309,7 @@ pub(crate) async fn create_viewer(
                             camera,
                             String::new(),
                             chosen,
+                            telemetry,
                             pump_shutdown,
                         )
                         .await;
@@ -365,6 +390,21 @@ pub(crate) async fn create_viewer(
         }
     }
 
+    // Diagnostic: what the answer actually negotiated for the video
+    // m-section (codec PT, rtpmap + fmtp lines). If the publisher's real
+    // bitstream does not match this (profile, packetization-mode), the
+    // browser never decodes a frame while egress bytes keep flowing.
+    if let TrackFeed::Live { room, camera, .. } = &feed {
+        tracing::info!(
+            room = %room,
+            camera = %camera,
+            candidate_count,
+            outbound_video_ssrc = outbound_video_ssrc.unwrap_or(0),
+            media = %first_video_media_lines(&local.sdp),
+            "whep answer negotiated video m-line"
+        );
+    }
+
     Ok(ViewerPeer {
         pc,
         shutdown,
@@ -401,7 +441,40 @@ fn first_ssrc_in_sdp(sdp: &str) -> Option<u32> {
     None
 }
 
+/// Summarizes the codec negotiation of the first **video** m-section:
+/// its `a=rtpmap`/`a=fmtp` lines joined into one loggable string. The
+/// publisher's bitstream must match this (payload type aside — SSRC and
+/// PT are rewritten per viewer binding) or the tile stays black while
+/// egress bytes flow.
+fn first_video_media_lines(sdp: &str) -> String {
+    let mut in_video = false;
+    let mut out: Vec<&str> = Vec::new();
+    for line in sdp.lines() {
+        let line = line.trim();
+        if line.starts_with("m=") {
+            if in_video {
+                break;
+            }
+            in_video = line.starts_with("m=video");
+            continue;
+        }
+        if !in_video {
+            continue;
+        }
+        if line.starts_with("a=rtpmap:") || line.starts_with("a=fmtp:") {
+            out.push(line);
+        }
+    }
+    out.join(" | ")
+}
+
 /// Streams a live camera's RTP chunks of one layer into one viewer track.
+///
+/// Every H.264 IDR written to the viewer is counted (telemetry + a
+/// throttled log line): with the ingest-side counter on the WHIP pump,
+/// the two numbers bracket the router — keyframes arriving but not
+/// forwarded pin the SFU, keyframes forwarded while the tile stays black
+/// pin the SDP negotiation or the viewer's decoder.
 async fn pump_live_track(
     track: Arc<TrackLocalStaticRTP>,
     router: Arc<TrackRouter>,
@@ -409,9 +482,11 @@ async fn pump_live_track(
     camera_id: String,
     rid: String,
     codec: MediaCodec,
+    telemetry: Arc<Telemetry>,
     shutdown: CancellationToken,
 ) {
     let mut rx = router.subscribe(&room_id, &camera_id, &rid);
+    let mut keyframes = 0u64;
     loop {
         tokio::select! {
             _ = shutdown.cancelled() => break,
@@ -420,7 +495,23 @@ async fn pump_live_track(
                 if chunk.codec != codec {
                     continue;
                 }
-                if !write_chunk(&track, &chunk).await {
+                let outcome = write_chunk(&track, &chunk).await;
+                if outcome.idr {
+                    keyframes += 1;
+                    telemetry
+                        .registry
+                        .inc("todd_whep_h264_keyframes_total");
+                    if keyframes % 25 == 0 {
+                        tracing::info!(
+                            room = %room_id,
+                            camera = %camera_id,
+                            rid = %rid,
+                            keyframes,
+                            "whep viewer h264 keyframes forwarded"
+                        );
+                    }
+                }
+                if !outcome.alive {
                     break;
                 }
             }
@@ -445,7 +536,8 @@ async fn pump_replay_track(
                 if chunk.codec != codec {
                     continue;
                 }
-                if !write_chunk(&track, &chunk).await {
+                let outcome = write_chunk(&track, &chunk).await;
+                if !outcome.alive {
                     break;
                 }
             }
@@ -453,17 +545,26 @@ async fn pump_replay_track(
     }
 }
 
-/// Unmarshals and writes one chunk into a viewer track.
-async fn write_chunk(track: &TrackLocalStaticRTP, chunk: &todd_transcode::media::RtpChunk) -> bool {
+/// Unmarshals and writes one chunk into a viewer track, reporting whether
+/// the chunk carried an H.264 IDR (keyframe) — see [`WriteOutcome`].
+async fn write_chunk(
+    track: &TrackLocalStaticRTP,
+    chunk: &todd_transcode::media::RtpChunk,
+) -> WriteOutcome {
     // webrtc-util's Unmarshal drains the buffer: takes &mut Bytes.
     let mut buf = chunk.packet.clone();
     let mut packet = match Packet::unmarshal(&mut buf) {
         Ok(p) => p,
         Err(e) => {
             tracing::warn!(error = %e, "rtp unmarshal failed");
-            return true;
+            return WriteOutcome {
+                alive: true,
+                idr: false,
+            };
         }
     };
+
+    let idr = chunk.codec == MediaCodec::H264 && payload_has_idr(&packet.payload);
 
     // Drop the publisher's header extensions: their IDs were negotiated
     // with the publisher, not with this viewer. A browser receiving an
@@ -477,9 +578,9 @@ async fn write_chunk(track: &TrackLocalStaticRTP, chunk: &todd_transcode::media:
 
     if let Err(e) = track.write_rtp_with_extensions(&packet, &[]).await {
         tracing::warn!(error = %e, "write_rtp failed; stopping viewer pump");
-        return false;
+        return WriteOutcome { alive: false, idr };
     }
-    true
+    WriteOutcome { alive: true, idr }
 }
 
 fn codec_capability(codec: MediaCodec) -> RTCRtpCodecCapability {

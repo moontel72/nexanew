@@ -431,6 +431,9 @@ async fn pump_track(
     // every WHEP viewer reverts to 409. Tolerate isolated errors; only a
     // sustained run of them means the track itself is broken.
     let mut marshal_failures = 0u32;
+    // H.264 IDRs seen on this track — the rate tells us whether the
+    // publisher honours keyframe requests (PLI) at all.
+    let mut keyframes = 0u64;
 
     loop {
         tokio::select! {
@@ -441,6 +444,24 @@ async fn pump_track(
                     match packet.marshal() {
                         Ok(bytes) => {
                             marshal_failures = 0;
+                            if codec == MediaCodec::H264
+                                && crate::h264::payload_has_idr(&packet.payload)
+                            {
+                                keyframes += 1;
+                                engine
+                                    .telemetry
+                                    .registry
+                                    .inc("todd_whip_h264_keyframes_total");
+                                if keyframes % 25 == 0 {
+                                    tracing::info!(
+                                        room = room_id,
+                                        camera = camera_id,
+                                        ssrc,
+                                        keyframes,
+                                        "publisher h264 keyframes received"
+                                    );
+                                }
+                            }
                             router.record_ingress(
                                 room_id,
                                 camera_id,
@@ -588,7 +609,8 @@ a=ssrc:3333333333 cname:video\r\n";
 
     #[test]
     fn detects_active_video_mline() {
-        let sdp = "v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\nm=video 35112 UDP/TLS/RTP/SAVPF 96\r\n";
+        let sdp =
+            "v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\nm=video 35112 UDP/TLS/RTP/SAVPF 96\r\n";
         assert!(has_video_mline(sdp));
     }
 

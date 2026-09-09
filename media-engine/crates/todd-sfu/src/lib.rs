@@ -28,6 +28,7 @@
 //!   `MEDIA_PLANE=remote`.
 
 pub mod engine;
+pub mod h264;
 pub mod http_routes;
 pub mod net;
 pub mod pli;

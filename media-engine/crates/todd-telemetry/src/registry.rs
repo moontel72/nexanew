@@ -86,6 +86,16 @@ const METRICS: &[(&str, &str, MetricKind)] = &[
         MetricKind::Counter,
     ),
     (
+        "todd_whip_h264_keyframes_total",
+        "H.264 IDR RTP packets received from publishers.",
+        MetricKind::Counter,
+    ),
+    (
+        "todd_whep_h264_keyframes_total",
+        "H.264 IDR RTP packets forwarded to WHEP viewers.",
+        MetricKind::Counter,
+    ),
+    (
         "todd_ice_disconnects_total",
         "ICE `Disconnected` transitions observed.",
         MetricKind::Counter,
