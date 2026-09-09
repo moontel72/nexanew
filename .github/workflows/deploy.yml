@@ -66,6 +66,21 @@ jobs:
           echo '  StrictHostKeyChecking no' >> ~/.ssh/config
           echo '  UserKnownHostsFile=/dev/null' >> ~/.ssh/config
 
+      # A full disk is the usual trigger for Postgres crash loops
+      # ("FATAL: the database system is in recovery mode") and breaks
+      # rsync --delete transfers. Fail fast with a clear message instead
+      # of pushing files onto an already-critical server.
+      - name: "Pre-flight: check server disk space"
+        run: |
+          output=$(ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "df -P /var/www/traceodd")
+          echo "$output"
+          pct=$(echo "$output" | awk 'NR==2 {gsub("%","",$5); print $5}')
+          echo "Server disk usage: ${pct}%"
+          if [ -n "$pct" ] && [ "$pct" -ge 95 ]; then
+            echo "ERROR: server disk is critically full - refusing to deploy"
+            exit 1
+          fi
+
       - name: Deploy backend via rsync
         run: |
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --exclude='.env' --exclude='storage' --exclude='vendor' --exclude='bootstrap/cache' backend/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/admin-panel/
@@ -186,6 +201,27 @@ jobs:
             if [ -n '${{ vars.REVERB_SCHEME }}' ] && ! grep -q '^REVERB_SCHEME=' .env; then echo "REVERB_SCHEME=${{ vars.REVERB_SCHEME }}" >> .env; fi
             if [ -n '${{ vars.REVERB_SERVER_HOST }}' ] && ! grep -q '^REVERB_SERVER_HOST=' .env; then echo "REVERB_SERVER_HOST=${{ vars.REVERB_SERVER_HOST }}" >> .env; fi
             if [ -n '${{ vars.REVERB_SERVER_PORT }}' ] && ! grep -q '^REVERB_SERVER_PORT=' .env; then echo "REVERB_SERVER_PORT=${{ vars.REVERB_SERVER_PORT }}" >> .env; fi
+
+            # PostgreSQL rejects connections for a while after a crash or
+            # reboot ("FATAL: the database system is in recovery mode") while
+            # it replays WAL. Wait for it to accept connections instead of
+            # failing the deploy outright.
+            echo 'Waiting for PostgreSQL to accept connections...'
+            db_ready=0
+            for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24; do
+              if php artisan db:monitor --databases=pgsql 2>&1 | grep -q OK; then
+                db_ready=1
+                break
+              fi
+              sleep 5
+            done
+            if [ "\$db_ready" -ne 1 ]; then
+              echo 'ERROR: PostgreSQL still not ready after 2 minutes'
+              echo 'Diagnose on the server: systemctl status postgresql, journalctl -u postgresql --no-pager -n 50, df -h /'
+              php artisan db:monitor --databases=pgsql
+              exit 1
+            fi
+            echo 'PostgreSQL is ready'
 
             php artisan migrate --force
             php artisan db:seed --class=CricketFeatureRegistrySeeder --force
