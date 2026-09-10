@@ -17,6 +17,7 @@ const SOURCE_KINDS: Array<{ value: CameraSourceKind; label: string }> = [
   { value: "whip", label: "WHIP" },
   { value: "rtsp", label: "RTSP" },
   { value: "rtmp", label: "RTMP" },
+  { value: "hls", label: "HLS" },
 ];
 
 const KIND_BADGE: Record<CameraSourceKind, string> = {
@@ -31,9 +32,16 @@ interface CameraForm {
   label: string;
   kind: CameraSourceKind;
   group: string;
+  hlsUrl: string;
 }
 
-const EMPTY_FORM: CameraForm = { cameraId: "", label: "", kind: "whip", group: "" };
+const EMPTY_FORM: CameraForm = {
+  cameraId: "",
+  label: "",
+  kind: "whip",
+  group: "",
+  hlsUrl: "",
+};
 
 interface AddResult {
   cameraId: string;
@@ -176,6 +184,7 @@ export function InputPanel() {
           label: form.label.trim() || null,
           kind: form.kind,
           group: form.group.trim() || null,
+          hls_url: form.hlsUrl.trim() || null,
         },
         getToken(),
       );
@@ -228,6 +237,7 @@ export function InputPanel() {
       label: camera.label ?? "",
       kind: camera.kind,
       group: camera.group ?? "",
+      hls_url: camera.hls_url ?? "",
     });
   };
 
@@ -369,6 +379,14 @@ export function InputPanel() {
             onChange={(event) => setForm({ ...form, group: event.target.value })}
           />
         </div>
+        {(form.kind === "hls" || form.kind === "rtmp") && (
+          <input
+            className="rounded-md border border-input bg-background px-2 py-1 text-xs"
+            placeholder="HLS manifest URL (required for HLS cameras)"
+            value={form.hlsUrl}
+            onChange={(event) => setForm({ ...form, hlsUrl: event.target.value })}
+          />
+        )}
         <Button onClick={handleAdd} disabled={busy || !effectiveRoomId}>
           {busy ? "Adding…" : "Add Camera"}
         </Button>
@@ -433,9 +451,17 @@ export function InputPanel() {
                         <span
                           className={cn(
                             "h-2 w-2 shrink-0 rounded-full",
-                            camera.active ? "bg-emerald-400" : "bg-amber-500/60",
+                            camera.active || camera.kind === "hls"
+                              ? "bg-emerald-400"
+                              : "bg-amber-500/60",
                           )}
-                          title={camera.active ? "live ingest" : "no live session"}
+                          title={
+                            camera.kind === "hls"
+                              ? "HLS source (played directly, no engine ingest)"
+                              : camera.active
+                                ? "live ingest"
+                                : "no live session"
+                          }
                         />
                         <span className="truncate text-xs font-medium">
                           {camera.label ?? camera.id}
@@ -499,6 +525,17 @@ export function InputPanel() {
                             }
                           />
                         </div>
+                        {((editForm.kind ?? camera.kind) === "hls" ||
+                          (editForm.kind ?? camera.kind) === "rtmp") && (
+                          <input
+                            className="rounded-md border border-input bg-background px-2 py-1 text-xs"
+                            value={editForm.hls_url ?? ""}
+                            placeholder="HLS manifest URL"
+                            onChange={(event) =>
+                              setEditForm({ ...editForm, hls_url: event.target.value })
+                            }
+                          />
+                        )}
                         <div className="flex gap-1">
                           <Button
                             className="px-2 py-1 text-xs"
