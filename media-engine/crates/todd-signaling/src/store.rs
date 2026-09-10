@@ -521,6 +521,7 @@ mod tests {
                 ingest_token: None,
                 ingest_token_issued_at_ms: None,
                 ingest_token_expires_at_ms: None,
+                hls_url: None,
             }],
         }
     }
@@ -536,6 +537,7 @@ mod tests {
             ingest_token: None,
             ingest_token_issued_at_ms: None,
             ingest_token_expires_at_ms: None,
+            hls_url: None,
         }
     }
 

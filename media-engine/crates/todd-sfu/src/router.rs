@@ -230,6 +230,20 @@ impl TrackRouter {
             .any(|entry| entry.key().0.as_str() == room_id && entry.key().1.as_str() == camera_id)
     }
 
+    /// True when a camera has at least one registered **video** stream.
+    /// Used by the starvation watchdog to distinguish audio-only ingests
+    /// (legitimate) from video ingests that stopped receiving RTP
+    /// (TURN relay collapse, asymmetric ICE failure).
+    pub fn has_video_stream(&self, room_id: &str, camera_id: &str) -> bool {
+        self.streams
+            .iter()
+            .any(|entry| {
+                entry.key().0.as_str() == room_id
+                    && entry.key().1.as_str() == camera_id
+                    && !entry.value().is_audio()
+            })
+    }
+
     /// First codec seen for a camera layer (used to build pipelines and
     /// viewer tracks).
     pub fn codec_of(&self, room_id: &str, camera_id: &str, rid: &str) -> Option<MediaCodec> {

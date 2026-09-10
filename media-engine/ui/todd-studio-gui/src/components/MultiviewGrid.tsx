@@ -6,6 +6,10 @@ import { MultiviewTile } from "./MultiviewTile";
 export interface CameraFeed {
   roomId: string;
   cameraId: string;
+  /** Source kind: "hls" cameras bypass engine liveness (no telemetry). */
+  sourceKind?: "whip" | "rtsp" | "rtmp" | "hls";
+  /** HLS manifest URL for RTMP/HLS bridge cameras (Stage 1). */
+  hlsUrl?: string | null;
 }
 
 export interface MultiviewGridProps {
@@ -19,17 +23,20 @@ export function MultiviewGrid({ feeds }: MultiviewGridProps) {
   const { state, preview } = useDirector();
   const telemetry = useTelemetry();
 
-  // Liveness comes from the engine's telemetry feed. ONLY video bytes
-  // count: a camera whose video RTP is above ~1 kbps is genuinely sending
-  // picture right now, so a WHEP watch will succeed. Audio-only ingress
-  // (Opus, 48 kHz) or a WHIP session that is merely ICE-connected must
-  // NOT start the watch — that produced the 40s-after-broadcast-start
-  // flash: WHEP mounted on audio-only, 409 polling, then a second flash
-  // when the real video track arrived ~2 min later. Now the tile flips
-  // from OFF straight to video exactly once.
+  // Liveness comes from the engine's telemetry feed. ANY ingress RTP
+  // (audio or video) counts: a camera with audio-only traffic should
+  // still trigger the WHEP watch — the 409 retry loop in useWhepPlayer
+  // keeps polling until the video track registers, so the tile picks up
+  // video the moment it arrives instead of staying OFF forever.
+  //
+  // The previous video-only gate (ingress_bps > 1000 && clock >= 90000)
+  // meant audio-only cameras (common during encoder warm-up or after
+  // TURN relay collapse) never subscribed at all — todd_whep_watches_total
+  // stayed at zero. The black-frame watchdog in useWhepPlayer.ts handles
+  // the post-subscribe stall case (connected but no decoded frames).
   const liveKeys = new Set<string>();
   for (const stream of telemetry?.streams ?? []) {
-    if (stream.ingress_bps > 1000 && (stream.clock_rate ?? 48000) >= 90000) {
+    if (stream.ingress_bps > 0) {
       liveKeys.add(`${stream.room_id}/${stream.camera_id}`);
     }
   }
@@ -68,9 +75,14 @@ export function MultiviewGrid({ feeds }: MultiviewGridProps) {
             key={key}
             roomId={feed.roomId}
             cameraId={feed.cameraId}
-            live={!livenessKnown || liveKeys.has(key)}
+            live={
+              !livenessKnown ||
+              liveKeys.has(key) ||
+              feed.sourceKind === "hls"
+            }
             active={active}
             flush={single}
+            hlsUrl={feed.hlsUrl}
             onSelect={() => preview(feed)}
           />
         );

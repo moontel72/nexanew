@@ -23,6 +23,7 @@ const KIND_BADGE: Record<CameraSourceKind, string> = {
   whip: "bg-primary/20 text-primary",
   rtsp: "bg-accent/20 text-accent",
   rtmp: "bg-muted text-muted-foreground",
+  hls: "bg-emerald-500/20 text-emerald-400",
 };
 
 interface CameraForm {

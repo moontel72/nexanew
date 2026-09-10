@@ -30,6 +30,8 @@ pub enum CameraSourceKind {
     Rtsp,
     /// RTMP push source.
     Rtmp,
+    /// HLS pull source (Stage 1 bridge: RTMP → SRS → HLS → hls.js tile).
+    Hls,
 }
 
 /// Camera metadata supplied by a caller when creating or adding a camera.
@@ -52,6 +54,11 @@ pub struct CameraSpec {
     /// ignored for WHIP cameras).
     #[serde(default)]
     pub url: Option<String>,
+    /// HLS manifest URL for `hls` (Stage 1 bridge) cameras, and an optional
+    /// HLS fallback for `rtmp` cameras. Supplied by the control plane — e.g.
+    /// the SRS output `https://cricket.traceodd.com/hls/live/{key}.m3u8`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hls_url: Option<String>,
 }
 
 impl CameraSpec {
@@ -71,6 +78,10 @@ impl CameraSpec {
             ingest_token: None,
             ingest_token_issued_at_ms: None,
             ingest_token_expires_at_ms: None,
+            hls_url: self
+                .hls_url
+                .map(|url| url.trim().to_string())
+                .filter(|url| !url.is_empty()),
         }
     }
 }
@@ -127,6 +138,11 @@ pub struct CameraInfo {
     /// Unix ms when `ingest_token` expires (`ingest_token_ttl_secs` at mint).
     #[serde(default)]
     pub ingest_token_expires_at_ms: Option<i64>,
+    /// HLS manifest URL for RTMP/HLS bridge cameras (Stage 1).
+    /// Populated by the engine when the camera's source is an RTMP feed
+    /// backed by SRS HLS output. Null for WHIP-only cameras.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hls_url: Option<String>,
 }
 
 /// Partial camera metadata update. Every field is optional: omitted
@@ -140,6 +156,9 @@ pub struct UpdateCameraRequest {
     pub kind: Option<CameraSourceKind>,
     #[serde(default)]
     pub group: Option<String>,
+    /// Sets (or, as an explicit empty string, clears) the HLS manifest URL.
+    #[serde(default)]
+    pub hls_url: Option<String>,
 }
 
 /// Response of `POST /api/v1/room/{room_id}/camera`: the stored camera
@@ -637,6 +656,10 @@ mod tests {
             serde_json::to_string(&CameraSourceKind::Rtmp).unwrap(),
             "\"rtmp\""
         );
+        assert_eq!(
+            serde_json::to_string(&CameraSourceKind::Hls).unwrap(),
+            "\"hls\""
+        );
     }
 
     #[test]
@@ -660,6 +683,7 @@ mod tests {
             kind: CameraSourceKind::Rtsp,
             group: Some("".to_string()),
             url: None,
+            hls_url: None,
         };
         let info = spec.into_info();
         assert_eq!(info.id, "cam-2");
@@ -675,6 +699,35 @@ mod tests {
         assert!(update.label.is_none());
         assert!(update.kind.is_none());
         assert!(update.group.is_none());
+        assert!(update.hls_url.is_none());
+    }
+
+    #[test]
+    fn hls_spec_url_survives_into_info_and_blank_becomes_none() {
+        let spec = CameraSpec {
+            id: "cam-3".to_string(),
+            label: None,
+            kind: CameraSourceKind::Hls,
+            group: None,
+            url: None,
+            hls_url: Some("  https://cdn.example/live/cam-3.m3u8  ".to_string()),
+        };
+        let info = spec.into_info();
+        assert_eq!(info.kind, CameraSourceKind::Hls);
+        assert_eq!(
+            info.hls_url.as_deref(),
+            Some("https://cdn.example/live/cam-3.m3u8")
+        );
+
+        let blank = CameraSpec {
+            id: "cam-4".to_string(),
+            label: None,
+            kind: CameraSourceKind::Hls,
+            group: None,
+            url: None,
+            hls_url: Some("   ".to_string()),
+        };
+        assert!(blank.into_info().hls_url.is_none());
     }
 
     #[test]

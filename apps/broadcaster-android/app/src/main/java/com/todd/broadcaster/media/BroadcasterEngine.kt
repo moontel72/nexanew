@@ -247,13 +247,15 @@ class BroadcasterEngine(private val context: Context) {
             sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
             continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
             candidateNetworkPolicy = PeerConnection.CandidateNetworkPolicy.ALL
-            // Carrier CGNATs drop LARGE UDP packets while audio-sized ones
-            // pass, so ICE keeps the UDP pair "healthy" via tiny keepalives
-            // and video dies silently — libwebrtc never falls back to the
-            // TURN relay on its own. When a relay is configured, force
-            // RELAY policy so all media rides the (UDP/TCP) relay.
+            // Use ALL transport types (host + srflx + relay) instead of
+            // RELAY-only.  Forcing RELAY caused every session to die after
+            // ~6 s when the coturn TCP relay path collapsed (consent
+            // freshness STUN timeout).  ALL lets libwebrtc try direct and
+            // server-reflexive candidates first — the engine has a public
+            // IP so srflx often works even behind carrier CGNAT — and fall
+            // back to the TURN relay only when no direct path survives.
             if (!turnUrl.isNullOrEmpty()) {
-                iceTransportsType = PeerConnection.IceTransportsType.RELAY
+                iceTransportsType = PeerConnection.IceTransportsType.ALL
             }
         }
 

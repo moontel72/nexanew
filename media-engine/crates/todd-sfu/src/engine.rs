@@ -547,6 +547,15 @@ impl Engine {
 
     /// Removes sessions whose PeerConnection already died (network loss,
     /// DTLS failure) so rooms and the router don't leak state.
+    ///
+    /// Also detects **RTP-starved** sessions: WHIP ingests whose ICE path
+    /// appears `Connected` on the engine side (webrtc-rs keepalives
+    /// through the Docker bridge maintain their own independent heartbeat)
+    /// but whose publisher has stopped sending video RTP (TURN relay
+    /// collapse, asymmetric ICE failure). A session with a registered
+    /// video track that has received zero or no video RTP for 30 s is
+    /// closed — this is the deterministic cleanup the ICE-layer timeouts
+    /// alone cannot provide.
     pub async fn prune_dead_sessions(&self) {
         let is_dead = |state: RTCPeerConnectionState| -> bool {
             matches!(
@@ -562,6 +571,42 @@ impl Engine {
             .map(|entry| entry.key().clone())
             .collect();
         for id in dead {
+            let _ = self.stop_session(&id).await;
+        }
+
+        // RTP starvation: the publisher's ICE path died on its side but
+        // the engine's ICE agent never noticed (asymmetric timeout via
+        // Docker bridge keepalives). A video-registered session that
+        // has received zero video RTP for 30 s is a zombie.
+        const STARVATION_SECS: f64 = 30.0;
+        let starved: Vec<String> = self
+            .sessions
+            .iter()
+            .filter(|entry| {
+                !is_dead(entry.value().pc.connection_state())
+                    && self
+                        .router
+                        .has_video_stream(&entry.value().room_id, &entry.value().camera_id)
+                    && self
+                        .telemetry
+                        .stream(&entry.value().room_id, &entry.value().camera_id, 90_000)
+                        .secs_since_last_ingress()
+                        .map_or(true, |s| s > STARVATION_SECS)
+            })
+            .map(|entry| entry.key().clone())
+            .collect();
+        for id in starved {
+            if let Some(session) = self.sessions.get(&id) {
+                tracing::warn!(
+                    session = %id,
+                    room = %session.room_id,
+                    camera = %session.camera_id,
+                    "closing RTP-starved ingest session (no video RTP for {STARVATION_SECS}s)"
+                );
+            }
+            self.telemetry
+                .registry
+                .inc("todd_rtp_starvation_closures_total");
             let _ = self.stop_session(&id).await;
         }
 

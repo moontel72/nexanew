@@ -148,6 +148,10 @@ fn build_description(url: &str, kind: CameraSourceKind) -> Result<String, AppErr
         CameraSourceKind::Whip => Err(AppError::BadRequest(
             "WHIP cameras ingest over HTTP — no GStreamer adapter needed".to_string(),
         )),
+        CameraSourceKind::Hls => Err(AppError::BadRequest(
+            "HLS cameras are served by SRS for viewer-side playback — no GStreamer adapter needed"
+                .to_string(),
+        )),
     }
 }
 
@@ -183,5 +187,10 @@ mod tests {
     fn whip_sources_have_no_adapter() {
         assert!(build_description("http://x", CameraSourceKind::Whip).is_err());
         assert!(build_description("", CameraSourceKind::Rtsp).is_err());
+    }
+
+    #[test]
+    fn hls_sources_have_no_adapter() {
+        assert!(build_description("http://x/live.m3u8", CameraSourceKind::Hls).is_err());
     }
 }

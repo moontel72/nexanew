@@ -66,6 +66,17 @@ fn validate_camera_source(camera: &CameraInfo) -> Result<(), AppError> {
     if camera.kind == CameraSourceKind::Whip {
         return Ok(());
     }
+    // HLS cameras are played straight off their manifest — the engine pulls
+    // nothing — but they are useless without a manifest URL.
+    if camera.kind == CameraSourceKind::Hls {
+        return match camera.hls_url.as_deref().map(str::trim) {
+            Some(url) if !url.is_empty() => Ok(()),
+            _ => Err(AppError::BadRequest(format!(
+                "camera {} (hls) requires an hls_url",
+                camera.id
+            ))),
+        };
+    }
     match camera.url.as_deref().map(str::trim) {
         Some(url) if !url.is_empty() => Ok(()),
         _ => Err(AppError::BadRequest(format!(
@@ -79,7 +90,9 @@ fn validate_camera_source(camera: &CameraInfo) -> Result<(), AppError> {
 /// are pulled by the media plane; WHIP cameras have no adapter.
 async fn sync_ingest_for_camera(state: &AppState, room_id: &str, camera: &CameraInfo) {
     use todd_common::types::CameraSourceKind;
-    if camera.kind == CameraSourceKind::Whip {
+    // WHIP ingests over HTTP and HLS is played from the manifest — neither
+    // kind needs a media-plane adapter.
+    if matches!(camera.kind, CameraSourceKind::Whip | CameraSourceKind::Hls) {
         let _ = state.plane.stop_ingest(room_id, &camera.id).await;
         return;
     }
@@ -104,6 +117,7 @@ fn specs_from_request(req: &CreateRoomRequest) -> Vec<CameraSpec> {
                 kind: todd_common::types::CameraSourceKind::Whip,
                 group: None,
                 url: None,
+                hls_url: None,
             })
             .collect()
     }
@@ -404,6 +418,13 @@ pub async fn update_camera(
             None
         } else {
             Some(group.trim().to_string())
+        };
+    }
+    if let Some(hls_url) = &update.hls_url {
+        existing.hls_url = if hls_url.trim().is_empty() {
+            None
+        } else {
+            Some(hls_url.trim().to_string())
         };
     }
 

@@ -2,7 +2,7 @@
 // (snake_case, as returned by the media engine).
 
 /// How a camera's media reaches the engine.
-export type CameraSourceKind = "whip" | "rtsp" | "rtmp";
+export type CameraSourceKind = "whip" | "rtsp" | "rtmp" | "hls";
 
 export interface CameraInfo {
   id: string;
@@ -16,6 +16,8 @@ export interface CameraInfo {
   ingest_token_issued_at_ms?: number | null;
   /// Unix ms the ingest token expires.
   ingest_token_expires_at_ms?: number | null;
+  /// HLS manifest URL (for RTMP/HLS bridge cameras — Stage 1).
+  hls_url?: string | null;
 }
 
 /// Camera metadata supplied when creating or adding a camera.
@@ -24,6 +26,8 @@ export interface CameraSpec {
   label?: string | null;
   kind?: CameraSourceKind;
   group?: string | null;
+  /// HLS manifest URL for `hls` cameras (Stage 1 bridge).
+  hls_url?: string | null;
 }
 
 /// Partial camera metadata update (omitted fields keep their value).
@@ -31,6 +35,8 @@ export interface UpdateCameraRequest {
   label?: string;
   kind?: CameraSourceKind;
   group?: string;
+  /// Sets (or, as an empty string, clears) the HLS manifest URL.
+  hls_url?: string;
 }
 
 export interface AddCameraResponse {

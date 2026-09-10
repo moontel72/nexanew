@@ -111,6 +111,11 @@ const METRICS: &[(&str, &str, MetricKind)] = &[
         MetricKind::Counter,
     ),
     (
+        "todd_rtp_starvation_closures_total",
+        "Ingest sessions closed by the RTP-starvation watchdog (video track registered but zero video RTP for 30 s).",
+        MetricKind::Counter,
+    ),
+    (
         "todd_whip_no_media_total",
         "WHIP sessions accepted but no RTP tracks registered within 10s.",
         MetricKind::Counter,

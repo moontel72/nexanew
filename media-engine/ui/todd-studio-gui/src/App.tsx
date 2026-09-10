@@ -77,6 +77,8 @@ export default function App() {
         room.cameras.map((camera) => ({
           roomId: room.id,
           cameraId: camera.id,
+          sourceKind: camera.kind,
+          hlsUrl: camera.hls_url,
         })),
       ),
     [rooms],

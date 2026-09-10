@@ -32,6 +32,11 @@ pub struct StreamStats {
     bitrate: Mutex<BitrateMeter>,
     egress: Mutex<BitrateMeter>,
     jitter: Mutex<JitterEstimator>,
+    /// Wall-clock instant of the last inbound RTP packet. Used by the
+    /// engine's starvation watchdog to detect zombie sessions whose ICE
+    /// path appears alive but whose publisher has stopped sending media
+    /// (TURN relay collapse, asymmetric ICE failure).
+    last_ingress_at: Mutex<Option<Instant>>,
 }
 
 impl Default for StreamStats {
@@ -55,10 +60,12 @@ impl StreamStats {
             bitrate: Mutex::new(BitrateMeter::new()),
             egress: Mutex::new(BitrateMeter::new()),
             jitter: Mutex::new(JitterEstimator::new(clock_rate.max(1))),
+            last_ingress_at: Mutex::new(None),
         }
     }
 
     /// Records one inbound RTP packet (called by the ingest pump).
+    /// Also stamps `last_ingress_at` for the engine's starvation watchdog.
     pub fn record_ingress(&self, rtp_timestamp: u32, bytes: usize) {
         self.packets_in.fetch_add(1, Ordering::Relaxed);
         self.bytes_in.fetch_add(bytes as u64, Ordering::Relaxed);
@@ -68,6 +75,19 @@ impl StreamStats {
         if let Ok(mut jitter) = self.jitter.lock() {
             jitter.update(rtp_timestamp);
         }
+        if let Ok(mut ts) = self.last_ingress_at.lock() {
+            *ts = Some(Instant::now());
+        }
+    }
+
+    /// Seconds elapsed since the last inbound RTP packet was recorded.
+    /// Returns `None` if no packet has ever been seen on this stream.
+    pub fn secs_since_last_ingress(&self) -> Option<f64> {
+        self.last_ingress_at
+            .lock()
+            .ok()
+            .and_then(|ts| *ts)
+            .map(|t| t.elapsed().as_secs_f64())
     }
 
     /// Records fan-out accounting for one forwarded packet (called by the
