@@ -51,7 +51,8 @@ Repository (root: `C:\Ecosystem\NexaTrace_System`):
    - BRIEF #5 (2026-09-09 field run: audio-only session, watchdog null-stats blind spot,
      viewer-side relay defaults).
 
-Evidence collected by the operator (`C:\Ecosystem\qoder-evidence\`):
+Evidence collected by the operator — **inside this repository at `NexaTrace_System\qoder-evidence\`**
+(gitignored, so workspace-restricted agents can read it directly):
 
 | File | What it contains |
 |---|---|
@@ -138,7 +139,7 @@ Reference point that still works: **Larix + OBS + cricket-manager + cricket.trac
 ### 5.1 Light — Qoder runs these directly (read-only)
 
 - Reading/opening files; `rg`/`grep` over the repository; `git --no-pager log/show/diff`.
-- Reading any file under `C:\Ecosystem\qoder-evidence\` (they are plain text).
+- Reading any file under `NexaTrace_System\qoder-evidence\` (plain text, inside the project).
 - `ls`, `stat`, size checks; `find` over the repo.
 
 ### 5.2 Heavy — NEVER run these (they hang the IDE)
@@ -187,11 +188,11 @@ format above — do not attempt to gather it yourself.
 
 Windows CMD (phone on USB):
 ```bat
-mkdir C:\Ecosystem\qoder-evidence2
+mkdir C:\Ecosystem\NexaTrace_System\qoder-evidence2
 adb logcat -c
 :: GO LIVE on the phone, open Todd Studio + chrome://webrtc-internals, wait 3-4 minutes
-adb shell dumpsys package com.todd.broadcaster > C:\Ecosystem\qoder-evidence2\apk-version.txt
-adb logcat -d -v time MainActivity:V BroadcasterEngine:V WhipClient:V libjingle:V WebRTC:V "*:S" > C:\Ecosystem\qoder-evidence2\phone-logcat.txt
+adb shell dumpsys package com.todd.broadcaster > C:\Ecosystem\NexaTrace_System\qoder-evidence2\apk-version.txt
+adb logcat -d -v time MainActivity:V BroadcasterEngine:V WhipClient:V libjingle:V WebRTC:V "*:S" > C:\Ecosystem\NexaTrace_System\qoder-evidence2\phone-logcat.txt
 ```
 
 VPS (SSH, no `ssh` prefix when already logged in):
@@ -209,13 +210,13 @@ exit
 
 Windows CMD (copy down):
 ```bat
-scp root@135.181.46.27:/tmp/todd-engine.log C:\Ecosystem\qoder-evidence2\
-scp root@135.181.46.27:/tmp/todd-turn.log C:\Ecosystem\qoder-evidence2\
-scp root@135.181.46.27:/tmp/todd-metrics.txt C:\Ecosystem\qoder-evidence2\
-scp root@135.181.46.27:/tmp/todd-df.txt C:\Ecosystem\qoder-evidence2\
-scp root@135.181.46.27:/tmp/todd-docker.txt C:\Ecosystem\qoder-evidence2\
-scp root@135.181.46.27:/tmp/todd-services.txt C:\Ecosystem\qoder-evidence2\
-scp root@135.181.46.27:/tmp/studio-deploy.txt C:\Ecosystem\qoder-evidence2\
+scp root@135.181.46.27:/tmp/todd-engine.log C:\Ecosystem\NexaTrace_System\qoder-evidence2\
+scp root@135.181.46.27:/tmp/todd-turn.log C:\Ecosystem\NexaTrace_System\qoder-evidence2\
+scp root@135.181.46.27:/tmp/todd-metrics.txt C:\Ecosystem\NexaTrace_System\qoder-evidence2\
+scp root@135.181.46.27:/tmp/todd-df.txt C:\Ecosystem\NexaTrace_System\qoder-evidence2\
+scp root@135.181.46.27:/tmp/todd-docker.txt C:\Ecosystem\NexaTrace_System\qoder-evidence2\
+scp root@135.181.46.27:/tmp/todd-services.txt C:\Ecosystem\NexaTrace_System\qoder-evidence2\
+scp root@135.181.46.27:/tmp/studio-deploy.txt C:\Ecosystem\NexaTrace_System\qoder-evidence2\
 ```
 
 **B. Corrected viewer dump (the earlier file was unusable):**

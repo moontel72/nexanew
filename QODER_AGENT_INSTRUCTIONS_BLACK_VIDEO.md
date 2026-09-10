@@ -338,13 +338,14 @@ repository already supports.
 ## 10. Evidence collection runbook (what the operator will hand you)
 
 The operator runs the following on his Windows PC (CMD), with the test phone on USB and
-SSH access to the VPS. All artifacts land in `C:\Ecosystem\qoder-evidence\`. Treat the
-file names below as guaranteed inputs when writing your Part A/B answers.
+SSH access to the VPS. All artifacts land **inside this repository** at
+`NexaTrace_System\qoder-evidence\` (gitignored, so restricted workspace agents can read it
+directly). Treat the file names below as guaranteed inputs when writing your Part A/B answers.
 
 ### 10.1 Before the run (one-time)
 
 ```bat
-mkdir C:\Ecosystem\qoder-evidence
+mkdir C:\Ecosystem\NexaTrace_System\qoder-evidence
 adb logcat -c
 ```
 
@@ -356,9 +357,9 @@ schedule to elapse).
 ### 10.2 After the run — phone artifacts
 
 ```bat
-adb shell dumpsys package com.todd.broadcaster > C:\Ecosystem\qoder-evidence\apk-version.txt
-adb shell getprop ro.product.model >> C:\Ecosystem\qoder-evidence\apk-version.txt
-adb logcat -d -v time MainActivity:V BroadcasterEngine:V WhipClient:V libjingle:V "*:S" > C:\Ecosystem\qoder-evidence\phone-logcat.txt
+adb shell dumpsys package com.todd.broadcaster > C:\Ecosystem\NexaTrace_System\qoder-evidence\apk-version.txt
+adb shell getprop ro.product.model >> C:\Ecosystem\NexaTrace_System\qoder-evidence\apk-version.txt
+adb logcat -d -v time MainActivity:V BroadcasterEngine:V WhipClient:V libjingle:V "*:S" > C:\Ecosystem\NexaTrace_System\qoder-evidence\phone-logcat.txt
 ```
 
 `apk-version.txt` proves WHICH build ran (`versionName`, `versionCode`,
@@ -369,13 +370,13 @@ adb logcat -d -v time MainActivity:V BroadcasterEngine:V WhipClient:V libjingle:
 
 ```bat
 ssh root@135.181.46.27 "journalctl -u todd-studio --since '15 min ago' --no-pager > /tmp/todd-engine.log; journalctl -u todd-turn --since '15 min ago' --no-pager > /tmp/todd-turn.log; curl -s http://127.0.0.1:8082/metrics > /tmp/todd-metrics.txt; df -h / > /tmp/todd-df.txt; docker ps --format '{{.Image}} {{.Status}} {{.CreatedAt}}' > /tmp/todd-docker.txt; systemctl is-active todd-studio todd-broadcaster todd-turn > /tmp/todd-services.txt; ls -lah /var/www/todd-studio/ > /tmp/studio-deploy.txt; grep -o 'turn:135.181.46.27' /var/www/todd-studio/assets/*.js >> /tmp/studio-deploy.txt"
-scp root@135.181.46.27:/tmp/todd-engine.log C:\Ecosystem\qoder-evidence\
-scp root@135.181.46.27:/tmp/todd-turn.log C:\Ecosystem\qoder-evidence\
-scp root@135.181.46.27:/tmp/todd-metrics.txt C:\Ecosystem\qoder-evidence\
-scp root@135.181.46.27:/tmp/todd-df.txt C:\Ecosystem\qoder-evidence\
-scp root@135.181.46.27:/tmp/todd-docker.txt C:\Ecosystem\qoder-evidence\
-scp root@135.181.46.27:/tmp/todd-services.txt C:\Ecosystem\qoder-evidence\
-scp root@135.181.46.27:/tmp/studio-deploy.txt C:\Ecosystem\qoder-evidence\
+scp root@135.181.46.27:/tmp/todd-engine.log C:\Ecosystem\NexaTrace_System\qoder-evidence\
+scp root@135.181.46.27:/tmp/todd-turn.log C:\Ecosystem\NexaTrace_System\qoder-evidence\
+scp root@135.181.46.27:/tmp/todd-metrics.txt C:\Ecosystem\NexaTrace_System\qoder-evidence\
+scp root@135.181.46.27:/tmp/todd-df.txt C:\Ecosystem\NexaTrace_System\qoder-evidence\
+scp root@135.181.46.27:/tmp/todd-docker.txt C:\Ecosystem\NexaTrace_System\qoder-evidence\
+scp root@135.181.46.27:/tmp/todd-services.txt C:\Ecosystem\NexaTrace_System\qoder-evidence\
+scp root@135.181.46.27:/tmp/studio-deploy.txt C:\Ecosystem\NexaTrace_System\qoder-evidence\
 ```
 
 Key fields you must mine from these files:
@@ -411,8 +412,9 @@ because both publishers fail but only one may reach the engine.
 
 ## 11. Evidence findings — 2026-09-10 run (agent pre-digested; start Part A from HERE)
 
-Artifacts: `C:\Ecosystem\qoder-evidence\` (collected 2026-09-10, test window ~13:32–14:21 UTC,
-i.e. ~15:32–16:21 operator local time = UTC+2). Server logs are UTC.
+Artifacts: `NexaTrace_System\qoder-evidence\` (inside this repository, gitignored; collected
+2026-09-10, test window ~13:32–14:21 UTC, i.e. ~15:32–16:21 operator local time = UTC+2).
+Server logs are UTC.
 
 ### 11.1 What the evidence proves (facts, with the exact lines)
 

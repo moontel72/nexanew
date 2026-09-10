@@ -37,6 +37,12 @@ media-engine/meta.json
 
 analysis_output.txt
 
+# Operator-collected field evidence (logs, dumps, adb output) — keep local,
+# never commit production logs/session ids.
+/qoder-evidence/
+/qoder-evidence2/
+/qoder-evidence*/
+
 *.iml
 .DS_Store
 
