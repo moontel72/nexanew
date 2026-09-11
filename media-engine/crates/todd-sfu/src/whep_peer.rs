@@ -115,10 +115,34 @@ pub(crate) async fn create_viewer(
         })
     }));
 
-    // The remote offer's media sections create the transceivers.
-    pc.set_remote_description(offer)
-        .await
-        .map_err(|e| AppError::Internal(format!("set_remote_description failed: {e}")))?;
+    // NOTE: our local tracks/transceivers are created *before*
+    // `set_remote_description` (see the loop below). webrtc-rs resolves each
+    // offered m-line to a transceiver by mid when it builds the answer
+    // (`generate_matched_sdp` -> `find_by_mid`), and those mids are assigned
+    // while the remote offer is processed. Calling `add_track` *after*
+    // `set_remote_description` therefore leaves the offered, track-less
+    // transceiver bound to the m-line while our track sits on a second
+    // transceiver the answer never references: the answer then advertises a
+    // sendonly m-line with no outbound SSRC and the browser receives zero RTP
+    // (tile stays black even though the byte counters keep rising). Creating
+    // the tracks first lets `satisfy_type_and_direction` adopt them — a local
+    // Sendrecv transceiver satisfies the viewer's Recvonly m-line — so the
+    // sender that owns our track is the exact one bound into the answer.
+
+    // Media kinds the viewer actually offered, in m-line order.
+    let offered_kinds: Vec<RTPCodecType> = offer_sdp
+        .lines()
+        .filter_map(|line| {
+            let rest = line.trim().strip_prefix("m=")?;
+            if rest.starts_with("video") {
+                Some(RTPCodecType::Video)
+            } else if rest.starts_with("audio") {
+                Some(RTPCodecType::Audio)
+            } else {
+                None
+            }
+        })
+        .collect();
 
     // Preferred video codec: whatever the source is actually sending
     // right now (the router tracks it for live cameras; replay sessions
@@ -152,8 +176,8 @@ pub(crate) async fn create_viewer(
             .map(|frames| frames.iter().any(|f| f.is_audio()))
             .unwrap_or(false));
 
-    for transceiver in pc.get_transceivers().await {
-        let chosen = match transceiver.kind() {
+    for kind in offered_kinds {
+        let chosen = match kind {
             RTPCodecType::Video => video_codec,
             RTPCodecType::Audio
                 if matches!(feed, TrackFeed::Live { .. } | TrackFeed::Program { .. }) =>
@@ -189,7 +213,7 @@ pub(crate) async fn create_viewer(
         // them upstream. Nothing else in webrtc-rs reads this stream —
         // without the loop the interceptor never fires and a stalled
         // decoder can never ask for an IDR.
-        if transceiver.kind() == RTPCodecType::Video && matches!(feed, TrackFeed::Live { .. }) {
+        if kind == RTPCodecType::Video && matches!(feed, TrackFeed::Live { .. }) {
             let rtcp_shutdown = shutdown.clone();
             let video_sender = sender.clone();
             tokio::spawn(async move {
@@ -252,7 +276,7 @@ pub(crate) async fn create_viewer(
                 audio_camera,
                 ..
             } => {
-                if transceiver.kind() == RTPCodecType::Video {
+                if kind == RTPCodecType::Video {
                     // tokio's broadcast::Receiver has no Clone impl;
                     // resubscribe() hands out a fresh tail reader.
                     let mut rx = video.resubscribe();
@@ -318,6 +342,12 @@ pub(crate) async fn create_viewer(
             }
         }
     }
+
+    // Apply the viewer's offer now that our tracks/transceivers exist, so
+    // webrtc-rs adopts them for the matching m-lines (see the note above).
+    pc.set_remote_description(offer)
+        .await
+        .map_err(|e| AppError::Internal(format!("set_remote_description failed: {e}")))?;
 
     // Peer state machine — mirror of the WHIP side: `Disconnected` arms
     // a grace watchdog, `Failed`/`Closed` prune the viewer session.
