@@ -113,7 +113,17 @@ pub(crate) async fn create(
                 pump_shutdown.clone(),
             );
             Box::pin(async move {
-                pump_track(track, &engine, &room, &camera, pump_shutdown).await;
+                // webrtc-rs 0.17 calls this handler while holding a mutex over
+                // the whole on_track callback (`peer_connection::do_track`:
+                // `let mut f = handler.lock().await; f(...).await`). Awaiting the
+                // long-lived pump here would hold that lock forever, so the
+                // publisher's NEXT track (video, after the audio track) blocks on
+                // it and never registers: audio-only ingest, zero H.264 keyframes,
+                // and every WHEP viewer stuck on a retryable 409. Spawn the pump
+                // and return immediately so the lock is released.
+                tokio::spawn(async move {
+                    pump_track(track, &engine, &room, &camera, pump_shutdown).await;
+                });
             })
         },
     ));
