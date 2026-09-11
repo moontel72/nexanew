@@ -91,21 +91,25 @@ export async function startWhepWatch(opts: {
   // just attributes) and re-issue play() from the ontrack handler — the
   // track frequently arrives AFTER the first play() call, and a video
   // that was playing an empty stream can stay black forever.
-  const fallbackStream = new MediaStream();
+  const remoteStream = new MediaStream();
   opts.videoEl.muted = true;
+  opts.videoEl.defaultMuted = true;
   opts.videoEl.setAttribute("muted", "");
   opts.videoEl.setAttribute("playsinline", "");
   opts.videoEl.autoplay = true;
-  opts.videoEl.srcObject = fallbackStream;
+  opts.videoEl.srcObject = remoteStream;
   pc.ontrack = (event) => {
-    // Prefer the incoming stream object; fall back to appending the raw
-    // track (some browsers omit event.streams).
-    if (event.streams.length > 0) {
-      opts.videoEl.srcObject = event.streams[0];
-    } else {
-      fallbackStream.addTrack(event.track);
+    const alreadyAttached = remoteStream
+      .getTracks()
+      .some((track) => track.id === event.track.id);
+
+    if (!alreadyAttached) {
+      remoteStream.addTrack(event.track);
     }
-    opts.videoEl.play().catch(() => undefined);
+
+    void opts.videoEl.play().catch((error) => {
+      console.warn("WHEP video play failed", error);
+    });
   };
 
   const offer = await pc.createOffer();
