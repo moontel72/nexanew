@@ -355,3 +355,149 @@ broadcast (Stop → Start) produced:
   bitrate).
 - Testing ka tareeqa wahi: Studio se fresh WHIP camera → APK mein URL → **Stop
   → Start** (engine restart ke baad app khud re-POST nahi karta).
+
+---
+
+## F. UPDATE 2026-09-12 — viewer receives AUDIO ONLY (no video track in the browser)
+
+Section E's ingest fix (`375eb6de`) is real and still holds: the engine registers
+`track up … codec=H264`, ~846 kbps ingress, keyframes forwarded. A **second,
+independent defect** on the WHEP **egress** side still keeps the Studio tile
+black — the browser never receives a video track at all.
+
+### F.1 The decisive browser evidence
+
+`chrome://webrtc-internals` on `studio.traceodd.com`, with a live WHIP broadcast
+and a WHEP camera tile:
+
+- The viewer peer connection exposes **`media-playout (kind=audio)`** only.
+- There is **no `inbound-rtp (kind=video)` section at all** — the browser has no
+  inbound video stream to decode.
+- Consequence: the tile's `live` flag is true (so the OFF badge disappears) but
+  `videoEl.videoWidth` stays 0 → the tile stays black and the black-frame
+  watchdog keeps bouncing the session.
+
+Additionally, the viewer's own transceiver dump (`getTransceivers()` / the
+`transceiver` panel in webrtc-internals) shows the video transceiver **is
+negotiated correctly**:
+
+```json
+{ "mid": "0", "kind": "video",
+  "sender":   { "track": null, "encodings": [{ "active": true }] },
+  "receiver": { "track": "31561754-…", "streams": ["5cf93e6f-…"] },
+  "direction": "recvonly", "currentDirection": "recvonly",
+  "reason": "setRemoteDescription", "transceiverIndex": 0 }
+```
+
+(transceiver 0 = video, transceiver 1 = audio.)
+
+So the offer is correct **and** the answer was accepted: the browser holds a
+`recvonly` video transceiver carrying a remote track + stream (an `a=msid`
+arrived), with `sender.track = null` as expected for a receiver. The browser is
+ready and *willing* to receive video — **the engine simply never sends any video
+RTP**.
+
+### F.2 Server-side corroboration (2026-09-11 ~18:35 UTC run)
+
+```
+whep viewer started  session=2eefd073… room=be2a31c8… camera=Cam-3 rid=
+whep watch accepted  session=2eefd073…
+whep answer negotiated video m-line … candidate_count=12 outbound_video_ssrc=0 …
+[whep] peer connection connected
+```
+
+- `outbound_video_ssrc` is `first_ssrc_in_sdp(&local.sdp)` and the log prints
+  `.unwrap_or(0)`, so **0** means “no usable video SSRC”: either the parse
+  returned `None` (no `a=ssrc:` line in any video m-section) **or** it read
+  `a=ssrc:0` (never assigned). webrtc-rs only emits `a=ssrc` while iterating a
+  sender's `send_parameters.encodings` (`sdp/mod.rs` → `with_media_source`), so
+  the video sender has **no bound encoding at answer time** — while the audio
+  sender does (audio plays). The PLI broker's `register_viewer` never runs either.
+- Yet `todd_whep_h264_keyframes_total` increments and `todd_egress_bitrate_bps`
+  is ~1.7 Mbps: the engine is writing RTP into its local video track and counting
+  it, but that track is not negotiated into a send binding the browser receives.
+- `[whep] peer connection connected` proves ICE/DTLS is fine, and audio flows.
+
+### F.3 What is NOT the cause
+
+- **Not the viewer's `srcObject` handling.** `whep.ts` offers two recvonly
+  transceivers (video + audio) — correct. The earlier claim that the audio
+  `ontrack` replaces the video stream does not hold: the engine creates both
+  tracks with the same `stream_id` = `"todd"`
+  (`whep_peer.rs`: `TrackLocalStaticRTP::new(codec, "todd-<uuid>", "todd")`),
+  so a browser groups them into **one** `MediaStream` and `event.streams[0]` is
+  the same object for both events. Audio-only playout in the browser confirms
+  the offer itself is sound.
+- **Not TURN/ICE** (the peer connection connects) and **not the ingest path**
+  (`track up … codec=H264` + `ingest ~846 kbps`).
+
+### F.4 Confirmed root cause
+
+The browser-side transceiver (F.1) proves the SDP negotiation succeeded — the
+answer's video m-line is `sendonly` (browser `currentDirection: recvonly`) — so
+what was missing was the **outgoing SSRC binding** for the engine's local video
+track (`outbound_video_ssrc` = 0 → no usable `a=ssrc`).
+
+`create_viewer` called `pc.add_track(track)` **after**
+`set_remote_description(offer)`. When `set_remote_description` processes the
+remote offer it creates a **track-less** transceiver per offered m-section
+(`RTCRtpSender::new(None, …)`) and stamps it with that m-section's `mid`. The
+later `add_track` cannot reuse it (webrtc-rs reuses a sender only when
+`sender.initial_track_id()` already matches the track id, which is `None` here)
+and instead calls `new_transceiver_from_track`, which **always creates a fresh
+transceiver** with no `mid`.
+
+When the answer is generated, `generate_matched_sdp` resolves each remote m-line
+with `find_by_mid(...)` — so it binds the **track-less** transceiver that the
+offer created, never the one holding our track. Result: the answer advertises a
+`sendonly` video m-line with **no SSRC**, the pump's `track.write_rtp(…)` has no
+binding to write to, and the browser receives zero video RTP while the engine
+keeps counting every keyframe it hands to the track (“bytes counted, nothing
+received”). That is also why `todd_whep_h264_keyframes_total` and
+`todd_egress_bitrate_bps` (an app-layer counter, not an SRTP counter) rose while
+the tile stayed black.
+
+### F.5 Fix applied and verified
+
+`create_viewer` now creates the local tracks/transceivers **before** applying the
+viewer's offer. `set_remote_description` then adopts them via
+`satisfy_type_and_direction` (a local **Sendrecv** transceiver satisfies the
+viewer's **Recvonly** m-line) and stamps them with the m-line's `mid`, so the
+sender that owns our track is exactly the one `generate_matched_sdp` binds into
+the answer.
+
+- Commit **`6799dabd`** — "Fix WHEP answer binding the offered transceivers"
+  (`media-engine/crates/todd-sfu/src/whep_peer.rs`).
+- `offered_kinds` is derived from the offer's own `m=` lines, in order, so the
+  pre-created transceivers line up 1:1 with the offered m-sections.
+- Built + deployed via CI (`media-engine-build.yml` → `media-engine-deploy.yml`):
+  image `8f283ac76139` (2026-09-11T23:22:18Z); `todd-studio` restarted
+  23:31:14 UTC.
+- **Operator-confirmed (2026-09-12): Todd Studio video now renders.**
+  `chrome://webrtc-internals` shows `inbound-rtp (kind=video)` with rising
+  `framesDecoded`, and ingest / egress / keyframe counters all advance.
+
+Note: the earlier `replace_track` idea for this section would **not** have
+worked — a transceiver created from a remote m-line has an empty
+`track_encodings`, and `replace_track` errors with
+`ErrRTPSenderNewTrackHasIncorrectEnvelope` in that case. Creating the tracks
+first (the fix above) is the correct path.
+
+### F.6 Roman Urdu khulasa (for the operator)
+
+- Browser ne confirm kar diya: WHEP par **sirf audio** aa raha hai, **video
+  receive nahi hoti** (`inbound-rtp (kind=video)` mojood hi nahi). Lekin browser
+  ka **video transceiver sahi negotiate hua hai** (`recvonly` + remote track/msid)
+  — yani browser video lene ke liye tayyar hai; engine bas **bhejta hi nahi**.
+- Engine ke log mein `outbound_video_ssrc=0` — video ka koi valid outbound SSRC
+  (`a=ssrc`) bind nahi hua, is liye pump ke `write_rtp` ka koi binding nahi aur
+  RTP bahar jata hi nahi (counter phir bhi barhta rehta hai).
+- Viewer (`whep.ts`) **bilkul theek** hai — offer mein dono transceivers theek
+  hain; na TURN/ICE ka masla hai, na ingest ka (H264 track up + ~846 kbps).
+- **Asal masla engine ke WHEP answer / sender binding mein tha**
+  (`whep_peer.rs`): `add_track` offer ki maujooda video transceiver ke bajaye
+  nayi transceiver bana deta tha.
+- **Fix (deployed + verified):** local tracks ab offer apply karne se **pehle**
+  banaa jate hain (`6799dabd`), is liye answer wahi sender bind karta hai jo
+  hamara track rakhta hai. **Video Todd Studio tile par chal gayi** — 18 din baad
+  masla hal.
