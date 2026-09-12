@@ -44,47 +44,58 @@ export class ApiError extends Error {
   }
 }
 
+/** Hard ceiling on every engine call so a stalled connection can never
+ * leave the director UI (e.g. the TAKE button) stuck in a pending state. */
+const REQUEST_TIMEOUT_MS = 15_000;
+
 async function request<T>(
   path: string,
   init: RequestInit & { token?: string | null },
 ): Promise<T> {
-  const buildInit = (token: string | null) => {
-    const headers = new Headers(init.headers);
-    // The SSO JWT is read from the auth store at call time — never from a
-    // build-time env var.
-    if (token) headers.set("Authorization", `Bearer ${token}`);
-    return { ...init, headers };
-  };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  const send = () =>
-    fetch(`${env.apiBaseUrl}${path}`, buildInit(init.token || getToken()));
+  try {
+    const buildInit = (token: string | null) => {
+      const headers = new Headers(init.headers);
+      // The SSO JWT is read from the auth store at call time — never from a
+      // build-time env var.
+      if (token) headers.set("Authorization", `Bearer ${token}`);
+      return { ...init, headers, signal: controller.signal };
+    };
 
-  let res = await send();
+    const send = () =>
+      fetch(`${env.apiBaseUrl}${path}`, buildInit(init.token || getToken()));
 
-  // 401 = the 15-min SSO JWT expired. Refresh it silently and retry the
-  // exact request once; only drop the session when the refresh itself is
-  // rejected (revoked account / misaligned secret).
-  if (res.status === 401 && init.token !== null) {
-    const fresh = await refreshToken();
-    if (fresh) {
-      res = await send();
-    } else {
-      clearToken();
+    let res = await send();
+
+    // 401 = the 15-min SSO JWT expired. Refresh it silently and retry the
+    // exact request once; only drop the session when the refresh itself is
+    // rejected (revoked account / misaligned secret).
+    if (res.status === 401 && init.token !== null) {
+      const fresh = await refreshToken();
+      if (fresh) {
+        res = await send();
+      } else {
+        clearToken();
+      }
     }
-  }
 
-  if (!res.ok) {
-    let message = res.statusText;
-    try {
-      const body = (await res.json()) as { error?: string };
-      if (body.error) message = body.error;
-    } catch {
-      // non-JSON error body
+    if (!res.ok) {
+      let message = res.statusText;
+      try {
+        const body = (await res.json()) as { error?: string };
+        if (body.error) message = body.error;
+      } catch {
+        // non-JSON error body
+      }
+      throw new ApiError(res.status, message);
     }
-    throw new ApiError(res.status, message);
+    if (res.status === 204) return undefined as T;
+    return (await res.json()) as T;
+  } finally {
+    clearTimeout(timer);
   }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
 }
 
 export const api = {

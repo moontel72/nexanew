@@ -213,7 +213,11 @@ class StreamController extends Controller
                 return;
             }
 
-            $roomId = $rooms[0]['id'];
+            // Prefer the room that actually has a program (PGM) source set.
+            // The Studio director may operate any room, so attaching the
+            // forwarder to an arbitrary first entry would target the wrong
+            // mixer (or one that does not exist yet).
+            $roomId = $this->roomWithProgram($engineUrl, $token, $rooms) ?? $rooms[0]['id'];
 
             // Build the full RTMP URL: ingest base + /{stream_key}
             $rtmpBase = $stream->rtmp_ingest_url
@@ -263,6 +267,37 @@ class StreamController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Returns the id of the first room with a program (PGM) source set, or
+     * null when no room is on air. Keeps the forwarder bound to the Studio's
+     * active room instead of an arbitrary entry in the room list.
+     *
+     * @param  array<int, array<string, mixed>>  $rooms
+     */
+    private function roomWithProgram(string $engineUrl, string $token, array $rooms): ?string
+    {
+        foreach ($rooms as $room) {
+            $id = $room['id'] ?? null;
+            if (!is_string($id) || $id === '') {
+                continue;
+            }
+
+            try {
+                $res = Http::timeout(2)
+                    ->withToken($token)
+                    ->get("{$engineUrl}/api/v1/program/" . urlencode($id));
+
+                if ($res->successful()) {
+                    return $id;
+                }
+            } catch (\Throwable $e) {
+                // Probe failures are non-critical — try the next room.
+            }
+        }
+
+        return null;
     }
 
     /**
