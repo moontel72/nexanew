@@ -45,6 +45,7 @@
 
     // --- Laravel / PHP ---
     "**/vendor",
+    "**/storage",
     "**/bootstrap/cache",
     "**/public/build",
     "**/public/hot",
@@ -93,7 +94,9 @@
     "**/*.iml",
 
     // --- Logs, caches, runtime noise ---
+    "**/*.log",
     "**/*.log.*",
+    "**/logs",
     "**/.cache",
     "**/*.pid",
     "**/*.swp",
@@ -112,6 +115,7 @@
 
     // --- Lockfiles (bhaari: composer.lock ~300KB, package-lock ~130KB) ---
     "**/pubspec.lock",
+    "**/composer.lock",
     "**/Cargo.lock",
     "**/package-lock.json",
     "**/yarn.lock",
@@ -164,18 +168,12 @@
     "**/*.keystore",
     "**/service-account*.json",
 
-    // --- IDE / tooling metadata (`.zed` aur `.vscode/settings.json` chhod
-    //     dein: wo meaningful shared config hain, generated nahi) ---
+    // --- IDE / tooling metadata ---
+    // (`.zed/` aur `.vscode/settings.json` jaan boojh kar exclude NAHIN kiye —
+    //  wahan meaningful shared config rehti hai, generated nahi.)
     "**/.idea",
     "**/.trae",
     "**/.composer",
     "**/.aider*"
-    "**/composer.lock",
-    "**/storage",
-    "**/logs",
-    "**/*.log",
-    "**/.aider*"
-  ],
-  "file_scan_inclusions": [
   ]
 }
