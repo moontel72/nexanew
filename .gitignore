@@ -50,3 +50,4 @@ analysis_output.txt
 
 # Zed agent escape-hatch transient state (see AGENTS.md)
 .zed/agent-scan-overrides.json
+.zed/.settings.agent-backup.json

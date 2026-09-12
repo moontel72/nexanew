@@ -30,6 +30,9 @@ const ROOT = process.cwd();
 const SETTINGS = path.join(ROOT, ".zed", "settings.json");
 const ZED_IGNORE = path.join(ROOT, ".zedignore");
 const STATE = path.join(ROOT, ".zed", "agent-scan-overrides.json");
+// Allow se pehle ki pristine settings — revoke isi ko verbatim restore karta hai
+// taake file byte-for-byte waisi hi rahe (ordering/line-endings tak).
+const BACKUP = path.join(ROOT, ".zed", ".settings.agent-backup.json");
 const WALK_SKIP = new Set([".git"]);
 const WALK_BUDGET = 400_000;
 
@@ -118,7 +121,11 @@ function readSettings() {
 function writeSettings(text) {
   // Trailing comma normalize (JSONC me allowed, magar saaf rakhte hain).
   const cleaned = text.replace(/,(\s*)\]/g, "$1]").replace(/,(\s*)}/g, "$1}");
-  fs.writeFileSync(SETTINGS, cleaned, "utf8");
+  // File ki line endings preserve karo. Windows par `core.autocrlf=true` hota
+  // hai: worktree CRLF rakhta hai, blob LF. Agar hum LF likh dein to git file
+  // ko modified dikhata hai (halanki content wahi hota hai).
+  const crlf = fs.readFileSync(SETTINGS, "utf8").includes("\r\n");
+  fs.writeFileSync(SETTINGS, crlf ? cleaned.replace(/\r?\n/g, "\r\n") : cleaned, "utf8");
 }
 
 /** Ek array element (string) hatao — poori line samet, comments safe. */
@@ -316,6 +323,9 @@ function cmdAllow(target, yes) {
     return;
   }
 
+  // Pristine settings ka backup (revoke ke liye) — sirf pehli baar.
+  if (!fs.existsSync(BACKUP)) fs.copyFileSync(SETTINGS, BACKUP);
+
   let text = readSettings();
   // 1) Matching exclusion globs ki lines hata do (comments preserve karte hue).
   for (const glob of hits) {
@@ -347,30 +357,22 @@ function cmdAllow(target, yes) {
 
 function cmdRevoke() {
   const s = state();
-  if (!s.overrides.length) {
+  if (!s.overrides.length && !fs.existsSync(BACKUP)) {
     console.log("Koi active override nahi — strict mode bereits on hai.");
     return;
   }
 
-  let text = readSettings();
   const removed = new Set();
-  const added = new Set();
   for (const o of s.overrides) {
     (o.removedExclusions ?? []).forEach((g) => removed.add(g));
-    (o.addedInclusions ?? []).forEach((g) => added.add(g));
   }
 
-  // 1) Added inclusions hata do.
-  for (const glob of added) {
-    text = removeArrayElement(text, "file_scan_inclusions", glob);
+  // Pristine backup verbatim restore karo (allow se pehle jaisi file thi).
+  if (fs.existsSync(BACKUP)) {
+    fs.copyFileSync(BACKUP, SETTINGS);
+    fs.unlinkSync(BACKUP);
   }
 
-  // 2) Removed exclusions wapas daal do.
-  for (const glob of removed) {
-    text = ensureArrayElement(text, "file_scan_exclusions", glob, null);
-  }
-
-  writeSettings(text);
   if (fs.existsSync(STATE)) fs.unlinkSync(STATE);
   console.log(`✅ Strict mode wapas. Restore kiye: ${[...removed].join(", ") || "(kuch nahi)"}`);
 }
