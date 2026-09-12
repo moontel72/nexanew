@@ -101,6 +101,24 @@ nahi karta; un par asar IDE-level settings ka hota hai.
 Qoder/VS Code agents ke liye koi `allow`/`revoke` CLI nahi hai: zaroorat par user
 se ijaazat le kar **sirf wahi specific file** kholein (poori directory nahi).
 
+## Pre-commit safety net (JSON config)
+
+`.githooks/pre-commit` commit se pehle JSON/JSONC config files validate karta hai
+(`.zed/settings.json`, `.vscode/settings.json`, `backend/composer.json`, staged
+`*.json`, ...). Broken JSON par commit **block** ho jata hai — warna woh silent
+failure hoti hai jisme Zed apni saari exclusions bhool jata hai.
+
+Har clone me ek baar enable karein:
+
+```sh
+node .githooks/validate-json-config.mjs --install   # git config core.hooksPath .githooks
+```
+
+- Manual check: `node .githooks/validate-json-config.mjs`
+- Ek specific file: `node .githooks/validate-json-config.mjs .zed/settings.json`
+- Emergency bypass (avoid): `git commit --no-verify`
+- Linux/macOS par agar hook na chale: `chmod +x .githooks/pre-commit`
+
 ## Doosri ahem baatein
 
 - Deploy GitHub Actions se hota hai (`.github/workflows/`), push par

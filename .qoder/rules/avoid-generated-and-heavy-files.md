@@ -46,6 +46,41 @@ Token/context spent on generated output is wasted and it buries the real source.
 Errors inside generated files are fixed in their source, never in the generated
 file itself (`*.freezed.dart` → its `*.dart` source, `*.g.dart` → the model).
 
+## NEVER modify the Zed ignore configuration
+
+These two files belong to the **Zed** agent's ignore system:
+
+- `.zedignore`
+- `.zed/settings.json`
+
+**Do not edit, rewrite, reformat, reorder, "clean up", or add/remove entries in
+them — ever. Leave them completely untouched.**
+
+Reasons:
+
+- They are hand-structured **JSONC** (comments allowed). Automated edits
+  frequently drop a comma or relocate entries, which makes the whole file
+  invalid.
+- When `.zed/settings.json` is invalid, Zed silently ignores **all**
+  exclusions — generated code, logs, build output, lockfiles and secrets all
+  become readable and searchable again. That is the exact opposite of this
+  rule, and it fails **silently**.
+- They are not agent scratch space; they are the enforcement layer for every
+  other rule in this file.
+
+If an exclusion genuinely needs to change:
+
+1. Tell the user **what** you would add or remove and **why**.
+2. Let the user apply it, or use the documented escape hatch
+   (`node .scripts/agent-ignored-files.mjs allow <path> --yes` → then `revoke`).
+3. Never write to these files yourself.
+
+Apply the same "propose, do not rewrite" discipline to `.vscode/settings.json`
+and the repository root `AGENTS.md`.
+
+A pre-commit hook (`.githooks/pre-commit`) validates these JSON config files and
+blocks a commit if any of them is broken — do not try to bypass it.
+
 ## Project notes
 
 - The same policy is enforced for the Zed agent via `.zedignore` +

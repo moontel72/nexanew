@@ -1,0 +1,30 @@
+#!/bin/sh
+# ============================================================================
+# NexaTrace pre-commit hook — JSON config safety net.
+#
+# Blocks a commit when a JSON / JSONC config file (e.g. `.zed/settings.json`,
+# `.vscode/settings.json`) has broken syntax. Broken config parses fail
+# SILENTLY in tooling (Zed simply drops all its exclusions), so such a file
+# must never reach the repository.
+#
+# Install (once per clone):
+#     node .githooks/validate-json-config.mjs --install
+# Manual run:
+#     sh .githooks/pre-commit
+# Emergency bypass (avoid):
+#     git commit --no-verify
+# ============================================================================
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: node nahi mila — JSON config validation SKIPPED" >&2
+  exit 0
+fi
+
+if node .githooks/validate-json-config.mjs; then
+  exit 0
+fi
+
+echo "" >&2
+echo "pre-commit BLOCKED: JSON config broken hai (details upar)." >&2
+echo "Emergency bypass: git commit --no-verify" >&2
+exit 1
