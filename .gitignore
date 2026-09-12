@@ -47,3 +47,6 @@ analysis_output.txt
 .DS_Store
 
 .aider*
+
+# Zed agent escape-hatch transient state (see AGENTS.md)
+.zed/agent-scan-overrides.json

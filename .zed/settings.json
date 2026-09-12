@@ -1,0 +1,180 @@
+{
+  // ==========================================================================
+  // Project-local Zed settings (JSONC — comments allowed).
+  //
+  // Maqsad: project file scan (project panel + agent search/read) ko sirf
+  // hand-written source par focus rakhna. Generated code, caches, logs,
+  // lockfiles, vendored deps, build folders aur bhaari binaries skip ho jayein
+  // taake agent ke context/tokens zaya na hon.
+  //
+  // AHEM: `file_scan_exclusions` sirf search ko nahi rokti — Zed aisi files ko
+  // DIRECT READ se bhi rok deta hai. Agar kisi ignored file ko error-fix ya
+  // deploy ke liye kholna ho to escape hatch use karein:
+  //
+  //   node .scripts/agent-ignored-files.mjs find <naam>        # hidden file dhoondo
+  //   node .scripts/agent-ignored-files.mjs explain <path>     # kaunsi rule chhupa rahi hai
+  //   node .scripts/agent-ignored-files.mjs allow <path> --yes # USER ki ijaazat ke BAAD
+  //   node .scripts/agent-ignored-files.mjs revoke             # strict mode wapas
+  //
+  // (Tafseel + laazmi protocol: AGENTS.md — "Ignored files" section.)
+  //
+  // NOTE: pehli entry `...` Zed ke inherited defaults (git, svn, DS_Store, ...)
+  // ko barqarar rakhti hai — ise hataana nahi.
+  // ==========================================================================
+  "file_scan_exclusions": [
+    "...",
+
+    // --- Flutter / Dart: build output + generated code ---
+    "**/.dart_tool",
+    "**/build",
+    "**/coverage",
+    "**/.packages",
+    "**/.flutter-plugins",
+    "**/.flutter-plugins-dependencies",
+    "**/flutter/ephemeral",
+    "**/macos/Flutter/ephemeral",
+    "**/Generated.xcconfig",
+    "**/flutter_export_environment.sh",
+    "**/generated_plugin_registrant.dart",
+    "**/*.g.dart",
+    "**/*.freezed.dart",
+    "**/*.mocks.dart",
+    "**/*.gr.dart",
+    "**/*.gen.dart",
+    "**/*.drift.dart",
+
+    // --- Laravel / PHP ---
+    "**/vendor",
+    "**/bootstrap/cache",
+    "**/public/build",
+    "**/public/hot",
+    "**/.phpunit.result.cache",
+    "**/.phpunit.cache",
+    "**/.phpactor.json",
+    "**/.php-cs-fixer.cache",
+    "**/Homestead.json",
+    "**/Homestead.yaml",
+    "**/auth.json",
+    "**/_ide_helper.php",
+    "**/_ide_helper_models.php",
+
+    // --- Rust ---
+    "**/target",
+    "**/target_check",
+    "**/*.rs.bk",
+    "**/meta.json",
+
+    // --- Node / JS / TS bundler output (TypeScript source `.ts` safe hai) ---
+    "**/node_modules",
+    "**/dist",
+    "**/*.min.js",
+    "**/*.min.css",
+    "**/*.js.map",
+    "**/*.css.map",
+    "**/*.tsbuildinfo",
+    "**/.npm",
+    "**/.yarn",
+    "**/.pnp.*",
+
+    // --- Android / iOS / desktop toolchains ---
+    "**/.gradle",
+    "**/local.properties",
+    "**/.cxx",
+    "**/*.apk",
+    "**/*.aab",
+    "**/*.dex",
+    "**/*.class",
+    "**/*.hprof",
+    "**/Pods",
+    "**/Podfile.lock",
+    "**/DerivedData",
+    "**/xcuserdata",
+    "**/*.xcuserstate",
+    "**/*.iml",
+
+    // --- Logs, caches, runtime noise ---
+    "**/*.log.*",
+    "**/.cache",
+    "**/*.pid",
+    "**/*.swp",
+    "**/*.swo",
+    "**/*.bak",
+    "**/*.orig",
+    "**/*.rej",
+    "**/*.tmp",
+    "**/*.temp",
+    "**/__pycache__",
+    "**/*.pyc",
+    "**/.pytest_cache",
+    "**/.nyc_output",
+    "**/lcov.info",
+    "**/analysis_output.txt",
+
+    // --- Lockfiles (bhaari: composer.lock ~300KB, package-lock ~130KB) ---
+    "**/pubspec.lock",
+    "**/Cargo.lock",
+    "**/package-lock.json",
+    "**/yarn.lock",
+    "**/pnpm-lock.yaml",
+    "**/Gemfile.lock",
+    "**/gradle.lockfile",
+
+    // --- Packaged artifacts / binaries / media (sab se bhaari) ---
+    "**/desktop-download",
+    "**/qoder-evidence",
+    "**/qoder-evidence2",
+    "**/*.tar",
+    "**/*.tar.gz",
+    "**/*.tgz",
+    "**/*.zip",
+    "**/*.7z",
+    "**/*.rar",
+    "**/*.gz",
+    "**/*.exe",
+    "**/*.msi",
+    "**/*.dmg",
+    "**/*.AppImage",
+    "**/*.deb",
+    "**/*.rpm",
+    "**/*.ipa",
+    "**/*.so",
+    "**/*.dylib",
+    "**/*.dll",
+    "**/*.rlib",
+    "**/*.lib",
+    "**/*.a",
+    "**/*.o",
+    "**/*.obj",
+    "**/*.pdb",
+    "**/*.rmeta",
+    "**/*.mp4",
+    "**/*.mkv",
+    "**/*.mov",
+    "**/*.avi",
+    "**/*.webm",
+    "**/*.flv",
+    "**/*.hls",
+    "**/*.m3u8",
+
+    // --- Secrets / credentials (tokens/keys leak na hon) ---
+    "**/.env",
+    "**/.env.*",
+    "**/*.p12",
+    "**/*.jks",
+    "**/*.keystore",
+    "**/service-account*.json",
+
+    // --- IDE / tooling metadata (`.zed` chhod dein: settings wahin hain) ---
+    "**/.idea",
+    "**/.vscode",
+    "**/.trae",
+    "**/.composer",
+    "**/composer.lock",
+    "**/storage",
+    "**/logs",
+    "**/*.log",
+    "**/.aider*"
+  ],
+  "file_scan_inclusions": [
+  ]
+}

@@ -1,0 +1,220 @@
+# ============================================================================
+# .zedignore — Zed project ignore (`.gitignore` syntax, NOT git-tracked)
+#
+# Maqsad: agent sirf hand-written source + error-related files par focus kare.
+# Generated code, caches, logs, lockfiles, vendored deps, build folders aur
+# bhaari binaries yahan se hide hain, taake wo context/tokens na khayen.
+#
+# Ye file git ko affect nahi karti — sirf Zed ke project panel / search /
+# agent context ko filter karti hai. Source code ko ignore NA karein.
+#
+# Zaroorat par: agar kisi ignored file ko parhna ho to us path ko yahan se
+# comment-out karein ya `!path/file` se wapas include karein.
+# ============================================================================
+
+# ────────────────────────────────────────────────────────────────────────────
+# Flutter / Dart
+# ────────────────────────────────────────────────────────────────────────────
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+coverage/
+
+# Flutter desktop/web generated toolchains
+**/flutter/ephemeral/
+linux/flutter/
+windows/flutter/
+macos/Flutter/ephemeral/
+**/Generated.xcconfig
+**/flutter_export_environment.sh
+**/generated_plugin_registrant.dart
+
+# Generated Dart (json_serializable / freezed / mockito / retrofit / drift)
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+*.gr.dart
+*.gen.dart
+*.drift.dart
+**/lib/generated/
+
+# ────────────────────────────────────────────────────────────────────────────
+# Laravel / PHP
+# ────────────────────────────────────────────────────────────────────────────
+vendor/
+**/vendor/
+storage/
+backend/storage/
+backend/bootstrap/cache/
+backend/public/build/
+backend/public/hot/
+backend/public/storage
+.phpunit.result.cache
+**/.phpunit.result.cache
+.phpunit.cache/
+.phpactor.json
+auth.json
+Homestead.json
+Homestead.yaml
+.php-cs-fixer.cache
+_ide_helper.php
+_ide_helper_models.php
+
+# ────────────────────────────────────────────────────────────────────────────
+# Rust
+# ────────────────────────────────────────────────────────────────────────────
+target/
+**/target/
+target_check/
+**/target_check/
+*.rs.bk
+media-engine/meta.json
+
+# ────────────────────────────────────────────────────────────────────────────
+# Node / JS / TS bundler output
+# (NOTE: `*.ts` is intentionally NOT ignored — woh TypeScript source hai)
+# ────────────────────────────────────────────────────────────────────────────
+node_modules/
+**/node_modules/
+dist/
+public/build/
+public/hot/
+*.min.js
+*.min.css
+*.js.map
+*.css.map
+*.tsbuildinfo
+.npm/
+.yarn/
+.pnp.*
+
+# ────────────────────────────────────────────────────────────────────────────
+# Android / iOS / desktop toolchains
+# ────────────────────────────────────────────────────────────────────────────
+.gradle/
+**/.gradle/
+**/local.properties
+.cxx/
+*.apk
+*.aab
+*.dex
+*.class
+*.hprof
+Pods/
+**/Pods/
+Podfile.lock
+DerivedData/
+**/DerivedData/
+*.xcuserstate
+**/xcuserdata/
+*.iml
+
+# ────────────────────────────────────────────────────────────────────────────
+# Logs, caches, runtime noise
+# ────────────────────────────────────────────────────────────────────────────
+*.log
+*.log.*
+logs/
+**/logs/
+.cache/
+**/.cache/
+*.pid
+*.swp
+*.swo
+*.bak
+*.orig
+*.rej
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc
+.pytest_cache/
+.nyc_output/
+lcov.info
+analysis_output.txt
+
+# ────────────────────────────────────────────────────────────────────────────
+# Lockfiles — bhaari (composer.lock 300KB+, package-lock 130KB+).
+# Zaroorat par locally regenerate ho jate hain.
+# ────────────────────────────────────────────────────────────────────────────
+pubspec.lock
+composer.lock
+Cargo.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+Gemfile.lock
+gradle.lockfile
+
+# ────────────────────────────────────────────────────────────────────────────
+# Packaged artifacts, binaries, media — sab se bhaari
+# ────────────────────────────────────────────────────────────────────────────
+desktop-download/
+qoder-evidence/
+qoder-evidence2/
+qoder-evidence*/
+
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+*.rar
+*.gz
+
+*.exe
+*.msi
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+*.ipa
+*.aab
+
+*.so
+*.dylib
+*.dll
+*.rlib
+*.lib
+*.a
+*.o
+*.obj
+*.pdb
+*.rmeta
+
+*.mp4
+*.mkv
+*.mov
+*.avi
+*.webm
+*.flv
+*.hls
+*.m3u8
+
+# ────────────────────────────────────────────────────────────────────────────
+# Secrets / credentials (heavy nahi, magar leak-proof rakhne ke liye)
+# ────────────────────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+!.env.desktop
+*.p12
+*.jks
+*.keystore
+service-account*.json
+
+# ────────────────────────────────────────────────────────────────────────────
+# IDE / editor / tooling metadata
+# (NOTE: `.zed/` jaan boojh kar ignore NAHIN kiya — wahan project settings
+#  rehti hain jinhein aap ko dekhna/edit karna hai.)
+# ────────────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+.trae/
+.composer/
+.aider*
+*.iml
