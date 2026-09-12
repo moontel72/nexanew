@@ -1,0 +1,96 @@
+{
+  // ==========================================================================
+  // Shared IDE exclusions — Qoder / VS Code-based agents + humans.
+  //
+  // `.gitignore` already hides UNTRACKED heavy output (build/, .dart_tool/,
+  // *.log, ...). Ye file un TRACKED files ke liye hai jinhe .gitignore hide
+  // nahi kar sakta — jaise `pubspec.lock` aur
+  // `linux|windows/flutter/generated_*`.
+  //
+  // NOTE: yahan VS Code glob patterns chalti hain (`.gitignore` syntax nahi).
+  //
+  // Qoder agent ke liye rule: `.qoder/rules/avoid-generated-and-heavy-files.md`
+  // ==========================================================================
+
+  "search.exclude": {
+    // Flutter / Dart build output + generated code
+    "**/.dart_tool": true,
+    "**/build": true,
+    "**/coverage": true,
+    "**/linux/flutter/ephemeral": true,
+    "**/windows/flutter/ephemeral": true,
+    "**/generated_plugin_registrant.*": true,
+    "**/generated_plugins.cmake": true,
+    "**/*.g.dart": true,
+    "**/*.freezed.dart": true,
+    "**/*.mocks.dart": true,
+    "**/*.gr.dart": true,
+    "**/*.gen.dart": true,
+
+    // Lockfiles (very large, no signal for source work)
+    "**/pubspec.lock": true,
+    "**/composer.lock": true,
+    "**/Cargo.lock": true,
+    "**/package-lock.json": true,
+    "**/yarn.lock": true,
+    "**/pnpm-lock.yaml": true,
+
+    // Logs, vendored deps, build/target dirs
+    "**/*.log": true,
+    "**/logs": true,
+    "**/backend/storage": true,
+    "**/backend/vendor": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/target": true,
+    "**/target_check": true,
+    "**/.gradle": true,
+
+    // Binaries / archives / media
+    "**/*.tar.gz": true,
+    "**/*.zip": true,
+    "**/*.apk": true,
+    "**/*.aab": true,
+    "**/*.ipa": true,
+    "**/*.exe": true,
+    "**/*.so": true,
+    "**/*.dll": true,
+    "**/*.rlib": true,
+    "**/*.mp4": true,
+    "**/*.mkv": true,
+    "**/*.m3u8": true,
+
+    // Operator-collected debug evidence
+    "**/qoder-evidence*": true
+  },
+
+  // Project panel / explorer: sirf sab se bhaari folders (tree navigable rahe;
+  // broad filtering `search.exclude` karta hai).
+  "files.exclude": {
+    "**/.dart_tool": true,
+    "**/build": true,
+    "**/.gradle": true,
+    "**/node_modules": true,
+    "**/target": true,
+    "**/target_check": true,
+    "**/dist": true,
+    "**/qoder-evidence*": true
+  },
+
+  // Huge trees ko watch na karein (CPU/RAM bachega, watcher limits se bachein).
+  "files.watcherExclude": {
+    "**/.dart_tool/**": true,
+    "**/build/**": true,
+    "**/.gradle/**": true,
+    "**/node_modules/**": true,
+    "**/target/**": true,
+    "**/target_check/**": true,
+    "**/dist/**": true,
+    "**/backend/vendor/**": true,
+    "**/backend/storage/**": true,
+    "**/qoder-evidence*/**": true
+  },
+
+  // Search gitignored files ko skip kare (default true — explicit rakha gaya).
+  "search.useIgnoreFiles": true
+}

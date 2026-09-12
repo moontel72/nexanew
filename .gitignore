@@ -1,3 +1,4 @@
+# ── Flutter / Dart: build output + generated toolchains ────────────────────
 .dart_tool/
 .packages
 .flutter-plugins
@@ -6,10 +7,25 @@
 build/
 coverage/
 
+# Qoder / VS Code-based agents: heavy generated + build artifacts.
+# NOTE: `pubspec.lock` aur `linux|windows/flutter/` ke andar ke generated files
+# git me TRACKED hain (Flutter app ke liye zaroori) — gitignore inhe untrack
+# nahi karta. In par skip IDE-level settings se lagta hai:
+#   .vscode/settings.json  → search.exclude / files.exclude
+#   .qoder/rules/          → Qoder agent rule
+pubspec.lock
+linux/flutter/
+windows/flutter/
+backend/storage/logs/
+
+# (build/, .dart_tool/ aur *.log upar already ignore ho chuke hain.)
+
 *.log
 
 .idea/
-.vscode/
+# `.vscode/*` (poori dir ke bajaye) taake shared settings.json track ho sake.
+.vscode/*
+!.vscode/settings.json
 
 **/.env
 **/.env.*

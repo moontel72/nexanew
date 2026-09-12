@@ -207,13 +207,12 @@ qoder-evidence*/
 *.keystore
 service-account*.json
 
-# ────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────
 # IDE / editor / tooling metadata
-# (NOTE: `.zed/` jaan boojh kar ignore NAHIN kiya — wahan project settings
-#  rehti hain jinhein aap ko dekhna/edit karna hai.)
-# ────────────────────────────────────────────────────────────────────────────
+# (NOTE: `.zed/` aur `.vscode/settings.json` jaan boojh kar ignore NAHIN kiye —
+#  wahan meaningful project settings rehti hain.)
+# ────────────────────────────────────────────────────────────────────
 .idea/
-.vscode/
 .trae/
 .composer/
 .aider*

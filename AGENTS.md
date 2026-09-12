@@ -82,6 +82,25 @@ Agar deploy debug karte waqt in me se koi file parhni ya compare karni ho,
 to upar wala hi protocol use karein — file ko repo me "wapas" laane ki
 zaroorat nahi.
 
+## Qoder / VS Code-based agents
+
+Teeno mechanisms ek hi policy enforce karte hain (generated/build/log files
+bina ijaazat na kholi jayein):
+
+| Tool | Mechanism | Kya chhupata hai |
+|---|---|---|
+| **Qoder IDE** | `.qoder/rules/avoid-generated-and-heavy-files.md` | Qoder rule (Always Apply). Qoder root `AGENTS.md` bhi khud padhta hai; conflict par `.qoder/rules/` jeetta hai. |
+| **VS Code / Qoder search** | `.vscode/settings.json` (`search.exclude`, `files.exclude`, `files.watcherExclude`) | Un **tracked** files ko bhi — jaise `pubspec.lock`, `linux\|windows/flutter/generated_*` — jinhe `.gitignore` nahi chhupa sakta. |
+| **Zed** | `.zedignore` + `.zed/settings.json` | Scan + search + direct read (permission-based `allow`/`revoke` escape hatch upar documented hai). |
+
+`.gitignore` mein bhi ye paths add kiye gaye hain, magar note karein:
+`pubspec.lock` aur `linux|windows/flutter/` ke andar ke generated files git me
+**tracked** hain (Flutter app ke liye zaroori) — is liye gitignore unhe untrack
+nahi karta; un par asar IDE-level settings ka hota hai.
+
+Qoder/VS Code agents ke liye koi `allow`/`revoke` CLI nahi hai: zaroorat par user
+se ijaazat le kar **sirf wahi specific file** kholein (poori directory nahi).
+
 ## Doosri ahem baatein
 
 - Deploy GitHub Actions se hota hai (`.github/workflows/`), push par

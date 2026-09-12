@@ -164,11 +164,12 @@
     "**/*.keystore",
     "**/service-account*.json",
 
-    // --- IDE / tooling metadata (`.zed` chhod dein: settings wahin hain) ---
+    // --- IDE / tooling metadata (`.zed` aur `.vscode/settings.json` chhod
+    //     dein: wo meaningful shared config hain, generated nahi) ---
     "**/.idea",
-    "**/.vscode",
     "**/.trae",
     "**/.composer",
+    "**/.aider*"
     "**/composer.lock",
     "**/storage",
     "**/logs",
