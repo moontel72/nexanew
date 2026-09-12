@@ -5,12 +5,17 @@
 // state/API contract as before: debounced PUT to
 // `POST /api/v1/program/overlay`, control-feed hydration, and Phase 4
 // persistence.
+//
+// AUTO-SYNC MODE: when enabled, reads the live ball-by-ball score from
+// the engine's cricket sync feed and pushes it as the overlay without
+// the director having to type anything.
 
 import { useEffect, useRef, useState } from "react";
 import { useDirector } from "../lib/director/directorService";
 import { useControlState } from "../hooks/useControlState";
 import { getToken } from "../lib/auth/authStore";
 import { api } from "../lib/api/client";
+import type { BallByBallStateDto } from "../lib/api/types";
 import {
   loadPersistedState,
   savePersistedState,
@@ -27,6 +32,7 @@ export function ScoreboardControl() {
   const [title, setTitle] = useState(persisted.scoreboard.title);
   const [subtitle, setSubtitle] = useState(persisted.scoreboard.subtitle);
   const [scoreboardOn, setScoreboardOn] = useState(persisted.scoreboard.enabled);
+  const [autoSync, setAutoSync] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hydratedRef = useRef(false);
@@ -90,6 +96,30 @@ export function ScoreboardControl() {
     }, 400);
   };
 
+  // ─── Auto-sync: push live cricket score as overlay ─────────────
+  const activeMatchId = control.cricket?.active_match_id ?? null;
+  const liveScore: BallByBallStateDto | null =
+    activeMatchId ? (control.scores[activeMatchId] ?? null) : null;
+  const lastSyncedRef = useRef(0);
+
+  useEffect(() => {
+    if (!autoSync || !scoreboardOn || !liveScore || !activeRoomId || !getToken()) return;
+    // Avoid redundant pushes when the score hasn't changed.
+    if (liveScore.updated_at_ms <= lastSyncedRef.current) return;
+    lastSyncedRef.current = liveScore.updated_at_ms;
+
+    const autoTitle = `${liveScore.batting_team} ${liveScore.runs}/${liveScore.wickets} — ${liveScore.overs.toFixed(1)} ov`;
+    const autoSubtitle = `${liveScore.batter_on_strike}* · ${liveScore.bowler}`;
+    setTitle(autoTitle);
+    setSubtitle(autoSubtitle);
+
+    if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
+    pushTimerRef.current = setTimeout(() => {
+      void send(true, autoTitle, autoSubtitle);
+    }, 400);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSync, scoreboardOn, liveScore?.updated_at_ms, activeRoomId]);
+
   return (
     <section className="flex flex-col gap-2 rounded-md border border-border bg-muted/40 p-3">
       <header className="flex items-center justify-between text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -105,6 +135,14 @@ export function ScoreboardControl() {
           type="checkbox"
           checked={scoreboardOn}
           onChange={(event) => scheduleScoreboard(event.target.checked, title, subtitle)}
+        />
+      </label>
+      <label className="flex items-center justify-between text-xs">
+        Auto-sync (live score)
+        <input
+          type="checkbox"
+          checked={autoSync}
+          onChange={(event) => setAutoSync(event.target.checked)}
         />
       </label>
       {scoreboardOn && (

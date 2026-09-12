@@ -113,6 +113,8 @@ class PublicMatchController extends Controller
 
     /**
      * Get all matches for a tournament (schedule view).
+     * Explicitly maps team relations so the public Flutter app receives
+     * team names + short codes instead of raw FK ids.
      */
     public function allMatches(Request $request): \Illuminate\Http\JsonResponse
     {
@@ -123,10 +125,35 @@ class PublicMatchController extends Controller
             $tournamentId = $active?->id;
         }
 
-        $matches = MatchModel::with(['teamA:id,name,short_code,logo_url', 'teamB:id,name,short_code,logo_url'])
+        $matches = MatchModel::with(['teamA:id,name,short_code,logo_url', 'teamB:id,name,short_code,logo_url', 'ground:id,name,location'])
             ->where('tournament_id', $tournamentId)
             ->orderBy('scheduled_at')
-            ->get();
+            ->get()
+            ->map(function ($match) {
+                $cached = LiveScoreService::getCachedScore($match->id);
+
+                return [
+                    'id' => $match->id,
+                    'status' => $match->status,
+                    'team_a' => $match->teamA?->name,
+                    'team_b' => $match->teamB?->name,
+                    'team_a_short' => $match->teamA?->short_code,
+                    'team_b_short' => $match->teamB?->short_code,
+                    'team_a_id' => $match->team_a_id,
+                    'team_b_id' => $match->team_b_id,
+                    'venue' => $match->venue,
+                    'match_type' => $match->match_type,
+                    'overs_per_side' => $match->overs_per_side,
+                    'scheduled_at' => $match->scheduled_at?->toIso8601String(),
+                    'stage' => $match->stage,
+                    'ground_id' => $match->ground_id,
+                    'ground' => $match->ground ? [
+                        'name' => $match->ground->name,
+                        'location' => $match->ground->location,
+                    ] : null,
+                    'live_score' => $cached ?? $match->liveScore?->full_snapshot,
+                ];
+            });
 
         return response()->json(['matches' => $matches]);
     }

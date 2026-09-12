@@ -68,7 +68,7 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
       backgroundColor: CricketColors.background,
       appBar: AppBar(
         title: Text(
-          '${widget.match.teamAShort ?? 'T1'} vs ${widget.match.teamBShort ?? 'T2'}',
+          '${widget.match.teamAShort ?? widget.match.teamAName ?? 'T1'} vs ${widget.match.teamBShort ?? widget.match.teamBName ?? 'T2'}',
           style: const TextStyle(fontSize: 16),
         ),
         backgroundColor: CricketColors.inputFill,

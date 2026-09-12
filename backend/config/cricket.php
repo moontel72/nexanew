@@ -27,6 +27,10 @@ return [
         // `.m3u8` suffix are appended by StreamController.
         'hls_base_url' => env('CRICKET_HLS_BASE_URL', 'https://cricket.traceodd.com/hls/live'),
 
+        // Bitrate (kbps) used by the engine's PGM→SRS RTMP forwarder.
+        // The Studio composite is re-encoded at this rate before push.
+        'forwarder_bitrate_kbps' => (int) env('CRICKET_FORWARDER_BITRATE_KBPS', 4000),
+
     ],
 
     /*
