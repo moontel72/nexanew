@@ -62,7 +62,7 @@
     "**/target",
     "**/target_check",
     "**/*.rs.bk",
-    "**/meta.json",
+    "media-engine/meta.json",
 
     // --- Node / JS / TS bundler output (TypeScript source `.ts` safe hai) ---
     "**/node_modules",
