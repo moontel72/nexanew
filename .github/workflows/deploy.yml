@@ -249,6 +249,14 @@ jobs:
             ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} \
               "if ! grep -q '^MEDIA_ENGINE_JWT_SECRET=' /var/www/traceodd/admin-panel/.env; then { printf 'MEDIA_ENGINE_JWT_SECRET='; base64 -d; printf '\n'; } >> /var/www/traceodd/admin-panel/.env; fi"
 
+      - name: Point Laravel at the media engine's listen address
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "
+            if ! grep -q '^MEDIA_ENGINE_URL=' /var/www/traceodd/admin-panel/.env; then
+              printf 'MEDIA_ENGINE_URL=http://127.0.0.1:8082\n' >> /var/www/traceodd/admin-panel/.env
+            fi
+          "
+
       - name: Smoke test API for null/type regressions
         if: always()
         run: |
