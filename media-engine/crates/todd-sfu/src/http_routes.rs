@@ -532,7 +532,29 @@ async fn program_transition(
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
 
-    let program = state.engine.set_program(&req);
+    // `set_program` builds and applies the GStreamer composite inline. If it
+    // panics, the unwinding request task drops the connection with no
+    // response: nginx logs "upstream prematurely closed connection" and the
+    // director only sees an opaque 502 with no clue what failed. Catch the
+    // panic so it becomes a real 500 plus a logged message.
+    let program = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        state.engine.set_program(&req)
+    }))
+    .map_err(|payload| {
+        let detail = payload
+            .downcast_ref::<&str>()
+            .map(|text| (*text).to_string())
+            .or_else(|| payload.downcast_ref::<String>().cloned())
+            .unwrap_or_else(|| "unknown panic".to_string());
+        tracing::error!(
+            room = %req.room_id,
+            camera = %req.camera_id,
+            panic = %detail,
+            "program transition panicked; returning 500 instead of dropping the connection"
+        );
+        AppError::Internal(format!("program transition panicked: {detail}"))
+    })?;
+
     Ok((StatusCode::OK, Json(program)))
 }
 

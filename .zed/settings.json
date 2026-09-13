@@ -21,6 +21,27 @@
   // NOTE: pehli entry `...` Zed ke inherited defaults (git, svn, DS_Store, ...)
   // ko barqarar rakhti hai — ise hataana nahi.
   // ==========================================================================
+  // Agent (LLM) output ceiling.
+  //
+  // Is machine par provider ka output cap 0 resolve ho raha hai, jis se
+  // lambe agent jawab beech jumle mein kat jate hain. `agent.model_parameters`
+  // har model request par lagta hai (aakhri match jeetta hai).
+  //
+  // NOTE: agar requests 400 dene lagein to `max_output_tokens` ki jagah
+  // `max_tokens` use karein (OpenAI-compatible APIs ke liye wahi standard
+  // field hai). Personal model config ka asli ghar USER settings hai
+  // (Zed -> Settings -> Open User Settings); yeh project-level entry sirf
+  // is repo ke liye ceiling set karti hai.
+  // ==========================================================================
+  "agent": {
+    "model_parameters": [
+      {
+        "max_output_tokens": 8192
+      }
+    ]
+  },
+
+  // ==========================================================================
   "file_scan_exclusions": [
     "...",
 

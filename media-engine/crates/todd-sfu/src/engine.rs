@@ -1376,12 +1376,17 @@ impl Engine {
                 }
             }
         }
-        let mixer = self
+        let Some(mixer) = self
             .mixers
             .get(&state.room_id)
-            .expect("mixer was just inserted")
-            .value()
-            .clone();
+            .map(|entry| entry.value().clone())
+        else {
+            tracing::error!(
+                room = %state.room_id,
+                "program mixer missing after build; keeping passthrough program egress"
+            );
+            return;
+        };
 
         let stinger_asset = state
             .stinger

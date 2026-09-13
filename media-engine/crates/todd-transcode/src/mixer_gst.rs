@@ -519,8 +519,18 @@ impl GstProgramMixer {
         &self,
         mut feeds: HashMap<AudioBus, Vec<(String, mpsc::Receiver<RtpChunk>)>>,
     ) {
-        let mut bindings = self.audio_bindings.lock().expect("audio bindings poisoned");
-        let mut tasks = self.audio_tasks.lock().expect("audio tasks poisoned");
+        // Poison-tolerant: a panic while a mixer lock was held poisons it for
+        // the rest of the process lifetime, and panicking on the poison turns
+        // every later vision switch into a dropped connection (nginx 502).
+        // The guarded state is small and rebuildable, so recover and report.
+        let mut bindings = self.audio_bindings.lock().unwrap_or_else(|poisoned| {
+            tracing::warn!("audio bindings mutex was poisoned; recovering");
+            poisoned.into_inner()
+        });
+        let mut tasks = self.audio_tasks.lock().unwrap_or_else(|poisoned| {
+            tracing::warn!("audio tasks mutex was poisoned; recovering");
+            poisoned.into_inner()
+        });
 
         for bus in AudioBus::ALL {
             let bus_name = bus.as_str().to_string();
@@ -605,12 +615,21 @@ impl GstProgramMixer {
             return;
         }
         {
-            let mut guard = self.current.lock().expect("mixer state poisoned");
+            let mut guard = self.current.lock().unwrap_or_else(|poisoned| {
+                tracing::warn!("mixer state mutex was poisoned; recovering");
+                poisoned.into_inner()
+            });
             *guard = plan.clone();
         }
 
-        let mut bindings = self.bindings.lock().expect("mixer bindings poisoned");
-        let mut slots = self.slots.lock().expect("mixer slots poisoned");
+        let mut bindings = self.bindings.lock().unwrap_or_else(|poisoned| {
+            tracing::warn!("mixer bindings mutex was poisoned; recovering");
+            poisoned.into_inner()
+        });
+        let mut slots = self.slots.lock().unwrap_or_else(|poisoned| {
+            tracing::warn!("mixer slots mutex was poisoned; recovering");
+            poisoned.into_inner()
+        });
 
         // Rebind slots: same source keeps its running task, everything
         // else is re-pointed.
@@ -747,7 +766,10 @@ impl GstProgramMixer {
     }
 
     fn push_task(&self, task: JoinHandle<()>) {
-        let mut tasks = self.tasks.lock().expect("mixer tasks poisoned");
+        let mut tasks = self.tasks.lock().unwrap_or_else(|poisoned| {
+            tracing::warn!("mixer tasks mutex was poisoned; recovering");
+            poisoned.into_inner()
+        });
         tasks.retain(|task| !task.is_finished());
         tasks.push(task);
     }

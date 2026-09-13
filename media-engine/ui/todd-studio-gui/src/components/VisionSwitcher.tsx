@@ -15,7 +15,11 @@ export function VisionSwitcher() {
     if (!feed) return "—";
     const room = rooms.find((r) => r.id === feed.roomId);
     const camera = room?.cameras.find((c) => c.id === feed.cameraId);
-    return camera?.label ?? camera?.id ?? feed.cameraId;
+    // Show the label *and* the raw id: the id is what the transition request
+    // (and the engine logs) carry, so the director can tell which physical
+    // camera a bus is really on when a label like "Cam-test" is reused.
+    if (camera?.label) return `${camera.label} (${camera.id})`;
+    return camera?.id ?? feed.cameraId;
   };
 
   return (

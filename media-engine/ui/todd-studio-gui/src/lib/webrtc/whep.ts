@@ -152,9 +152,14 @@ export async function startWhepWatch(opts: {
       pc.close();
       opts.videoEl.srcObject = null;
       if (sessionUrl) {
+        // Read the token at teardown time, not at watch time: a broadcast
+        // outlives the JWT TTL, and the 401-retry above may have swapped in
+        // a refreshed token. Reusing the captured one made the engine
+        // reject every teardown with 401 and leaked the viewer slot.
+        const closeToken = getToken() ?? token;
         fetch(sessionUrl, {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${closeToken}` },
         }).catch(() => undefined);
       }
     },
