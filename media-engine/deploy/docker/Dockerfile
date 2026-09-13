@@ -44,6 +44,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
     gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly \
     gstreamer1.0-libav \
+    # `textoverlay`/`textrender` live in the pango plugin, which Debian/
+    # Ubuntu ship inside `gstreamer1.0-x` (not plugins-base). Without it the
+    # program mixer's parse fails with `no element "textoverlay"` and PGM
+    # silently falls back to passthrough — no composite, no burn-in.
+    gstreamer1.0-x \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /src/target/release/${BIN} /usr/local/bin/todd
