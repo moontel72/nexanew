@@ -27,3 +27,28 @@ pub mod forwarder;
 pub mod ingest;
 #[cfg(feature = "gst")]
 pub mod mixer_gst;
+
+/// Initializes GStreamer exactly once for this process.
+///
+/// Until this runs, every `gst` API call panics with "GStreamer has not been
+/// initialized. Call `gst::init` first." — that panic is what took the
+/// program transition handler down: the unwinding request task dropped the
+/// connection with no response, which nginx surfaced to the director as an
+/// opaque 502 and left PGM untouched. Safe to call from any thread and from a
+/// hot path; only the first caller does any work.
+#[cfg(feature = "gst")]
+pub fn ensure_gst_initialized() {
+    use std::sync::Once;
+    static INIT: Once = Once::new();
+    INIT.call_once(|| {
+        // `init()` returns `Result` on current gst-rs builds while older ones
+        // return `()`; `let _` accepts either shape. A real failure would
+        // resurface as the "not initialized" panic at the call site.
+        let _ = gstreamer::init();
+        tracing::info!("gstreamer initialized");
+    });
+}
+
+/// No-op without the `gst` feature so callers need no cfg of their own.
+#[cfg(not(feature = "gst"))]
+pub fn ensure_gst_initialized() {}

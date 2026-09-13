@@ -157,6 +157,12 @@ impl Engine {
         let replay_buffer_ms = config.replay_buffer_ms;
         let replay_export_callback_url = config.replay_export_callback_url.clone();
 
+        // GStreamer must be initialized before any gst API is touched (the
+        // program mixer and output forwarders call into gst-rs on demand).
+        // Doing it here runs it on the startup thread, before the server
+        // starts accepting requests.
+        todd_transcode::ensure_gst_initialized();
+
         Ok(Engine {
             api_whip: Arc::new(api_whip),
             api_whep: Arc::new(api_whep),

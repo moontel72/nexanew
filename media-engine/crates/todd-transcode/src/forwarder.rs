@@ -63,6 +63,7 @@ impl GstForwarder {
         mut video_rx: mpsc::Receiver<RtpChunk>,
         audio_rx: Vec<(AudioBus, mpsc::Receiver<RtpChunk>)>,
     ) -> Result<Self, AppError> {
+        crate::ensure_gst_initialized();
         let first = video_rx.recv().await.ok_or_else(|| {
             AppError::BadRequest("no RTP received; camera is inactive".to_string())
         })?;

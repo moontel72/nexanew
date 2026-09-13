@@ -112,6 +112,7 @@ pub fn is_target_compatible(codec: &str) -> bool {
 /// GStreamer-side detection of available encoder factories.
 #[cfg(feature = "gst")]
 pub fn detect_encoders() -> Vec<EncoderKind> {
+    crate::ensure_gst_initialized();
     let mut found = Vec::new();
     for (element, kind) in [
         ("nvh264enc", EncoderKind::Nvenc),

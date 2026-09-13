@@ -175,6 +175,7 @@ impl GstProgramMixer {
         config: &MixerOutputConfig,
         on_metering: MeteringCallback,
     ) -> Result<Self, AppError> {
+        crate::ensure_gst_initialized();
         let description = build_description(config, MAX_SLOTS)?;
         let pipeline = gst::parse::launch(&description)
             .map_err(|e| AppError::Internal(format!("gst mixer parse failed: {e}")))?
