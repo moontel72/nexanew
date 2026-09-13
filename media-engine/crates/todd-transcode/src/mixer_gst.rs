@@ -473,7 +473,9 @@ impl GstProgramMixer {
         // on every vote so WHEP/RTMP viewers follow the tally.
         match &overlays.poll {
             Some(poll) => {
-                let _ = self.poll.set_property_from_str("text", &format_poll_text(poll));
+                let _ = self
+                    .poll
+                    .set_property_from_str("text", &format_poll_text(poll));
                 let _ = self.poll_alpha.set_property_from_str("alpha", "1.0");
             }
             None => {
@@ -504,8 +506,13 @@ impl GstProgramMixer {
                 let _ = amplify.set_property_from_str("amplification", &format!("{linear:.4}"));
             }
             if let Some(delay) = self.pipeline.by_name(&format!("adelay_{}", bus.as_str())) {
-                let nanos = spec.delay_ms.saturating_mul(1_000_000);
-                let _ = delay.set_property_from_str("delay", &nanos.to_string());
+                // `adelay_{bus}` is a pass-through `identity` unless the host
+                // actually ships a delay element (see `build_description`), and
+                // only a real delay element accepts the `delay` property.
+                if delay.find_property("delay").is_some() {
+                    let nanos = spec.delay_ms.saturating_mul(1_000_000);
+                    let _ = delay.set_property_from_str("delay", &nanos.to_string());
+                }
             }
         }
     }
@@ -894,6 +901,14 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
     );
 
     // ---- audio stage: one branch per bus + silence keep-alive pad -----
+    // The lip-sync slot is a named `identity` pass-through, not `audiodelay`:
+    // that element is no longer shipped by GStreamer (nothing in the 1.24
+    // plugin set registers it), and referencing it made `gst_parse_launch`
+    // reject the *whole* mixer description with `no element "audiodelay"`.
+    // That single missing element silently downgraded PGM to passthrough and
+    // blocked add_program_forwarder with 409, so the public HLS stream never
+    // started. `apply_audio_config()` still looks up `adelay_{bus}`; it now
+    // finds the pass-through and has nothing to set.
     for bus in AudioBus::ALL {
         branches.push(format!(
             "appsrc name=abus_{bus} format=time is-live=true do-timestamp=true \
@@ -901,7 +916,7 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
              ! rtpopusdepay ! opusdec ! audioconvert ! audioresample \
              ! volume name=avol_{bus} \
              ! audioamplify name=again_{bus} amplification=1.0 \
-             ! audiodelay name=adelay_{bus} delay=0 \
+             ! identity name=adelay_{bus} \
              ! tee name=btee_{bus} \
              btee_{bus}. ! queue ! audioconvert ! audioresample \
              ! audio/x-raw,format=S16LE,rate=48000,channels=2 \
