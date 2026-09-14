@@ -896,39 +896,56 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
     }
 
     // ---- program overlay burn-in branches (stack above the video) -----
+    //
+    // Every overlay is its own compositor layer, so each branch needs its own
+    // source: `gdkpixbufoverlay`/`textoverlay` are filters, and a branch whose
+    // sink pad is unlinked never delivers a buffer — the compositor then waits
+    // for that pad forever and the *whole* mixer produces nothing (no PGM
+    // egress, no program-forwarder data, no metering). A fully transparent live
+    // pattern is the layer base; the overlay draws onto it and the alpha gate
+    // (or the overlay's own `alpha`) keeps it invisible until enabled.
+    branches.push(format!(
+        "videotestsrc name=ov_base pattern=solid-color foreground-color=0x00000000 \
+         is-live=true \
+         ! video/x-raw,format=AYUV,width={w},height={h},framerate={fps}/1 \
+         ! tee name=ov_tee",
+        w = config.width,
+        h = config.height,
+        fps = config.fps,
+    ));
     // Corner watermark / channel logo (transparent PNG).
     branches.push(
-        "gdkpixbufoverlay name=watermark relative-x=0.965 relative-y=0.02 alpha=0.0 ! comp."
+        "ov_tee. ! queue ! gdkpixbufoverlay name=watermark relative-x=0.965 relative-y=0.02 alpha=0.0 ! comp."
             .to_string(),
     );
     // Tournament brand (left side): the manager's own logo + name.
     branches.push(
-        "gdkpixbufoverlay name=brand_logo relative-x=0.02 relative-y=0.02 alpha=0.0 ! comp."
+        "ov_tee. ! queue ! gdkpixbufoverlay name=brand_logo relative-x=0.02 relative-y=0.02 alpha=0.0 ! comp."
             .to_string(),
     );
     branches.push(
-        "textoverlay name=brand_text text=\"\" valignment=top halignment=left xpos=70 ypos=6 \
+        "ov_tee. ! queue ! textoverlay name=brand_text text=\"\" valignment=top halignment=left xpos=70 ypos=6 \
          line-alignment=left shaded-background=true font-desc=\"Sans Bold 20\" \
          ! alpha name=brand_text_alpha alpha=0.0 ! comp."
             .to_string(),
     );
     // Scoreboard lower-third.
     branches.push(
-        "textoverlay name=lowerthird text=\"\" valignment=bottom halignment=center ypos=70 \
+        "ov_tee. ! queue ! textoverlay name=lowerthird text=\"\" valignment=bottom halignment=center ypos=70 \
          line-alignment=center shaded-background=true font-desc=\"Sans Bold 26\" \
          ! alpha name=lt_alpha alpha=0.0 ! comp."
             .to_string(),
     );
     // Animated event popup (SIX / FOUR / WICKET / milestone).
     branches.push(
-        "textoverlay name=popup text=\"\" valignment=center halignment=center \
+        "ov_tee. ! queue ! textoverlay name=popup text=\"\" valignment=center halignment=center \
          line-alignment=center shaded-background=true font-desc=\"Sans Bold 64\" \
          ! alpha name=pop_alpha alpha=0.0 ! comp."
             .to_string(),
     );
     // Live spectator poll (persistent while a poll is active).
     branches.push(
-        "textoverlay name=poll text=\"\" valignment=top halignment=center ypos=28 \
+        "ov_tee. ! queue ! textoverlay name=poll text=\"\" valignment=top halignment=center ypos=28 \
          line-alignment=center shaded-background=true font-desc=\"Sans Bold 22\" \
          ! alpha name=poll_alpha alpha=0.0 ! comp."
             .to_string(),
