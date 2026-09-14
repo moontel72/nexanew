@@ -751,7 +751,7 @@ impl GstProgramMixer {
                 }
                 let asset = stinger_asset.filter(|url| !url.trim().is_empty());
                 match asset {
-                    Some(url) => {
+                    Some(url) if self.stinger_src.find_property("uri").is_some() => {
                         let _ = self.stinger_src.set_property_from_str("uri", &url);
                         let alpha = self.stinger_alpha.clone();
                         let up = animate_alpha(alpha.clone(), 0.0, 1.0, duration / 2);
@@ -764,6 +764,11 @@ impl GstProgramMixer {
                         };
                         self.push_task(up);
                         self.push_task(down);
+                    }
+                    Some(_) => {
+                        tracing::warn!(
+                            "stinger asset ignored: this mixer has no file source (no stinger asset configured at build time) — cutting instead"
+                        );
                     }
                     None => {
                         tracing::warn!("stinger requested without an asset — falling back to cut");
@@ -855,11 +860,28 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
         ));
     }
     // Stinger overlay branch: inert until a stinger URI is set at runtime.
-    branches.push(
-        "uridecodebin name=stinger_src ! videoconvert ! videoscale \
-         ! alpha name=stinger_alpha alpha=0.0 ! comp."
-            .to_string(),
-    );
+    //
+    // `uridecodebin` *without* a URI posts "No URI specified to play from."
+    // and fails the whole pipeline's state change, so it is only used when an
+    // asset is actually configured. Otherwise a black live pattern holds the
+    // slot (same element name, so the runtime uri swap and the build-time
+    // lookup still resolve).
+    match config
+        .stinger_asset_url
+        .as_deref()
+        .filter(|url| !url.trim().is_empty())
+    {
+        Some(url) => branches.push(format!(
+            "uridecodebin name=stinger_src uri=\"{url}\" ! videoconvert ! videoscale \
+             ! alpha name=stinger_alpha alpha=0.0 ! comp."
+        )),
+        None => branches.push(
+            "videotestsrc name=stinger_src pattern=black is-live=true \
+             ! videoconvert ! videoscale \
+             ! alpha name=stinger_alpha alpha=0.0 ! comp."
+                .to_string(),
+        ),
+    }
 
     // ---- program overlay burn-in branches (stack above the video) -----
     // Corner watermark / channel logo (transparent PNG).
@@ -909,6 +931,10 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
     // blocked add_program_forwarder with 409, so the public HLS stream never
     // started. `apply_audio_config()` still looks up `adelay_{bus}`; it now
     // finds the pass-through and has nothing to set.
+    //
+    // Each bus also has to reach the mixer through `audioconvert`: linking a
+    // `tee` src pad straight into `audiomixer` fails at parse time with
+    // `could not link btee_{bus} to amix`.
     for bus in AudioBus::ALL {
         branches.push(format!(
             "appsrc name=abus_{bus} format=time is-live=true do-timestamp=true \
@@ -921,7 +947,7 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
              btee_{bus}. ! queue ! audioconvert ! audioresample \
              ! audio/x-raw,format=S16LE,rate=48000,channels=2 \
              ! appsink name=meter_{bus} sync=false \
-             btee_{bus}. ! amix.",
+             btee_{bus}. ! audioconvert ! amix.",
             bus = bus.as_str(),
         ));
     }
