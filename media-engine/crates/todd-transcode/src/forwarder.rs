@@ -64,9 +64,22 @@ impl GstForwarder {
         audio_rx: Vec<(AudioBus, mpsc::Receiver<RtpChunk>)>,
     ) -> Result<Self, AppError> {
         crate::ensure_gst_initialized();
-        let first = video_rx.recv().await.ok_or_else(|| {
-            AppError::BadRequest("no RTP received; camera is inactive".to_string())
-        })?;
+        // The router fans every media type of a layer out on one subscription,
+        // so the first chunk seen here can be the camera's Opus audio even
+        // though this is the video feed. Taking its codec produced
+        // "no video forwarder pipeline for codec Opus" (501) and killed the
+        // camera forwarder, so wait for the first *video* chunk instead.
+        let first = loop {
+            let chunk = video_rx.recv().await.ok_or_else(|| {
+                AppError::BadRequest("no RTP received; camera is inactive".to_string())
+            })?;
+            if matches!(
+                chunk.codec,
+                MediaCodec::H264 | MediaCodec::Vp8 | MediaCodec::Vp9
+            ) {
+                break chunk;
+            }
+        };
 
         let detected = crate::hw::detect_encoders();
         let description = build_description(
