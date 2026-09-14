@@ -780,7 +780,23 @@ impl Engine {
         self.program.insert(req.room_id.clone(), state.clone());
 
         #[cfg(feature = "gst")]
-        self.apply_mixer_scene(&state);
+        {
+            // gst-rs property setters *panic* (rather than returning an error)
+            // when a value is invalid or out of range, e.g. feeding a dB value
+            // to GstVolume's linear `volume`. Containing the panic here means
+            // one bad value degrades the program composite instead of unwinding
+            // the transition request — which the director only saw as a bare
+            // 502 from nginx.
+            let applied = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                self.apply_mixer_scene(&state);
+            }));
+            if applied.is_err() {
+                tracing::error!(
+                    room = %state.room_id,
+                    "program mixer apply panicked; keeping the previous program state"
+                );
+            }
+        }
 
         self.telemetry
             .registry

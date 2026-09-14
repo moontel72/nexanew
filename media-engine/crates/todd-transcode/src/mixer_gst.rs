@@ -499,7 +499,19 @@ impl GstProgramMixer {
                 } else {
                     FADER_FLOOR_DB
                 };
-                let _ = volume.set_property_from_str("volume", &format!("{db:.2}"));
+                // `GstVolume::volume` is a linear factor in [0, 10] (the
+                // unbounded knob is `volume-full-range`), not decibels.
+                // Handing it a dB value such as "-6.00" makes gst-rs panic
+                // with "can't be set from given value, it is invalid or out of
+                // range", which unwound the whole transition request (a 502
+                // for the director) the moment the mixer finally built.
+                let factor = 10f32.powf(db / 20.0);
+                let factor = if factor.is_finite() {
+                    factor.clamp(0.0, 10.0)
+                } else {
+                    1.0
+                };
+                let _ = volume.set_property_from_str("volume", &format!("{factor:.6}"));
             }
             if let Some(amplify) = self.pipeline.by_name(&format!("again_{}", bus.as_str())) {
                 let linear = 10f32.powf(spec.gain_db / 20.0);
