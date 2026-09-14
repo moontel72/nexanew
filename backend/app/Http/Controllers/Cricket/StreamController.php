@@ -186,8 +186,8 @@ class StreamController extends Controller
     // ─────────────────────────────────────────────────────────────
 
     /**
-     * Start the engine's PGM composite forwarder to SRS so HLS
-     * segments appear at /hls/live/{key}.m3u8 for the public player.
+     * Start the engine's forwarder to SRS so HLS segments appear at
+     * /hls/live/{key}.m3u8 for the public player.
      *
      * Non-blocking: any failure is logged but never prevents the
      * stream activation from succeeding.
@@ -213,11 +213,22 @@ class StreamController extends Controller
                 return;
             }
 
-            // Prefer the room that actually has a program (PGM) source set.
-            // The Studio director may operate any room, so attaching the
-            // forwarder to an arbitrary first entry would target the wrong
-            // mixer (or one that does not exist yet).
-            $roomId = $this->roomWithProgram($engineUrl, $token, $rooms) ?? $rooms[0]['id'];
+            // Resolve the room and camera that are actually on air.
+            //
+            // The composite (`source: program`) is fed by the GStreamer mixer,
+            // which still does not build reliably on this host, and when it is
+            // missing the engine answers 409 and nothing reaches SRS — the
+            // public portal then only ever shows its "Stream starting soon"
+            // fallback. Fanning the on-air camera out directly puts the match
+            // on air now; the composite can be switched back on once the mixer
+            // is fixed.
+            $source = $this->programSource($engineUrl, $token, $rooms);
+            if ($source === null) {
+                Log::info('Cricket: no on-air program camera — forwarder skipped.');
+                return;
+            }
+            $roomId = $source['room_id'];
+            $cameraId = $source['camera_id'];
 
             // Build the full RTMP URL: ingest base + /{stream_key}
             $rtmpBase = $stream->rtmp_ingest_url
@@ -244,8 +255,8 @@ class StreamController extends Controller
                 ->withToken($token)
                 ->withHeaders(['Content-Type' => 'application/json'])
                 ->post("{$engineUrl}/api/v1/room/{$roomId}/forward", [
-                    'camera_id' => '',
-                    'source' => 'program',
+                    'camera_id' => $cameraId,
+                    'source' => 'camera',
                     'kind' => 'rtmp',
                     'url' => $rtmpUrl,
                     'bitrate_kbps' => (int) config('cricket.streaming.forwarder_bitrate_kbps', 4000),
@@ -276,7 +287,7 @@ class StreamController extends Controller
      *
      * @param  array<int, array<string, mixed>>  $rooms
      */
-    private function roomWithProgram(string $engineUrl, string $token, array $rooms): ?string
+    private function programSource(string $engineUrl, string $token, array $rooms): ?array
     {
         foreach ($rooms as $room) {
             $id = $room['id'] ?? null;
@@ -289,9 +300,18 @@ class StreamController extends Controller
                     ->withToken($token)
                     ->get("{$engineUrl}/api/v1/program/" . urlencode($id));
 
-                if ($res->successful()) {
-                    return $id;
+                if (!$res->successful()) {
+                    continue;
                 }
+
+                $program = $res->json();
+                $camera = is_array($program) ? ($program['camera_id'] ?? null) : null;
+
+                if (!is_string($camera) || $camera === '') {
+                    continue;
+                }
+
+                return ['room_id' => $id, 'camera_id' => $camera];
             } catch (\Throwable $e) {
                 // Probe failures are non-critical — try the next room.
             }
@@ -324,7 +344,10 @@ class StreamController extends Controller
             }
 
             foreach ($forwarders as $fwd) {
-                if (($fwd['source'] ?? '') !== 'program') {
+                // Match on the cricket stream key rather than the source: the
+                // auto-forwarder may be fanned out from the program composite
+                // or straight from the on-air camera.
+                if (!str_contains((string) ($fwd['url'] ?? ''), 'cricket_match_')) {
                     continue;
                 }
                 $key = $fwd['key'] ?? '';
