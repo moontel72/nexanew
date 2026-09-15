@@ -285,23 +285,46 @@ fn build_description(
     };
 
     // ---- audio stage -------------------------------------------------
+    // The bus mixer is declared once, with its output chain, and every bus
+    // then links into it with `mix.`.
+    //
+    // Naming `audiomixer name=mix` on *each* branch left the parser with an
+    // element that was never added to the pipeline:
+    //   gst pipeline parse failed: could not link vol_ambient to mix
+    // which the camera forwarder surfaced as a 500 and never reached SRS.
+    //
+    // `GstVolume::volume` is a linear factor in [0, 10], not decibels, so the
+    // bus dB value is converted (and clamped) before it is emitted - a raw
+    // 0.0 dB would otherwise be silence.
     let mut audio_branches: Vec<String> = Vec::new();
     if has_audio {
+        audio_branches.push(
+            "audiomixer name=mix ! audioconvert ! audioresample \
+             ! voaacenc bitrate=128000 ! aacparse \
+             ! queue name=aq max-size-time=1000000000 ! mux."
+                .to_string(),
+        );
         for bus in AudioBus::ALL {
             let bus_cfg = audio_cfg.bus(bus);
             if !bus_cfg.enabled {
                 continue;
             }
-            let volume = if bus_cfg.muted {
+            let db = if bus_cfg.muted {
                 -60.0f32
             } else {
                 bus_cfg.volume_db
+            };
+            let factor = 10f32.powf(db / 20.0);
+            let factor = if factor.is_finite() {
+                factor.clamp(0.0, 10.0)
+            } else {
+                1.0
             };
             audio_branches.push(format!(
                 "appsrc name=audio_{} format=time is-live=true do-timestamp=true \
                  caps=\"application/x-rtp,media=audio,encoding-name=OPUS,clock-rate=48000\" \
                  ! rtpopusdepay ! opusdec ! audioconvert ! audioresample \
-                 ! volume name=vol_{} volume={volume} ! audiomixer name=mix",
+                 ! volume name=vol_{} volume={factor:.6} ! mix.",
                 bus.as_str(),
                 bus.as_str(),
             ));
@@ -346,9 +369,6 @@ fn build_description(
     if !audio_branches.is_empty() {
         description.push_str(" ");
         description.push_str(&audio_branches.join(" "));
-        description.push_str(
-            " ! audioconvert ! audioresample ! voaacenc bitrate=128000 ! aacparse ! queue name=aq max-size-time=1000000000 ! mux.",
-        );
     }
     description.push(' ');
     description.push_str(&mux_tail);
