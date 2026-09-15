@@ -14,6 +14,9 @@ const files = [
   "app/Http/Controllers/Cricket/TeamController.php",
   "app/Http/Controllers/Cricket/TournamentSetupController.php",
   "app/Http/Controllers/Cricket/MatchContextController.php",
+  "app/Http/Controllers/Cricket/StreamController.php",
+  "app/Http/Controllers/Cricket/PublicMatchController.php",
+  "routes/panels/cricket.php",
 ];
 
 let failures = 0;

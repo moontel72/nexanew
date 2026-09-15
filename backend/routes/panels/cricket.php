@@ -132,6 +132,17 @@ Route::prefix('api/v1/cricket/manager')
         Route::put('active-match', [MatchContextController::class, 'update']);
         Route::delete('active-match', [MatchContextController::class, 'destroy']);
 
+        // Camera stream health — reports whether the engine's PGM→SRS
+        // forwarder is actually running for a match's on-air camera. The
+        // forwarder is what writes the SRS HLS segments the public player
+        // and the Studio tiles read, so a false here explains an HLS 404.
+        Route::get('matches/{matchId}/stream-health', [StreamController::class, 'health']);
+
+        // Idempotent forwarder recovery: re-asserts the engine→SRS bridge
+        // for every stream still marked live. Used by the console's
+        // "Reconnect stream" action and safe to call at any time.
+        Route::post('matches/{matchId}/stream-resync', [StreamController::class, 'resync']);
+
         // Live Scoring
         Route::post('matches/{matchId}/score', [LiveScoreController::class, 'update']);
         Route::post('matches/{matchId}/score/undo', [LiveScoreController::class, 'undoLastBall']);

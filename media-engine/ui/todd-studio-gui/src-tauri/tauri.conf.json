@@ -22,7 +22,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self' customprotocol: asset:; connect-src 'self' ipc: http://ipc.localhost https://studio.traceodd.com wss://studio.traceodd.com https://cricket.traceodd.com https://cricket-manager.traceodd.com https://broadcaster.traceodd.com https://traceodd.com https://docs.traceodd.com; img-src 'self' asset: http://asset.localhost data: blob: https:; media-src 'self' blob: data: https://studio.traceodd.com https://cricket.traceodd.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'"
     }
   },
   "bundle": {

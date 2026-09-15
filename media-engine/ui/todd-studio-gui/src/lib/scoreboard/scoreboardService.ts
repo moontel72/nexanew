@@ -4,11 +4,20 @@
 //  - PUSH (primary): the engine delivers `score_updated` events on the
 //    control-plane WebSocket (fed by Laravel Reverb → Rust media engine).
 //  - POLL (fallback): when the control plane has no score for the match
-//    yet (offline feed, engine restart, match not configured), fall back
-//    to `GET /api/v1/cricket/live/{match_id}` at a relaxed cadence.
+//    yet (offline feed, engine restart, match not configured), pull the
+//    engine's own cached copy over REST.
+//
+// IMPORTANT — the fallback polls the *engine*, never the Cricket Manager
+// host. The engine mirrors every synced match at
+// `GET /api/v1/cricket/live/{match_id}` on its own origin, which is the
+// same origin this app is already served from (studio.traceodd.com).
+// Polling `cricket.traceodd.com` instead fails twice over: that host
+// hard-blocks `/api/*` (403) and does not permit cross-origin reads
+// (no CORS headers), so the fallback could never produce a score and the
+// overlay stayed stuck on the placeholder below.
 
 import { useEffect, useState } from "react";
-import { env } from "../utils";
+import { env, wsBaseUrl } from "../utils";
 import { getToken } from "../auth/authStore";
 import { useControlState } from "../../hooks/useControlState";
 import type { BallByBallStateDto, BallEventDto } from "../api/types";
@@ -47,6 +56,20 @@ export function mapBallByBall(raw: BallByBallStateDto): BallByBallState {
   };
 }
 
+/**
+ * Engine origin for the scoreboard REST fallback.
+ *
+ * `env.apiBaseUrl` is empty in the web build (same-origin), so this
+ * resolves to the Studio's own origin — which nginx already proxies to
+ * the engine under `location /api/`. The desktop build sets it to
+ * `https://studio.traceodd.com`, giving the same origin explicitly.
+ */
+function engineBaseUrl(): string {
+  if (env.apiBaseUrl) return env.apiBaseUrl;
+  // wsBaseUrl() maps http→ws; invert to recover an absolute http origin.
+  return wsBaseUrl().replace(/^ws/, "http");
+}
+
 /** REST fallback hook — only active while the push feed has no score. */
 function useScoreboardPoll(
   matchId: string | null,
@@ -64,7 +87,7 @@ function useScoreboardPoll(
       try {
         const token = getToken();
         const res = await fetch(
-          `${env.apiBaseUrl}/api/v1/cricket/live/${encodeURIComponent(matchId)}`,
+          `${engineBaseUrl()}/api/v1/cricket/live/${encodeURIComponent(matchId)}`,
           {
             headers: {
               Accept: "application/json",
