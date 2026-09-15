@@ -142,12 +142,14 @@ class _MatchHeaderCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: CricketColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: CricketColors.textAccent.withValues(alpha: 0.4)),
+        border: Border.all(
+          color: CricketColors.textAccent.withValues(alpha: 0.4),
+        ),
       ),
       child: Column(
         children: [
           Text(
-            '${s.teamA} vs ${s.teamB}',
+            s.displayTitle,
             style: const TextStyle(
               color: CricketColors.textPrimary,
               fontSize: 16,

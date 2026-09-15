@@ -1980,7 +1980,7 @@ class CricketRepository {
     throw Exception(_apiError(res));
   }
 
-  /// Delete a tournament (soft delete — including completed ones).
+  /// Delete a tournament and everything inside it (permanent).
   Future<void> deleteTournament(String tournamentId) async {
     final res = await _http.delete(
       Uri.parse(

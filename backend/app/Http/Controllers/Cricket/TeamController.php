@@ -3,13 +3,19 @@
 namespace App\Http\Controllers\Cricket;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cricket\Player;
 use App\Models\Cricket\Team;
 use App\Models\Cricket\Tournament;
+use App\Services\Cricket\CricketDataCleanupService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class TeamController extends Controller
 {
+    public function __construct(
+        private readonly CricketDataCleanupService $cleanup,
+    ) {
+    }
     public function index(Request $request): \Illuminate\Http\JsonResponse
     {
         $teams = Team::withCount('players')
@@ -139,10 +145,37 @@ class TeamController extends Controller
         return response()->json($team);
     }
 
+    /**
+     * Delete a team.
+     *
+     * Keeps the app's two-stage delete UX: the team row is soft-deleted so
+     * it can be restored from the Trash tab, but it is disconnected from
+     * every active surface immediately — its fixtures and their child
+     * records are purged (a fixture referencing a deleted team renders as a
+     * placeholder label, and a fixture cannot outlive one of the teams
+     * playing it), and its players are detached from any other live match.
+     */
     public function destroy(string $id): \Illuminate\Http\JsonResponse
     {
-        Team::findOrFail($id)->delete();
-        return response()->json(['message' => 'Team deleted.']);
+        $team = Team::findOrFail($id);
+
+        // Prune fixtures referencing this team (both sides) + their child
+        // records, caches and overlay state.
+        $this->cleanup->purgeTeamFixtures((string) $team->id);
+
+        // Players stay restorable (they belong to the team's trash flow)
+        // but must vanish from any squad or live slot they currently hold.
+        $playerIds = Player::where('team_id', $team->id)->pluck('id')->all();
+        foreach ($playerIds as $playerId) {
+            $this->cleanup->detachPlayer((string) $playerId);
+        }
+
+        $team->delete();
+
+        return response()->json([
+            'message' => 'Team deleted.',
+            'detached_players' => count($playerIds),
+        ]);
     }
 
     /**
@@ -193,11 +226,27 @@ class TeamController extends Controller
 
     /**
      * Permanently delete a soft-deleted team (cannot be undone).
+     *
+     * This is the real removal, so the team's players are purged here too
+     * rather than left orphaned against a team that no longer exists.
      */
     public function forceDelete(string $id): \Illuminate\Http\JsonResponse
     {
         $team = Team::onlyTrashed()->findOrFail($id);
         $name = (string) $team->name;
+
+        // Detach and remove every player the team owns (including ones
+        // already in the trash — nothing can restore them once the team
+        // itself is gone).
+        $playerIds = Player::withTrashed()->where('team_id', $team->id)->pluck('id')->all();
+        foreach ($playerIds as $playerId) {
+            $this->cleanup->detachPlayer((string) $playerId);
+        }
+        Player::withTrashed()->where('team_id', $team->id)->forceDelete();
+
+        // Fixtures were pruned at soft-delete time; this covers any created
+        // while the team sat in the trash.
+        $this->cleanup->purgeTeamFixtures((string) $team->id);
         $team->forceDelete();
 
         return response()->json([

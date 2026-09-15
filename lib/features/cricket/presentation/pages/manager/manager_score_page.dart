@@ -250,8 +250,8 @@ class _ScoreHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final teamA = match?.teamAShort ?? match?.teamAName ?? 'T1';
-    final teamB = match?.teamBShort ?? match?.teamBName ?? 'T2';
+    final teamA = match?.teamADisplay ?? 'TBD';
+    final teamB = match?.teamBDisplay ?? 'TBD';
     final batting = score.battingTeam ?? '—';
     final bowling = score.bowlingTeam ?? '—';
 
@@ -260,7 +260,9 @@ class _ScoreHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: CricketColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: CricketColors.textAccent.withValues(alpha: 0.4)),
+        border: Border.all(
+          color: CricketColors.textAccent.withValues(alpha: 0.4),
+        ),
       ),
       child: Column(
         children: [

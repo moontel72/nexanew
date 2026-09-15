@@ -184,6 +184,13 @@ function applyEvent(state: ControlState, event: ControlEvent): ControlState {
         ...state,
         scores: { ...state.scores, [event.match_id]: event.score },
       };
+    case "score_cleared": {
+      // The match was deleted upstream (or the active context moved on).
+      // Drop the cached score so the overlay does not keep burning it.
+      const scores = { ...state.scores };
+      delete scores[event.match_id];
+      return { ...state, scores };
+    }
     case "replay_created":
       return {
         ...state,

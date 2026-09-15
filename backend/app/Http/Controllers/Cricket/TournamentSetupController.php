@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Cricket;
 use App\Http\Controllers\Controller;
 use App\Models\Cricket\Team;
 use App\Models\Cricket\Tournament;
+use App\Services\Cricket\CricketDataCleanupService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -19,6 +20,11 @@ use Illuminate\Support\Str;
  */
 class TournamentSetupController extends Controller
 {
+    public function __construct(
+        private readonly CricketDataCleanupService $cleanup,
+    ) {
+    }
+
     /**
      * List all tournaments (most recent first).
      */
@@ -97,16 +103,23 @@ class TournamentSetupController extends Controller
     }
 
     /**
-     * Delete a tournament (soft delete) — including completed ones.
+     * Delete a tournament and everything inside it.
+     *
+     * Permanent cleanup (not a soft delete): matches, teams and players are
+     * removed along with their innings/scores/commentary, the Redis score
+     * snapshots and active-match pointers are flushed, and the media engine
+     * is told to drop the overlays. A soft delete here is what left deleted
+     * teams visible in Todd Studio's lower-third.
      */
     public function destroy(string $id): \Illuminate\Http\JsonResponse
     {
-        $tournament = Tournament::findOrFail($id);
-        $tournament->delete();
+        $tournament = Tournament::withTrashed()->findOrFail($id);
+        $counts = $this->cleanup->purgeTournament((string) $tournament->id);
 
         return response()->json([
             'success' => true,
             'message' => 'Tournament deleted.',
+            'purged' => $counts,
         ]);
     }
 
@@ -114,32 +127,34 @@ class TournamentSetupController extends Controller
      * Activate this tournament and deactivate all others so the public
      * portal and Fixture Scheduler always resolve a single active one.
      *
-     * Teams registered before any tournament existed have no
-     * tournament_id — they are attached to the activated tournament so
-     * fixture scheduling works without manual fixes.
+     * Orphan teams (no `tournament_id`) are NOT adopted implicitly. Team
+     * ownership is an operator decision — silently binding teams to
+     * whichever tournament happens to be activated next is how a team ends
+     * up in a tournament nobody chose. Unscheduled orphans are reported in
+     * the response so the operator can assign them deliberately.
      */
     public function activate(string $id): \Illuminate\Http\JsonResponse
     {
         $tournament = Tournament::findOrFail($id);
 
-        $assignedTeams = DB::transaction(function () use ($tournament) {
+        DB::transaction(function () use ($tournament) {
             Tournament::where('id', '!=', $tournament->id)
                 ->update(['is_active' => false]);
             $tournament->update([
                 'status' => 'active',
                 'is_active' => true,
             ]);
-
-            return Team::whereNull('tournament_id')
-                ->update(['tournament_id' => $tournament->id]);
         });
+
+        $orphanTeams = Team::whereNull('tournament_id')->count();
 
         return response()->json([
             'message' => 'Tournament activated.'
-                . ($assignedTeams > 0
-                    ? " {$assignedTeams} existing team(s) attached to it."
+                . ($orphanTeams > 0
+                    ? " {$orphanTeams} team(s) are not assigned to any tournament"
+                        . ' and were left untouched — assign them explicitly.'
                     : ''),
-            'assigned_teams' => $assignedTeams,
+            'unassigned_teams' => $orphanTeams,
             'tournament' => $tournament->fresh(),
         ]);
     }

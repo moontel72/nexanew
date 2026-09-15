@@ -16,6 +16,7 @@ import '../../blocs/team/team_bloc.dart';
 import '../../blocs/fixture/fixture_bloc.dart';
 import '../../blocs/tournament_setup/tournament_setup_bloc.dart';
 import '../../blocs/dls_calculator/dls_calculator_bloc.dart';
+import '../../widgets/cricket_lookups.dart';
 import '../../../data/models/cricket_models.dart';
 import '../../../data/repositories/cricket_repository.dart';
 import 'manager_login_page.dart';
@@ -481,12 +482,10 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
                   style: TextStyle(color: Color(0xFFBDD8DB)),
                 ),
                 items: matches.map((m) {
-                  final ta = m.teamAShort ?? m.teamAName ?? 'T1';
-                  final tb = m.teamBShort ?? m.teamBName ?? 'T2';
                   return DropdownMenuItem(
                     value: m.id,
                     child: Text(
-                      '$ta vs $tb (${m.status})',
+                      '${m.displayTitle} (${cricketStatusLabel(m.status)})',
                       style: TextStyle(
                         color: m.isLive
                             ? const Color(0xFFEF4444)
@@ -746,7 +745,9 @@ class _GoLivePanel extends StatelessWidget {
                       style: TextStyle(color: Colors.white, fontSize: 12),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
+                      side: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.5),
+                      ),
                     ),
                     onPressed: () => context.read<MatchListBloc>().add(
                       UpdateMatchStatus(match.id, 'innings_break'),
@@ -766,7 +767,9 @@ class _GoLivePanel extends StatelessWidget {
                       style: TextStyle(color: Colors.white, fontSize: 12),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
+                      side: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.5),
+                      ),
                     ),
                     onPressed: () => _confirmEndMatch(context),
                   ),
@@ -1282,12 +1285,10 @@ class _AnalyticsTabState extends State<_AnalyticsTab> {
                 style: TextStyle(color: Color(0xFFBDD8DB)),
               ),
               items: matches.map((m) {
-                final ta = m.teamAShort ?? m.teamAName ?? 'T1';
-                final tb = m.teamBShort ?? m.teamBName ?? 'T2';
                 return DropdownMenuItem(
                   value: m.id,
                   child: Text(
-                    '$ta vs $tb',
+                    m.displayTitle,
                     style: const TextStyle(color: Colors.white),
                   ),
                 );
@@ -1354,7 +1355,7 @@ class _AnalyticsTabState extends State<_AnalyticsTab> {
         (m) => m.id == mid,
         orElse: () => MatchModel(id: '', status: ''),
       );
-      title = '${m.teamAShort ?? 'T1'} vs ${m.teamBShort ?? 'T2'}';
+      title = m.displayTitle;
     }
     c.goNamed(
       'cricket_match_analytics',

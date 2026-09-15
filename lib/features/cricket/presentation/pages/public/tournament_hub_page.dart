@@ -8,6 +8,7 @@ import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.
 import 'package:trace_odd/features/cricket/presentation/blocs/tournament_hub/tournament_hub_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/match_list/match_list_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/widgets/points_table_widget.dart';
+import 'package:trace_odd/features/cricket/presentation/widgets/cricket_lookups.dart';
 
 class TournamentHubPage extends StatefulWidget {
   final String tournamentId;
@@ -438,8 +439,7 @@ class _MatchesTab extends StatelessWidget {
     }
     context.go(
       '/cricket/match/${match.id}/analytics'
-      '?title=${Uri.encodeComponent(match.teamAShort ?? 'T1')}'
-      '%20vs%20${Uri.encodeComponent(match.teamBShort ?? 'T2')}',
+      '?title=${Uri.encodeComponent(match.displayTitle)}',
     );
   }
 }
@@ -456,11 +456,11 @@ class _MatchTile extends StatelessWidget {
     child: ListTile(
       onTap: onTap,
       title: Text(
-        '${match.teamAShort ?? 'T1'} vs ${match.teamBShort ?? 'T2'}',
+        match.displayTitle,
         style: const TextStyle(color: CricketColors.textPrimary),
       ),
       subtitle: Text(
-        match.status,
+        cricketStatusLabel(match.status),
         style: TextStyle(
           color: match.isLive
               ? CricketColors.live
@@ -494,7 +494,7 @@ class _MatchGridTile extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            '${match.teamAShort ?? 'T1'}\nvs\n${match.teamBShort ?? 'T2'}',
+            '${match.teamADisplay ?? 'TBD'}\nvs\n${match.teamBDisplay ?? 'TBD'}',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: CricketColors.textPrimary,
@@ -504,7 +504,7 @@ class _MatchGridTile extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            match.status,
+            cricketStatusLabel(match.status),
             style: TextStyle(
               color: match.isLive
                   ? CricketColors.live

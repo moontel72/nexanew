@@ -118,6 +118,12 @@ pub enum ControlEvent {
         match_id: String,
         score: BallByBallState,
     },
+    /// The match no longer exists in the manager (deleted match/tournament)
+    /// or the manager moved the active context elsewhere. Directors must
+    /// drop the overlay for this match instead of keeping the last state.
+    ScoreCleared {
+        match_id: String,
+    },
     /// A replay session was created (manual trigger or auto-tag).
     ReplayCreated {
         replay: ReplayInfo,

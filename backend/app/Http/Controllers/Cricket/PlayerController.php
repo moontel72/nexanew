@@ -4,11 +4,16 @@ namespace App\Http\Controllers\Cricket;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cricket\Player;
+use App\Services\Cricket\CricketDataCleanupService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class PlayerController extends Controller
 {
+    public function __construct(
+        private readonly CricketDataCleanupService $cleanup,
+    ) {
+    }
     public function index(Request $request): \Illuminate\Http\JsonResponse
     {
         $players = Player::where('team_id', $request->team_id)
@@ -177,10 +182,26 @@ class PlayerController extends Controller
         return response()->json($player->load('team:id,name,short_code,team_code'));
     }
 
+    /**
+     * Delete a player.
+     *
+     * Keeps the trash flow intact (the row is soft-deleted and restorable
+     * from the Trash tab) but immediately detaches the player from every
+     * active surface — squads, the current striker/bowler slots, and the
+     * cached live snapshots — so a deleted player cannot linger in the
+     * scoring console or the Studio overlay.
+     */
     public function destroy(string $id): \Illuminate\Http\JsonResponse
     {
-        Player::findOrFail($id)->delete();
-        return response()->json(['message' => 'Player deleted.']);
+        $player = Player::findOrFail($id);
+
+        $affectedMatches = $this->cleanup->detachPlayer((string) $player->id);
+        $player->delete();
+
+        return response()->json([
+            'message' => 'Player deleted.',
+            'detached_from_matches' => $affectedMatches,
+        ]);
     }
 
     /**
@@ -248,6 +269,12 @@ class PlayerController extends Controller
     {
         $player = Player::onlyTrashed()->findOrFail($id);
         $name = (string) $player->name;
+
+        // Re-detach in case the player was restored-into-squad while in the
+        // trash, then remove the career-stats row that points at them.
+        $this->cleanup->detachPlayer((string) $player->id);
+
+        \App\Models\Cricket\PlayerCareerStats::where('player_id', $player->id)->delete();
         $player->forceDelete();
 
         return response()->json([

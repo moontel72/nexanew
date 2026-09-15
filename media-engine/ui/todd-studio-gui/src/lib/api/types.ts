@@ -503,6 +503,7 @@ export type ControlEvent =
   | { type: "forwarding_changed"; status: ForwardingStatus }
   | { type: "cricket_config_changed"; config: CricketConfigView }
   | { type: "score_updated"; match_id: string; score: BallByBallStateDto }
+  | { type: "score_cleared"; match_id: string }
   | { type: "replay_created"; replay: ReplayInfo }
   | { type: "poll_changed"; room_id: string; poll: PollStateDto }
   | { type: "poll_cleared"; room_id: string }

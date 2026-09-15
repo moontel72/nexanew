@@ -31,6 +31,29 @@ use crate::store::RoomStore;
 use todd_common::error::AppError;
 use todd_replay::session::{ReplayEvent, ReplayTrigger};
 
+/// Why a REST refresh of one match failed. The distinction matters: a
+/// transient network blip must keep the last known score on air, while a
+/// `404` means the match no longer exists in the manager and its cached
+/// state has to be dropped immediately — otherwise the Studio lower-third
+/// keeps burning a deleted match's score forever (see [`refresh_match`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum FetchError {
+    /// The match is gone upstream (HTTP 404/410) — the cached score is
+    /// stale and must be evicted.
+    Gone,
+    /// Anything else (network, 5xx, parse): retry later, keep last known.
+    Transient(String),
+}
+
+impl std::fmt::Display for FetchError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FetchError::Gone => write!(f, "match no longer exists upstream (HTTP 404)"),
+            FetchError::Transient(message) => write!(f, "{message}"),
+        }
+    }
+}
+
 /// Live ball-by-ball state for one match, as shown on the Studio
 /// lower-third.
 #[derive(Debug, Clone, Serialize)]
@@ -447,6 +470,36 @@ impl ScoreboardHub {
 
     pub fn upsert(&self, state: BallByBallState) {
         self.scores.insert(state.match_id.clone(), state);
+    }
+
+    /// Evicts every trace of one match from the in-memory cache.
+    ///
+    /// Used when the manager reports the match as gone (deleted
+    /// tournament/match) so the Studio overlay stops burning a deleted
+    /// match's score. Returns true when there was something to drop, so
+    /// callers can avoid publishing redundant clear events.
+    pub async fn forget(&self, match_id: &str) -> bool {
+        let had_score = self.scores.remove(match_id).is_some();
+        self.sync.remove(match_id);
+        self.last_push_at.remove(match_id);
+        self.last_score_at.remove(match_id);
+
+        let mut active = self.active_match.write().await;
+        if active.as_deref() == Some(match_id) {
+            *active = None;
+        }
+        drop(active);
+
+        // An evicted match must not keep being polled by the watchdog.
+        let mut config = self.config.write().await;
+        let before = config.match_configs.len();
+        config
+            .match_configs
+            .retain(|match_config| match_config.match_id != match_id);
+        let removed_from_config = config.match_configs.len() != before;
+        drop(config);
+
+        had_score || removed_from_config
     }
 
     /// Records the outcome of one sync round for a match, including which
@@ -892,6 +945,25 @@ async fn handle_push_event(
         "match.context.selected" => {
             // Manager flipped the active match: adopt it, register it if
             // unknown, and push the new context to every director panel.
+            //
+            // The outgoing match's cached score is evicted first: its state
+            // would otherwise stay in `scores` (and in every director
+            // panel's map) and keep feeding the Studio overlay after the
+            // scorer moved on to another match.
+            let previous = hub.active_match_id().await;
+            if let Some(previous) = previous {
+                if previous != match_id && hub.forget(&previous).await {
+                    tracing::info!(
+                        previous = %previous,
+                        next = %match_id,
+                        "cricket active match flipped — cleared previous score"
+                    );
+                    control.publish(ControlEvent::ScoreCleared {
+                        match_id: previous,
+                    });
+                }
+            }
+
             hub.set_active_match(match_id).await;
             hub.auto_add_match(match_id).await;
             publish_config(hub, control).await;
@@ -915,6 +987,22 @@ async fn handle_push_event(
                 event_ts_ms,
             )
             .await;
+        }
+        "match.context.cleared" => {
+            // The manager cleared the selection, or the match/tournament was
+            // deleted. Evict the cached score immediately — waiting for the
+            // next watchdog poll to notice the 404 would leave the deleted
+            // match's score on air in the meantime.
+            if hub.forget(match_id).await {
+                tracing::info!(
+                    match_id = %match_id,
+                    "cricket context cleared upstream — dropped cached score"
+                );
+                control.publish(ControlEvent::ScoreCleared {
+                    match_id: match_id.to_string(),
+                });
+                publish_config(hub, control).await;
+            }
         }
         _ => {}
     }
@@ -956,7 +1044,23 @@ async fn refresh_match(
             )
             .await;
         }
-        Err(message) => {
+        Err(FetchError::Gone) => {
+            // The manager deleted this match (or the tournament owning it).
+            // Evict the cached score and tell every director panel to drop
+            // the overlay — a push carrying a dead match id must not leave
+            // a stale lower-third on air.
+            if hub.forget(match_id).await {
+                tracing::info!(
+                    match_id = %match_id,
+                    "cricket match gone upstream — cleared cached score"
+                );
+                control.publish(ControlEvent::ScoreCleared {
+                    match_id: match_id.to_string(),
+                });
+                publish_config(hub, control).await;
+            }
+        }
+        Err(FetchError::Transient(message)) => {
             hub.record_sync(match_id, Err(message), SyncTransport::Push);
         }
     }
@@ -1174,7 +1278,22 @@ async fn poll_loop(
                     )
                     .await;
                 }
-                Err(message) => {
+                Err(FetchError::Gone) => {
+                    // The match was deleted upstream (or its tournament was).
+                    // `forget` also drops it from the polled match list, so
+                    // this branch fires at most once per dead match.
+                    if hub.forget(&match_config.match_id).await {
+                        tracing::info!(
+                            match_id = %match_config.match_id,
+                            "cricket match gone upstream — cleared cached score"
+                        );
+                        control.publish(ControlEvent::ScoreCleared {
+                            match_id: match_config.match_id.clone(),
+                        });
+                        publish_config(&hub, &control).await;
+                    }
+                }
+                Err(FetchError::Transient(message)) => {
                     hub.record_sync(
                         &match_config.match_id,
                         Err(message.clone()),
@@ -1207,22 +1326,36 @@ async fn fetch_match(
     base_url: &str,
     match_id: &str,
     api_token: Option<&str>,
-) -> Result<BallByBallState, String> {
+) -> Result<BallByBallState, FetchError> {
     let url = format!("{base_url}/api/v1/cricket/live/{match_id}");
     let mut request = client.get(&url);
     if let Some(token) = api_token {
         // Single adaptation point for the manager auth contract: the
         // token is sent as a bearer credential. The endpoint is public,
-        // so this is only used when a deployment keeps it private.
+        // so this is only used when a deployment keeps this private.
         request = request.bearer_auth(token);
     }
     let resp = request
         .send()
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(|e| FetchError::Transient(e.to_string()))?;
+
+    // 404/410 are terminal: the manager has no live score for this match
+    // (deleted, or never scored). Distinguishing them from a network blip
+    // is what lets the engine fail closed instead of pinning a deleted
+    // match's score on air indefinitely.
+    let status = resp.status();
+    if status == reqwest::StatusCode::NOT_FOUND || status == reqwest::StatusCode::GONE {
+        return Err(FetchError::Gone);
+    }
+
+    let resp = resp
         .error_for_status()
-        .map_err(|e| e.to_string())?;
-    let raw: ManagerResponse = resp.json().await.map_err(|e| e.to_string())?;
+        .map_err(|e| FetchError::Transient(e.to_string()))?;
+    let raw: ManagerResponse = resp
+        .json()
+        .await
+        .map_err(|e| FetchError::Transient(e.to_string()))?;
     Ok(map_ball_by_ball(raw))
 }
 
@@ -1396,6 +1529,70 @@ mod tests {
         assert_eq!(view.active_match_id.as_deref(), Some("m-9"));
         assert_eq!(view.match_configs.len(), 2);
         assert_eq!(view.match_configs[1].match_id, "m-9");
+    }
+
+    /// A deleted match must vanish from every cache the engine keeps,
+    /// otherwise the Studio overlay keeps burning its score forever.
+    #[tokio::test]
+    async fn forget_evicts_score_config_and_active_context() {
+        let hub = ScoreboardHub::new(
+            ScoreboardSettings::new(
+                "https://manager.example".to_string(),
+                vec!["demo".to_string(), "m-2".to_string()],
+                3000,
+                None,
+            )
+            .into_config(),
+        );
+        hub.set_active_match("demo").await;
+        hub.upsert(state_with(29, 1, None, None));
+        hub.touch_push("demo");
+        assert!(hub.is_new_score("demo", "29:1:none"));
+
+        assert!(hub.forget("demo").await);
+
+        assert!(hub.get("demo").is_none());
+        assert!(hub.all().is_empty());
+        // The active pointer must not survive the match it points at.
+        assert_eq!(hub.active_match_id().await, None);
+        // A dead match must also stop being polled by the watchdog,
+        // while its configured siblings survive.
+        let view = hub.config_view().await;
+        assert_eq!(view.match_configs.len(), 1);
+        assert_eq!(view.match_configs[0].match_id, "m-2");
+        // Dedupe state is gone, so a re-created match re-fires its first ball.
+        assert!(hub.is_new_score("demo", "29:1:none"));
+
+        // Idempotent: nothing left to drop on the second call.
+        assert!(!hub.forget("demo").await);
+    }
+
+    /// Forgetting one match must leave its siblings untouched.
+    #[tokio::test]
+    async fn forget_only_touches_the_named_match() {
+        let hub = ScoreboardHub::new(
+            ScoreboardSettings::new(
+                "https://manager.example".to_string(),
+                vec!["demo".to_string(), "keep".to_string()],
+                3000,
+                None,
+            )
+            .into_config(),
+        );
+        hub.upsert(state_with(29, 1, None, None));
+        let mut other = state_with(15, 0, None, None);
+        other.match_id = "keep".to_string();
+        hub.upsert(other);
+        hub.set_active_match("keep").await;
+
+        assert!(hub.forget("demo").await);
+
+        assert_eq!(hub.active_match_id().await.as_deref(), Some("keep"));
+        let view = hub.config_view().await;
+        assert_eq!(view.match_configs.len(), 1);
+        assert_eq!(view.match_configs[0].match_id, "keep");
+        assert_eq!(hub.all().len(), 1);
+        assert_eq!(hub.all()[0].match_id, "keep");
     }
 
     #[test]

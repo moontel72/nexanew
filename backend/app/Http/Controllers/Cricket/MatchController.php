@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Cricket;
 use App\Http\Controllers\Controller;
 use App\Models\Cricket\MatchManager;
 use App\Models\Cricket\MatchModel;
-use App\Models\Cricket\Team;
 use App\Models\Cricket\Tournament;
+use App\Services\Cricket\CricketDataCleanupService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -20,6 +20,11 @@ class MatchController extends Controller
 
     /** Bracket stages supported by the fixture scheduler. */
     private const STAGES = 'group_stage,quarter_final,semi_final,final,friendly_test';
+
+    public function __construct(
+        private readonly CricketDataCleanupService $cleanup,
+    ) {
+    }
 
     public function index(Request $request): \Illuminate\Http\JsonResponse
     {
@@ -36,27 +41,12 @@ class MatchController extends Controller
 
     public function store(Request $request): \Illuminate\Http\JsonResponse
     {
-        // Self-heal: teams registered before a tournament was activated have
-        // no tournament_id — attach any referenced orphan team to this
-        // tournament so scheduling works without manual SQL fixes.
-        $referencedTeamIds = array_filter([
-            $request->input('team_a_id'),
-            $request->input('team_b_id'),
-        ]);
-        if (!empty($referencedTeamIds) && $request->filled('tournament_id')) {
-            // Self-heal covers both orphan teams (registered before any
-            // tournament existed) and teams left over from a previous
-            // tournament — reusing an existing team in a new tournament
-            // must not trip the "does not belong to the active
-            // tournament" validation.
-            Team::whereIn('id', $referencedTeamIds)
-                ->where(function ($q) use ($request) {
-                    $q->whereNull('tournament_id')
-                        ->orWhere('tournament_id', '!=', $request->tournament_id);
-                })
-                ->update(['tournament_id' => $request->tournament_id]);
-        }
-
+        // Teams are scoped to the tournament they were registered in and
+        // are NEVER reassigned implicitly. An earlier "self-heal" silently
+        // moved any referenced team into the request's tournament, which
+        // let a fixture drag a team out of (or into) a tournament the
+        // operator never chose. The validation below now rejects a
+        // cross-tournament pairing instead of rewriting it.
         $validator = Validator::make($request->all(), [
             'tournament_id' => 'required|uuid|exists:cricket_tournaments,id',
             'team_a_id' => [
@@ -135,20 +125,7 @@ class MatchController extends Controller
     {
         $match = MatchModel::findOrFail($id);
 
-        // Self-heal orphan teams on edit as well (see store()).
-        $referencedTeamIds = array_filter([
-            $request->input('team_a_id'),
-            $request->input('team_b_id'),
-        ]);
-        if (!empty($referencedTeamIds)) {
-            Team::whereIn('id', $referencedTeamIds)
-                ->where(function ($q) use ($match) {
-                    $q->whereNull('tournament_id')
-                        ->orWhere('tournament_id', '!=', $match->tournament_id);
-                })
-                ->update(['tournament_id' => $match->tournament_id]);
-        }
-
+        // Teams are never reassigned implicitly (see store()).
         $validator = Validator::make($request->all(), [
             'team_a_id' => [
                 'sometimes', 'uuid',
@@ -672,8 +649,17 @@ class MatchController extends Controller
 
     public function destroy(string $id): \Illuminate\Http\JsonResponse
     {
-        MatchModel::findOrFail($id)->delete();
-        return response()->json(['message' => 'Match deleted.']);
+        MatchModel::findOrFail($id);
+
+        // Permanent cleanup: the cricket tables carry no foreign keys, so
+        // a soft delete alone would leave innings/scores/commentary behind
+        // and the media engine would keep serving the deleted score.
+        $counts = $this->cleanup->purgeMatch($id);
+
+        return response()->json([
+            'message' => 'Match deleted.',
+            'purged' => $counts,
+        ]);
     }
 
     /**

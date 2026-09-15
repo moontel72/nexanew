@@ -163,8 +163,78 @@ class MatchModel {
   /// return it as a relation object — accept both shapes.
   static String? _teamNameOf(dynamic value) {
     if (value == null) return null;
-    if (value is Map) return value['name']?.toString();
-    return value.toString();
+    if (value is Map) {
+      final name = value['name']?.toString();
+      return (name != null && name.isNotEmpty) ? name : null;
+    }
+    final text = value.toString();
+    return text.isEmpty ? null : text;
+  }
+
+  /// Short code for a team, from either response shape.
+  ///
+  /// The manager list endpoint returns the relation object (`team_a: {...}`)
+  /// and no flat `team_a_short` key, so reading only the flat key left every
+  /// short code null from `index()` — which is what pushed the UI onto its
+  /// placeholder labels.
+  static String? _teamShortOf(
+    dynamic value,
+    Map<String, dynamic> json,
+    String flatKey,
+  ) {
+    final flat = json[flatKey]?.toString();
+    if (flat != null && flat.isNotEmpty) return flat;
+
+    if (value is Map) {
+      for (final key in const ['short_code', 'team_code', 'name']) {
+        final candidate = value[key]?.toString();
+        if (candidate != null && candidate.isNotEmpty) return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  /// Team id from either shape — covers the flat `team_a_id` key (detail
+  /// endpoints) and the nested `team_a: {id: ...}` relation (list endpoints).
+  static String? _teamIdOf(
+    dynamic value,
+    Map<String, dynamic> json,
+    String flatKey,
+  ) {
+    final flat = json[flatKey]?.toString();
+    if (flat != null && flat.isNotEmpty) return flat;
+
+    if (value is Map) {
+      final nested = value['id']?.toString();
+      if (nested != null && nested.isNotEmpty) return nested;
+    }
+
+    return null;
+  }
+
+  /// The home team's display label: short code first, then full name.
+  String? get teamADisplay => teamAShort ?? teamAName;
+
+  /// The away team's display label: short code first, then full name.
+  String? get teamBDisplay => teamBShort ?? teamBName;
+
+  /// Match title for list rows, app bars and overlays.
+  ///
+  /// Single source of truth so every screen renders the same thing. Prefers
+  /// short codes, then full names, and falls back per side — a fixture whose
+  /// second team is missing still renders "HERO vs …" rather than collapsing
+  /// to a generic placeholder for both.
+  String get displayTitle {
+    final a = teamADisplay;
+    final b = teamBDisplay;
+
+    if (a != null && b != null) return '$a vs $b';
+    if (a != null) return '$a vs TBD';
+    if (b != null) return 'TBD vs $b';
+
+    // Neither team resolved — the fixture has no usable team data at all.
+    return 'Fixture TBD';
   }
 
   factory MatchModel.fromJson(Map<String, dynamic> json) => MatchModel(
@@ -172,18 +242,10 @@ class MatchModel {
     status: json['status']?.toString() ?? 'unknown',
     teamAName: _teamNameOf(json['team_a']),
     teamBName: _teamNameOf(json['team_b']),
-    teamAShort:
-        json['team_a_short']?.toString() ??
-        (json['team_a'] is Map
-            ? (json['team_a'] as Map)['short_code']?.toString()
-            : null),
-    teamBShort:
-        json['team_b_short']?.toString() ??
-        (json['team_b'] is Map
-            ? (json['team_b'] as Map)['short_code']?.toString()
-            : null),
-    teamAId: json['team_a_id']?.toString(),
-    teamBId: json['team_b_id']?.toString(),
+    teamAShort: _teamShortOf(json['team_a'], json, 'team_a_short'),
+    teamBShort: _teamShortOf(json['team_b'], json, 'team_b_short'),
+    teamAId: _teamIdOf(json['team_a'], json, 'team_a_id'),
+    teamBId: _teamIdOf(json['team_b'], json, 'team_b_id'),
     currentBattingTeamId: json['current_batting_team_id']?.toString(),
     currentBowlingTeamId: json['current_bowling_team_id']?.toString(),
     venue: json['venue']?.toString(),
@@ -198,7 +260,11 @@ class MatchModel {
         ? LiveScoreSnapshot.fromJson(json['live_score'] as Map<String, dynamic>)
         : null,
     stage: json['stage']?.toString() ?? 'group_stage',
-    groundId: json['ground_id']?.toString(),
+    groundId:
+        json['ground_id']?.toString() ??
+        (json['ground'] is Map
+            ? (json['ground'] as Map)['id']?.toString()
+            : null),
     groundName: json['ground'] is Map
         ? (json['ground'] as Map)['name']?.toString()
         : null,
@@ -1560,10 +1626,12 @@ class ScorecardModel {
         : const <String, dynamic>{};
 
     return ScorecardModel(
-      teamA: match['team_a'] as String? ?? '',
-      teamB: match['team_b'] as String? ?? '',
-      teamAShort: match['team_a_short'] as String? ?? '',
-      teamBShort: match['team_b_short'] as String? ?? '',
+      teamA: MatchModel._teamNameOf(match['team_a']) ?? '',
+      teamB: MatchModel._teamNameOf(match['team_b']) ?? '',
+      teamAShort:
+          MatchModel._teamShortOf(match['team_a'], match, 'team_a_short') ?? '',
+      teamBShort:
+          MatchModel._teamShortOf(match['team_b'], match, 'team_b_short') ?? '',
       venue: match['venue'] as String?,
       matchType: match['match_type'] as String?,
       oversPerSide: match['overs_per_side'] as int?,
@@ -1583,5 +1651,29 @@ class ScorecardModel {
             )
           : null,
     );
+  }
+
+  /// Short code if present, else the full name (mirrors [MatchModel]).
+  String? get teamADisplay {
+    if (teamAShort.isNotEmpty) return teamAShort;
+    return teamA.isNotEmpty ? teamA : null;
+  }
+
+  String? get teamBDisplay {
+    if (teamBShort.isNotEmpty) return teamBShort;
+    return teamB.isNotEmpty ? teamB : null;
+  }
+
+  /// Same title contract as [MatchModel.displayTitle] so the scorecard
+  /// header and the match list never disagree.
+  String get displayTitle {
+    final a = teamADisplay;
+    final b = teamBDisplay;
+
+    if (a != null && b != null) return '$a vs $b';
+    if (a != null) return '$a vs TBD';
+    if (b != null) return 'TBD vs $b';
+
+    return 'Fixture TBD';
   }
 }

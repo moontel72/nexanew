@@ -1634,4 +1634,23 @@ class LiveScoreService
             return null;
         }
     }
+
+    /**
+     * Drops the cached score snapshot for one match.
+     *
+     * Called on deletion: the snapshot would otherwise keep serving the
+     * deleted match's score to `GET /api/v1/cricket/live/{id}` (and thus
+     * to the media engine) until its TTL expired.
+     */
+    public static function forgetCachedScore(string $matchId): void
+    {
+        try {
+            Redis::del(self::CACHE_PREFIX . $matchId);
+        } catch (\Throwable $e) {
+            Log::warning('Cricket: Redis score cache flush failed (non-critical)', [
+                'match_id' => $matchId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
 }

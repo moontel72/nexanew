@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Cricket;
 
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\Cricket\CricketManagerAuth;
+use App\Events\Cricket\CricketMatchContextCleared;
 use App\Models\Cricket\MatchModel;
 use App\Services\Cricket\ActiveMatchContextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -69,7 +71,27 @@ class MatchContextController extends Controller
     {
         $manager = CricketManagerAuth::manager($request);
 
+        // Read the current pointer *before* clearing it: the realtime
+        // consumers (media engine, director panels) key off the match id,
+        // and without telling them the Studio overlay would keep burning
+        // the deselected match's score.
+        $previous = $this->context->get((string) $manager->id);
+
         $this->context->clear((string) $manager->id);
+
+        if ($previous !== null) {
+            try {
+                CricketMatchContextCleared::dispatch($previous, (string) $manager->id);
+            } catch (\Throwable $e) {
+                // A failed broadcast must never block the clear itself —
+                // consumers fall back to the REST read of the same key.
+                Log::warning('Cricket: context-cleared broadcast failed (non-critical)', [
+                    'match_id' => $previous,
+                    'manager_id' => $manager->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         return response()->json([
             'manager_id' => $manager->id,

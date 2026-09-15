@@ -99,7 +99,7 @@ class _ClubMatchesTab extends StatelessWidget {
               ),
             ),
             title: Text(
-              '${matches[i].teamAShort ?? matches[i].teamAName ?? 'T1'} vs ${matches[i].teamBShort ?? matches[i].teamBName ?? 'T2'}',
+              matches[i].displayTitle,
               style: const TextStyle(
                 color: CricketColors.textPrimary,
                 fontWeight: FontWeight.bold,

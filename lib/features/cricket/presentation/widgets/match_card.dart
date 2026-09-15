@@ -32,11 +32,11 @@ class MatchCard extends StatelessWidget {
   });
 
   String get _teamALabel =>
-      '${match.teamAShort ?? match.teamAName ?? 'TBD'} ${match.teamAName != null && match.teamAShort != null ? '· ${match.teamAName}' : ''}'
+      '${match.teamADisplay ?? 'TBD'} ${match.teamAName != null && match.teamAShort != null ? '· ${match.teamAName}' : ''}'
           .trim();
 
   String get _teamBLabel =>
-      '${match.teamBShort ?? match.teamBName ?? 'TBD'} ${match.teamBName != null && match.teamBShort != null ? '· ${match.teamBName}' : ''}'
+      '${match.teamBDisplay ?? 'TBD'} ${match.teamBName != null && match.teamBShort != null ? '· ${match.teamBName}' : ''}'
           .trim();
 
   String? get _venueLabel {
