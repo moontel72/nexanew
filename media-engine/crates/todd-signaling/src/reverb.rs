@@ -141,7 +141,21 @@ fn parse_frame(text: &str) -> Result<Option<ReverbEvent>, String> {
         .unwrap_or_default()
         .to_string();
 
-    if event.starts_with("pusher:") {
+    // Reverb sends two families of protocol frames that are not
+    // application events:
+    //   * `pusher:*`            — connection/heartbeat handshakes.
+    //   * `pusher_internal:*`   — subscription acks Reverb emits for EVERY
+    //                             subscribe (see Reverb's Pusher
+    //                             EventHandler, which frames them as
+    //                             `'pusher_internal:'.$event`).
+    //
+    // Only the first family was filtered, so every subscription ack was
+    // forwarded to the scoreboard dispatcher. Acks carry no `match_id`,
+    // so each one logged "cricket.context event without match_id". That
+    // noise masked real discovery failures: the message the engine emitted
+    // when it genuinely could not resolve an active match was identical to
+    // the one emitted for a harmless subscribe acknowledgement.
+    if event.starts_with("pusher:") || event.starts_with("pusher_internal:") {
         return Ok(None);
     }
 
@@ -167,4 +181,85 @@ fn parse_frame(text: &str) -> Result<Option<ReverbEvent>, String> {
         event,
         data,
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Reverb answers every `pusher:subscribe` with
+    /// `pusher_internal:subscription_succeeded` (Reverb's Pusher
+    /// `EventHandler` frames internal events as `'pusher_internal:'.$event`).
+    /// It carries no `match_id`, so before this filter existed the engine
+    /// forwarded it to the scoreboard dispatcher and logged
+    /// "cricket.context event without match_id - ignored" on every connect.
+    #[test]
+    fn subscription_ack_is_not_an_application_event() {
+        let frame = r#"{
+            "event": "pusher_internal:subscription_succeeded",
+            "channel": "cricket.context",
+            "data": "{}"
+        }"#;
+
+        assert!(parse_frame(frame).unwrap().is_none());
+    }
+
+    #[test]
+    fn presence_events_are_not_application_events() {
+        for event in [
+            "pusher_internal:member_added",
+            "pusher_internal:member_removed",
+        ] {
+            let frame =
+                format!(r#"{{"event":"{event}","channel":"cricket.context","data":"{{}}"}}"#);
+            assert!(parse_frame(&frame).unwrap().is_none(), "{event}");
+        }
+    }
+
+    /// The real payload: Laravel's `broadcastWith()` sits at `data` with
+    /// `match_id` at the top level. Nothing wraps it further, which is why
+    /// the engine's `data.match_id` lookup is correct as written.
+    #[test]
+    fn context_selected_payload_resolves_match_id_directly() {
+        let frame = r#"{
+            "event": "match.context.selected",
+            "channel": "cricket.context",
+            "data": "{\"match_id\":\"a2c0880f-cc5b-40d9-8d5c-6ffa3916e021\",\"manager_id\":\"mgr-1\",\"selected_at\":\"2026-09-15T22:16:02+00:00\"}"
+        }"#;
+
+        let event = parse_frame(frame).unwrap().unwrap();
+        assert_eq!(event.channel, "cricket.context");
+        assert_eq!(event.event, "match.context.selected");
+        assert_eq!(
+            event.data.get("match_id").and_then(Value::as_str),
+            Some("a2c0880f-cc5b-40d9-8d5c-6ffa3916e021")
+        );
+    }
+
+    #[test]
+    fn protocol_frames_are_not_events() {
+        let frame = r#"{"event":"pusher:ping","data":{}}"#;
+        assert!(parse_frame(frame).unwrap().is_none());
+    }
+
+    #[test]
+    fn frames_without_a_channel_are_ignored() {
+        let frame = r#"{"event":"some.event","data":"{}"}"#;
+        assert!(parse_frame(frame).unwrap().is_none());
+    }
+
+    #[test]
+    fn object_shaped_data_is_tolerated() {
+        let frame = r#"{
+            "event": "score.updated",
+            "channel": "cricket.match.m-1",
+            "data": {"match_id": "m-1"}
+        }"#;
+
+        let event = parse_frame(frame).unwrap().unwrap();
+        assert_eq!(
+            event.data.get("match_id").and_then(Value::as_str),
+            Some("m-1")
+        );
+    }
 }
