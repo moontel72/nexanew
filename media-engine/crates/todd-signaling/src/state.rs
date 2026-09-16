@@ -82,6 +82,12 @@ impl AppState {
                     telemetry.clone(),
                 )?);
                 engine.spawn_sampler();
+                // Recovers camera forwarders whose publisher dropped and
+                // reconnected. Without it a mid-match publish gap leaves
+                // SRS writing nothing for the rest of the match.
+                // gst-gated: the watchdog only exists where forwarders do.
+                #[cfg(feature = "gst")]
+                engine.spawn_forwarder_watchdog();
                 Arc::new(EmbeddedMediaPlane { engine })
             }
             MediaPlaneMode::Remote => {

@@ -121,7 +121,10 @@ export function MultiviewTile({
           {error}
         </div>
       )}
-      {connected && !rendering && (
+      {/* The loading banner is suppressed once an error is known: showing
+          "loading…" next to a failure tells the operator to keep waiting
+          for something that will never arrive. */}
+      {connected && !rendering && !error && (
         <div className="absolute inset-x-0 bottom-0 flex justify-center bg-black/60 px-2 py-1 text-[10px] text-amber-400">
           {isHls ? "loading HLS stream…" : "waiting for video frames…"}
         </div>

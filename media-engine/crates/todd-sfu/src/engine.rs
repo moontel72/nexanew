@@ -1165,12 +1165,31 @@ impl Engine {
             bitrate_kbps: target.bitrate_kbps,
             keyframe_interval: target.keyframe_interval,
         };
-        let forwarder = todd_transcode::forwarder::GstForwarder::build_program(
+        let forwarder = todd_transcode::forwarder::GstForwarder::build_program_with_callback(
             target,
             target.encoder,
             &spec,
             mixer.value().subscribe_video(),
             mixer.value().subscribe_audio(),
+            Box::new({
+                let status_map = Arc::clone(&self.forwarder_status);
+                let forwarders = Arc::clone(&self.forwarders);
+                let fail_key = key.clone();
+                let url = target.url.clone();
+                move |detail: String| {
+                    tracing::error!(
+                        key = %fail_key,
+                        url = %url,
+                        error = %detail,
+                        "program forwarder failed; clearing it so a watchdog can rebuild"
+                    );
+                    if let Some(mut status) = status_map.get_mut(&fail_key) {
+                        status.state = ForwardState::Failed;
+                        status.error = Some(detail);
+                    }
+                    forwarders.remove(&fail_key);
+                }
+            }),
         )
         .await
         .map_err(|e| {
@@ -1189,6 +1208,7 @@ impl Engine {
         })?;
 
         self.forwarders.insert(key.clone(), forwarder);
+
         let status = ForwardingStatus {
             key,
             room_id: room_id.to_string(),
@@ -1650,6 +1670,29 @@ impl Engine {
         });
     }
 
+    /// Spawns the periodic forwarder watchdog: re-arms camera forwarders
+    /// whose publisher went away and came back.
+    ///
+    /// Interval is deliberately coarse (5s). A forwarder is rebuilt only
+    /// after its camera is publishing again, and `rearm_stale_forwarders`
+    /// skips anything already running, so an aggressive poll buys nothing
+    /// but churn.
+    #[cfg(feature = "gst")]
+    pub fn spawn_forwarder_watchdog(&self) {
+        let engine = self.clone();
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(Duration::from_secs(5));
+            tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            loop {
+                tick.tick().await;
+                let rearmed = engine.rearm_stale_forwarders().await;
+                if !rearmed.is_empty() {
+                    tracing::info!(count = rearmed.len(), "forwarder watchdog re-armed outputs");
+                }
+            }
+        });
+    }
+
     async fn sample_stats(&self) {
         use webrtc::stats::StatsReportType;
 
@@ -1714,6 +1757,16 @@ impl Engine {
     /// Spawns a GStreamer forwarding pipeline that consumes the camera's
     /// selected layer + audio buses. Only available with the `gst`
     /// feature (needs system GStreamer >= 1.24 at build time).
+    ///
+    /// Returns as soon as the target is validated and the status is recorded
+    /// as `Starting`; the pipeline itself is built on a background task.
+    ///
+    /// This split is deliberate. `GstForwarder::build` waits for the camera's
+    /// first video chunk before it can choose a depayloader, so building it
+    /// inline made the HTTP request block until the camera published. When a
+    /// director activated a camera before its publisher was live (the normal
+    /// case — the operator switches, then the phone connects) the request
+    /// hung, and the forwarder was only registered *after* video appeared.
     #[cfg(feature = "gst")]
     pub async fn add_forwarder(
         &self,
@@ -1732,7 +1785,11 @@ impl Engine {
             )));
         }
 
-        // Select the simulcast layer to forward (lowest by default).
+        // Select the simulcast layer to forward. `lowest_video_rid` (not
+        // `lowest_rid`) because a single-track phone registers its Opus
+        // audio under the same `""` rid as its video, and picking the rid
+        // from that ordering can resolve to an audio-only layer — which
+        // builds a pipeline that can never carry a picture.
         let rid = match target.rid.clone() {
             Some(r) if !r.is_empty() => {
                 if !self.router.is_rid_active(room_id, camera_id, &r) {
@@ -1744,7 +1801,7 @@ impl Engine {
             }
             _ => self
                 .router
-                .lowest_rid(room_id, camera_id)
+                .lowest_video_rid(room_id, camera_id)
                 .unwrap_or_default(),
         };
 
@@ -1761,8 +1818,10 @@ impl Engine {
         }
 
         // Subscribe the video layer + all live audio tracks, grouped by
-        // bus via the RID convention.
-        let video_rx = self.router.subscribe(room_id, camera_id, &rid);
+        // bus via the RID convention. Subscribing here (before the pipeline
+        // exists) is what keeps chunks flowing into the forwarder's channel
+        // while the background task waits for the first one.
+        let mut video_rx = self.router.subscribe(room_id, camera_id, &rid);
         let mut audio_rx: Vec<(AudioBus, tokio::sync::mpsc::Receiver<_>)> = Vec::new();
         for (audio_rid, _ssrc, codec) in self.router.audio_tracks(room_id, camera_id) {
             if !matches!(codec, MediaCodec::Opus) {
@@ -1779,21 +1838,206 @@ impl Engine {
             bitrate_kbps: target.bitrate_kbps,
             keyframe_interval: target.keyframe_interval,
         };
-        let forwarder =
-            GstForwarder::build(target, encoder, spec, &target.audio, video_rx, audio_rx).await?;
-        self.forwarders.insert(key.clone(), forwarder);
-        let status = ForwardingStatus {
+
+        // Publish `Starting` up front so the operator sees the forwarder
+        // immediately instead of waiting on the first video chunk.
+        let starting = ForwardingStatus {
             key: key.clone(),
             room_id: room_id.to_string(),
             source: todd_common::types::ForwardSource::Camera,
             kind: target.kind,
             url: target.url.clone(),
-            state: todd_common::types::ForwardState::Running,
+            state: todd_common::types::ForwardState::Starting,
             started_at_ms: chrono::Utc::now().timestamp_millis(),
             error: None,
         };
-        self.forwarder_status.insert(key, status);
+        self.forwarder_status.insert(key.clone(), starting);
+
+        let forwarders = Arc::clone(&self.forwarders);
+        let status_map = Arc::clone(&self.forwarder_status);
+        let spawned_key = key.clone();
+        let audio_cfg = target.audio.clone();
+        let owned_target = target.clone();
+
+        tokio::spawn(async move {
+            // Two independent clones: the failure callback may fire while
+            // the build future still needs `forwarders` to publish the
+            // pipeline into. Sharing one Arc would move it into the closure
+            // and leave the build path unable to borrow it.
+            let fail_forwarders = Arc::clone(&forwarders);
+            let fail_status = Arc::clone(&status_map);
+            let fail_key = spawned_key.clone();
+            let fail_url = owned_target.url.clone();
+
+            let on_fail = move |detail: String| {
+                tracing::error!(
+                    key = %fail_key,
+                    url = %fail_url,
+                    error = %detail,
+                    "forwarder failed; clearing it so a watchdog can rebuild"
+                );
+                if let Some(mut status) = fail_status.get_mut(&fail_key) {
+                    status.state = todd_common::types::ForwardState::Failed;
+                    status.error = Some(detail);
+                }
+                // Drop the dead pipeline so `add_forwarder` can be called
+                // again for the same target. Without this the key stays
+                // occupied forever and recovery is impossible.
+                fail_forwarders.remove(&fail_key);
+            };
+
+            match GstForwarder::build_with_callback(
+                &owned_target,
+                encoder,
+                spec,
+                &audio_cfg,
+                &mut video_rx,
+                audio_rx,
+                Box::new(on_fail),
+            )
+            .await
+            {
+                Ok(forwarder) => {
+                    // Only publish `Running` when the pipeline was actually
+                    // built from live video.
+                    if let Some(existing) = status_map.get(&spawned_key) {
+                        if existing.state == todd_common::types::ForwardState::Failed {
+                            // The bus already reported a failure; keep the
+                            // failure rather than overwriting it.
+                            drop(existing);
+                            tracing::warn!(
+                                key = %spawned_key,
+                                "forwarder built but already failed; not storing"
+                            );
+                            forwarders.remove(&spawned_key);
+                            return;
+                        }
+                    }
+                    forwarders.insert(spawned_key.clone(), forwarder);
+                    if let Some(mut status) = status_map.get_mut(&spawned_key) {
+                        status.state = todd_common::types::ForwardState::Running;
+                        status.error = None;
+                    }
+                    tracing::info!(key = %spawned_key, "forwarder running");
+                }
+                Err(e) => {
+                    tracing::error!(
+                        key = %spawned_key,
+                        error = %e,
+                        "forwarder pipeline build failed"
+                    );
+                    if let Some(mut status) = status_map.get_mut(&spawned_key) {
+                        status.state = todd_common::types::ForwardState::Failed;
+                        status.error = Some(e.to_string());
+                    }
+                }
+            }
+        });
+
         Ok(())
+    }
+
+    /// Rebuilds a camera forwarder that died or never started.
+    ///
+    /// A forwarder's life is tied to one publisher session. When the phone
+    /// drops Wi-Fi and reconnects, the WHIP session is torn down and rebuilt
+    /// — but the forwarder keeps the *old* router subscription, whose channel
+    /// closed with the old session. The pipeline then ends at EOS (or was
+    /// never built at all, if the camera was activated before it published)
+    /// while the stream URL stays "live" in the database, so nothing ever
+    /// recreates it and SRS receives nothing for the rest of the match.
+    ///
+    /// This is the recovery half of that pair: it finds camera forwarders
+    /// whose target camera now has live video but no running pipeline, and
+    /// starts them again. Idempotent — a healthy forwarder is left alone.
+    ///
+    /// Returns the keys that were re-armed.
+    #[cfg(feature = "gst")]
+    pub async fn rearm_stale_forwarders(&self) -> Vec<String> {
+        use todd_common::types::{ForwardSource, ForwardState, ForwardTarget};
+
+        let mut rearmed = Vec::new();
+
+        // Collect candidates first: mutating the status map while holding a
+        // read guard on it would deadlock the DashMap shard.
+        let candidates: Vec<(String, String)> = self
+            .forwarder_status
+            .iter()
+            .filter(|entry| entry.value().source == ForwardSource::Camera)
+            .filter(|entry| {
+                matches!(
+                    entry.value().state,
+                    ForwardState::Failed | ForwardState::Starting
+                )
+            })
+            .map(|entry| (entry.value().key.clone(), entry.value().room_id.clone()))
+            .collect();
+
+        for (key, room_id) in candidates {
+            // Key shape is `{room}/{camera}/{url}`; recover the camera id.
+            let Some(camera_id) = key
+                .strip_prefix(&format!("{room_id}/"))
+                .and_then(|rest| rest.split('/').next())
+                .map(str::to_string)
+            else {
+                continue;
+            };
+
+            // A pipeline already exists — leave it alone.
+            if self.forwarders.contains_key(&key) {
+                continue;
+            }
+
+            // Only re-arm once the camera is actually publishing again.
+            let rid = self
+                .router
+                .lowest_video_rid(&room_id, &camera_id)
+                .unwrap_or_default();
+            if self
+                .router
+                .video_codec_of(&room_id, &camera_id, &rid)
+                .is_none()
+            {
+                continue;
+            }
+
+            let Some(target) = self.forwarder_status.get(&key).map(|s| ForwardTarget {
+                camera_id: camera_id.clone(),
+                source: ForwardSource::Camera,
+                kind: s.kind,
+                url: s.url.clone(),
+                encoder: Default::default(),
+                bitrate_kbps: 0,
+                keyframe_interval: 0,
+                rid: None,
+                audio: Default::default(),
+            }) else {
+                continue;
+            };
+
+            // Drop the stale status so the conflict check and the status
+            // write start from a clean slate.
+            self.forwarder_status.remove(&key);
+
+            match self.add_forwarder(&room_id, &camera_id, &target).await {
+                Ok(()) => {
+                    tracing::info!(
+                        key = %key,
+                        room = %room_id,
+                        camera = %camera_id,
+                        "re-armed stale forwarder after publisher returned"
+                    );
+                    rearmed.push(key);
+                }
+                Err(e) => tracing::warn!(
+                    key = %key,
+                    error = %e,
+                    "failed to re-arm stale forwarder"
+                ),
+            }
+        }
+
+        rearmed
     }
 
     #[cfg(not(feature = "gst"))]

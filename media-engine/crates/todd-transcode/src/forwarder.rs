@@ -36,6 +36,9 @@ pub struct GstForwarder {
     pipeline: gst::Pipeline,
     /// Push tasks; aborted on drop.
     push_tasks: Vec<JoinHandle<()>>,
+    /// Bus watcher; aborted on drop. Keeps the pipeline's error state live
+    /// instead of silently discarding it.
+    _bus_task: JoinHandle<()>,
 }
 
 impl Drop for GstForwarder {
@@ -44,6 +47,7 @@ impl Drop for GstForwarder {
         for task in &self.push_tasks {
             task.abort();
         }
+        self._bus_task.abort();
     }
 }
 
@@ -54,6 +58,9 @@ impl GstForwarder {
     /// `video_rx` carries the video stream of one camera (one simulcast
     /// layer); `audio_rx` carries the camera's audio tracks grouped by
     /// target bus (already routed by the SFU via RID convention).
+    ///
+    /// `on_fail` fires once when the pipeline reports a fatal bus error, so
+    /// the caller can clear the forwarder and let a watchdog rebuild it.
     #[allow(clippy::too_many_arguments)]
     pub async fn build(
         target: &ForwardTarget,
@@ -62,6 +69,35 @@ impl GstForwarder {
         audio_cfg: &AudioMixerConfig,
         mut video_rx: mpsc::Receiver<RtpChunk>,
         audio_rx: Vec<(AudioBus, mpsc::Receiver<RtpChunk>)>,
+    ) -> Result<Self, AppError> {
+        Self::build_with_callback(
+            target,
+            encoder,
+            spec,
+            audio_cfg,
+            &mut video_rx,
+            audio_rx,
+            Box::new(|_| {}),
+        )
+        .await
+    }
+
+    /// [`build`](Self::build) with a failure callback.
+    ///
+    /// The callback runs once, on the bus watcher thread, the first time the
+    /// pipeline reports a fatal error (unreachable RTMP server, rejected
+    /// publish, encoder failure). Callers that own shared state use it to
+    /// mark the forwarder `Failed` instead of leaving a dead pipeline
+    /// reported as `Running`.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn build_with_callback(
+        target: &ForwardTarget,
+        encoder: EncoderKind,
+        spec: EncoderSpec,
+        audio_cfg: &AudioMixerConfig,
+        video_rx: &mut mpsc::Receiver<RtpChunk>,
+        audio_rx: Vec<(AudioBus, mpsc::Receiver<RtpChunk>)>,
+        on_fail: Box<dyn FnOnce(String) + Send + 'static>,
     ) -> Result<Self, AppError> {
         crate::ensure_gst_initialized();
         // The router fans every media type of a layer out on one subscription,
@@ -108,6 +144,10 @@ impl GstForwarder {
             .by_name("video_src")
             .and_then(|element| element.downcast::<AppSrc>().ok())
             .ok_or_else(|| AppError::Internal("video appsrc lookup failed".to_string()))?;
+        // `replace` moves the receiver out; the caller's slot is left with a
+        // closed channel, which is fine because `build_with_callback` owns
+        // the receiver for the rest of this call and never reads it again.
+        let video_rx = std::mem::replace(video_rx, closed_channel());
         push_tasks.push(spawn_push_task(video_src, video_rx, Some(first)));
 
         for (bus, rx) in audio_rx {
@@ -124,9 +164,17 @@ impl GstForwarder {
         }
 
         tracing::info!(kind = ?target.kind, url = %target.url, "forwarder started");
+
+        // Capture output failures instead of discarding them. This is the
+        // signal that was missing: without it a dead RTMP connection stayed
+        // reported as `Running` while SRS received nothing.
+        let fail_label = format!("camera/{}", target.camera_id);
+        let _bus_task = watch_bus(&pipeline, fail_label, on_fail);
+
         Ok(GstForwarder {
             pipeline,
             push_tasks,
+            _bus_task,
         })
     }
 
@@ -140,6 +188,20 @@ impl GstForwarder {
         spec: &EncoderSpec,
         video: broadcast::Receiver<RtpChunk>,
         audio: broadcast::Receiver<RtpChunk>,
+    ) -> Result<Self, AppError> {
+        Self::build_program_with_callback(target, encoder, spec, video, audio, Box::new(|_| {}))
+            .await
+    }
+
+    /// [`build_program`](Self::build_program) with a failure callback fired
+    /// once when the pipeline reports a fatal bus error.
+    pub async fn build_program_with_callback(
+        target: &ForwardTarget,
+        encoder: EncoderKind,
+        spec: &EncoderSpec,
+        video: broadcast::Receiver<RtpChunk>,
+        audio: broadcast::Receiver<RtpChunk>,
+        on_fail: Box<dyn FnOnce(String) + Send + 'static>,
     ) -> Result<Self, AppError> {
         let description = build_program_description(target, encoder, spec)?;
         let pipeline = gst::parse::launch(&description)
@@ -169,11 +231,108 @@ impl GstForwarder {
         push_tasks.push(spawn_push_task(audio_src, audio_rx, None));
 
         tracing::info!(kind = ?target.kind, url = %target.url, "program forwarder started");
+
+        let _bus_task = watch_bus(&pipeline, "program".to_string(), on_fail);
+
         Ok(GstForwarder {
             pipeline,
             push_tasks,
+            _bus_task,
         })
     }
+}
+
+/// A receiver whose sender is already dropped — used as the vacated slot
+/// when a receiver is moved out of a `&mut` parameter.
+fn closed_channel() -> mpsc::Receiver<RtpChunk> {
+    let (tx, rx) = mpsc::channel(1);
+    drop(tx);
+    rx
+}
+
+/// Watches a pipeline's bus and reports the first fatal condition.
+///
+/// GStreamer reports pipeline failures **asynchronously, on the bus**.
+/// `set_state(Playing)` returning `Ok` only means the state change was
+/// *accepted*, never that playback works — an `rtmpsink` that cannot reach
+/// its server fails seconds later with a bus error while the pipeline keeps
+/// reporting `Playing`. Nothing in this crate watched the bus, so every
+/// output failure was discarded: the forwarder logged "forwarder started",
+/// stayed `Running` forever, and the operator saw a healthy forwarder while
+/// SRS never received a single byte.
+///
+/// This task is the missing signal. It logs the error and invokes `on_fail`
+/// (which marks the forwarder `Failed` and clears it) so a failure is
+/// visible and recoverable instead of silent.
+fn watch_bus<F>(pipeline: &gst::Pipeline, label: String, on_fail: F) -> JoinHandle<()>
+where
+    F: FnOnce(String) + Send + 'static,
+{
+    let Some(bus) = pipeline.bus() else {
+        tracing::warn!(%label, "pipeline has no bus; output errors cannot be observed");
+        return tokio::spawn(async {});
+    };
+
+    // `spawn_blocking`: `timed_pop_filtered` blocks, and this must not
+    // occupy a runtime worker thread.
+    tokio::task::spawn_blocking(move || {
+        use gst::MessageView;
+
+        let mut on_fail = Some(on_fail);
+        loop {
+            // Poll in bounded slices so a healthy pipeline does not pin
+            // this thread forever; `Drop` on the forwarder aborts the task.
+            let Some(message) = bus.timed_pop_filtered(
+                gst::ClockTime::from_seconds(1),
+                &[
+                    gst::MessageType::Error,
+                    gst::MessageType::Eos,
+                    gst::MessageType::StateChanged,
+                ],
+            ) else {
+                continue;
+            };
+
+            match message.view() {
+                MessageView::Error(err) => {
+                    let src = err
+                        .src()
+                        .map(|s| s.path_string().to_string())
+                        .unwrap_or_else(|| "unknown".to_string());
+                    let detail = format!(
+                        "{src}: {} (debug: {})",
+                        err.error(),
+                        err.debug().unwrap_or_default()
+                    );
+                    tracing::error!(
+                        %label,
+                        error = %err.error(),
+                        debug = err.debug().unwrap_or_default().as_str(),
+                        "forwarder pipeline error"
+                    );
+                    if let Some(cb) = on_fail.take() {
+                        cb(detail);
+                    }
+                    break;
+                }
+                MessageView::Eos(..) => {
+                    tracing::warn!(%label, "forwarder pipeline reached EOS");
+                    if let Some(cb) = on_fail.take() {
+                        cb("pipeline reached end-of-stream".to_string());
+                    }
+                    break;
+                }
+                MessageView::StateChanged(state) => {
+                    // A transition away from PLAYING means the sink could
+                    // not be (re)configured — bad URL or unreachable host.
+                    if state.current() == gst::State::Null {
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+    })
 }
 
 /// Bridges a broadcast receiver (async) into a bounded mpsc channel that

@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Middleware\Cricket\CricketManagerAuth;
 use App\Models\Cricket\ManagerSessionLog;
 use App\Models\Cricket\StreamEndpoint;
-use App\Services\MediaEngineTokenService;
+use App\Services\Cricket\CricketStreamSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -15,6 +15,10 @@ use Illuminate\Support\Facades\Validator;
 
 class StreamController extends Controller
 {
+    public function __construct(
+        private readonly CricketStreamSyncService $sync,
+    ) {
+    }
     public function index(Request $request, string $matchId): \Illuminate\Http\JsonResponse
     {
         $streams = StreamEndpoint::where('match_id', $matchId)
@@ -140,15 +144,38 @@ class StreamController extends Controller
 
         // Auto-wire the engine's PGM forwarder to SRS so the public
         // player at cricket.traceodd.com receives HLS segments.
-        $this->startPgmForwarder($stream);
+        $this->sync->resyncStream($stream);
 
-        // Register/refresh the on-air camera in the Studio room with its
-        // HLS manifest URL. Without this the Studio tile has no source to
-        // render and falls back to the WHEP path — which is empty for an
-        // RTMP/SRS camera, leaving the preview black forever.
-        $this->syncStudioCamera($stream);
+        // NOTE: the Studio camera is NOT registered here.
+        //
+        // `syncStudioCamera` used to add a second camera to the Studio room,
+        // keyed `cricket-{stream_id}` with `kind: "hls"`. The broadcaster
+        // already publishes the same physical feed under its own camera id
+        // (`CAM-03`/`CAM-04`), so the room ended up with two entries for one
+        // camera: the real WHIP tile and a phantom HLS tile. The multimedia
+        // grid renders one pane per registered camera, so two entries split
+        // the player 50/50 — and because the phantom HLS playlist only exists
+        // while the PGM forwarder is healthy, its pane sat on "loading HLS
+        // stream…" forever.
+        //
+        // Video flows broadcaster → engine → (RTMP) → SRS → HLS → public
+        // page. The Studio tile reads the broadcaster's own WHIP camera, so
+        // no second registration is needed. `removeGhostStudioCameras` clears
+        // any that earlier runs left behind.
+        $this->removeGhostStudioCameras($stream);
 
         return response()->json(['message' => 'Stream activated.', 'stream' => $stream]);
+    }
+
+    /**
+     * Removes every ghost `cricket-*` camera from the Studio rooms.
+     *
+     * Delegates to the sync service so the engine credentials live in one
+     * place. Never throws — Studio cleanup must not block going on air.
+     */
+    private function removeGhostStudioCameras(StreamEndpoint $stream): void
+    {
+        $this->sync->removeGhostCameras();
     }
 
     public function deactivate(Request $request, string $matchId, string $streamId): \Illuminate\Http\JsonResponse
@@ -182,8 +209,8 @@ class StreamController extends Controller
      * public player then sits on a permanent HLS 404 with no way to
      * recover short of deactivating and re-activating the camera.
      *
-     * This is idempotent: `startPgmForwarder` skips a forwarder that is
-     * already running for the same URL.
+     * This is idempotent: a forwarder that is already running for the same
+     * URL is left untouched.
      */
     public function resync(Request $request, string $matchId): \Illuminate\Http\JsonResponse
     {
@@ -192,13 +219,17 @@ class StreamController extends Controller
             ->orderBy('camera_number')
             ->get();
 
+        $repaired = [];
         foreach ($streams as $live) {
-            $this->startPgmForwarder($live);
+            if ($this->sync->resyncStream($live)) {
+                $repaired[] = $live->id;
+            }
         }
 
         return response()->json([
             'message' => 'Streams re-synced.',
             'streams' => $streams->pluck('id'),
+            'forwarders_running' => $repaired,
         ]);
     }
 
@@ -222,19 +253,8 @@ class StreamController extends Controller
             ->orderBy('camera_number')
             ->get();
 
-        $forwarders = $this->engineForwarders();
-
-        $report = $streams->map(function (StreamEndpoint $stream) use ($forwarders) {
-            $url = rtrim((string) ($stream->rtmp_ingest_url
-                ?: config('cricket.streaming.rtmp_ingest_url')), '/') . '/' . $stream->rtmp_stream_key;
-
-            $match = null;
-            foreach ($forwarders as $fwd) {
-                if (($fwd['url'] ?? '') === $url) {
-                    $match = $fwd;
-                    break;
-                }
-            }
+        $report = $streams->map(function (StreamEndpoint $stream) {
+            $health = $this->sync->healthFor($stream);
 
             return [
                 'camera_number' => $stream->camera_number,
@@ -242,10 +262,8 @@ class StreamController extends Controller
                 'stream_key' => $stream->rtmp_stream_key,
                 'status' => $stream->stream_status,
                 'hls_playlist_url' => $stream->hls_playlist_url,
-                'forwarder_state' => $match === null
-                    ? 'missing'
-                    : ($match['state'] ?? 'unknown'),
-                'forwarder_error' => $match['error'] ?? null,
+                'forwarder_state' => $health['forwarder_state'],
+                'forwarder_error' => $health['forwarder_error'],
             ];
         });
 
@@ -267,317 +285,24 @@ class StreamController extends Controller
     }
 
     /**
-     * Fetch the engine's forwarder list, or an empty array when the engine
-     * is unreachable. Never throws — this is a diagnostic endpoint.
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    private function engineForwarders(): array
-    {
-        try {
-            $engineUrl = rtrim((string) config('services.media_engine.url', ''), '/');
-            if ($engineUrl === '') {
-                return [];
-            }
-
-            $list = Http::timeout(5)
-                ->withToken($this->mintDirectorToken())
-                ->get("{$engineUrl}/api/v1/forward/list")
-                ->json();
-
-            return is_array($list) ? $list : [];
-        } catch (\Throwable $e) {
-            Log::warning('Cricket: forwarder list probe failed', [
-                'error' => $e->getMessage(),
-            ]);
-
-            return [];
-        }
-    }
-
-    /**
-     * Register (or refresh) the cricket camera inside the Studio room.
-     *
-     * Cricket cameras do not ingest into the engine over WHIP: OBS/RTMP
-     * pushes to SRS and the engine fans the on-air camera back out to
-     * SRS as HLS. The Studio multiviewer therefore plays these cameras
-     * from the HLS manifest, and `hls_url` is what selects that path
-     * (`MultiviewTile` uses HLS whenever `hls_url` is set).
-     *
-     * Cameras are addressed by a stable id derived from the DB row, so
-     * re-activating a camera updates the same entry instead of piling up
-     * duplicates every time a director switches source.
-     */
-    private function syncStudioCamera(StreamEndpoint $stream): void
-    {
-        try {
-            $engineUrl = rtrim((string) config('services.media_engine.url', ''), '/');
-            if ($engineUrl === '') {
-                return;
-            }
-
-            $hlsUrl = trim((string) $stream->hls_playlist_url);
-            if ($hlsUrl === '') {
-                Log::info('Cricket: stream has no HLS URL — Studio camera sync skipped.', [
-                    'stream_id' => $stream->id,
-                ]);
-
-                return;
-            }
-
-            $token = $this->mintDirectorToken();
-
-            $rooms = Http::timeout(5)
-                ->withToken($token)
-                ->get("{$engineUrl}/api/v1/room/list")
-                ->json();
-
-            if (!is_array($rooms) || empty($rooms)) {
-                Log::info('Cricket: no active Studio room — camera sync skipped.');
-
-                return;
-            }
-
-            $cameraId = self::cameraIdFor($stream);
-            $label = $stream->camera_label ?: ('Cam ' . $stream->camera_number);
-
-            foreach ($rooms as $room) {
-                $roomId = $room['id'] ?? null;
-                if (!is_string($roomId) || $roomId === '') {
-                    continue;
-                }
-
-                // Replace the camera entry wholesale: `hls_url` is the
-                // field that decides HLS vs WHEP, so both kind and URL
-                // must move together.
-                $payload = [
-                    'id' => $cameraId,
-                    'label' => $label,
-                    'kind' => 'hls',
-                    'group' => 'cricket',
-                    'hls_url' => $hlsUrl,
-                ];
-
-                $exists = false;
-                foreach ($room['cameras'] ?? [] as $camera) {
-                    if (($camera['id'] ?? null) === $cameraId) {
-                        $exists = true;
-                        break;
-                    }
-                }
-
-                if ($exists) {
-                    $res = Http::timeout(5)
-                        ->withToken($token)
-                        ->withHeaders(['Content-Type' => 'application/json'])
-                        ->put("{$engineUrl}/api/v1/room/{$roomId}/camera/{$cameraId}", [
-                            'label' => $label,
-                            'kind' => 'hls',
-                            'group' => 'cricket',
-                            'hls_url' => $hlsUrl,
-                        ]);
-                } else {
-                    $res = Http::timeout(5)
-                        ->withToken($token)
-                        ->withHeaders(['Content-Type' => 'application/json'])
-                        ->post("{$engineUrl}/api/v1/room/{$roomId}/camera", $payload);
-                }
-
-                if (! $res->successful()) {
-                    Log::warning('Cricket: Studio camera sync failed', [
-                        'room_id' => $roomId,
-                        'camera_id' => $cameraId,
-                        'status' => $res->status(),
-                        'body' => $res->body(),
-                    ]);
-                }
-            }
-        } catch (\Throwable $e) {
-            Log::warning('Cricket: Studio camera sync error (non-critical)', [
-                'error' => $e->getMessage(),
-            ]);
-        }
-    }
-
-    /**
-     * Stable engine camera id for a cricket stream row.
-     *
-     * Derived from the stream's UUID so it survives label/camera-number
-     * edits and never collides with a hand-added Studio camera.
-     */
-    public static function cameraIdFor(StreamEndpoint $stream): string
-    {
-        return 'cricket-' . $stream->id;
-    }
-
-    /**
-     * Push the new program-feed context to public viewers via Reverb.
-     * Broadcast failures are non-critical and must never block switching.
-     */
-    private function broadcastStreamChange(string $matchId, ?array $activeStream): void
-    {
-        try {
-            CricketStreamUpdated::dispatch($matchId, $activeStream);
-        } catch (\Throwable $e) {
-            Log::warning('Cricket: stream broadcast failed (non-critical)', [
-                'match_id' => $matchId,
-                'error' => $e->getMessage(),
-            ]);
-        }
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    //  Engine PGM → SRS auto-forwarder
-    // ─────────────────────────────────────────────────────────────
-
-    /**
-     * Start the engine's forwarder to SRS so HLS segments appear at
-     * /hls/live/{key}.m3u8 for the public player.
-     *
-     * Non-blocking: any failure is logged but never prevents the
-     * stream activation from succeeding.
-     */
-    private function startPgmForwarder(StreamEndpoint $stream): void
-    {
-        try {
-            $engineUrl = rtrim((string) config('services.media_engine.url', ''), '/');
-            if ($engineUrl === '') {
-                return;
-            }
-
-            $token = $this->mintDirectorToken();
-
-            // Discover the active Studio room.
-            $rooms = Http::timeout(5)
-                ->withToken($token)
-                ->get("{$engineUrl}/api/v1/room/list")
-                ->json();
-
-            if (!is_array($rooms) || empty($rooms)) {
-                Log::info('Cricket: no active Studio room — PGM forwarder skipped.');
-                return;
-            }
-
-            // Resolve the room and camera that are actually on air.
-            //
-            // The composite (`source: program`) is fed by the GStreamer mixer,
-            // which still does not build reliably on this host, and when it is
-            // missing the engine answers 409 and nothing reaches SRS — the
-            // public portal then only ever shows its "Stream starting soon"
-            // fallback. Fanning the on-air camera out directly puts the match
-            // on air now; the composite can be switched back on once the mixer
-            // is fixed.
-            $source = $this->programSource($engineUrl, $token, $rooms);
-            if ($source === null) {
-                Log::info('Cricket: no on-air program camera — forwarder skipped.');
-                return;
-            }
-            $roomId = $source['room_id'];
-            $cameraId = $source['camera_id'];
-
-            // Build the full RTMP URL: ingest base + /{stream_key}
-            $rtmpBase = $stream->rtmp_ingest_url
-                ?: config('cricket.streaming.rtmp_ingest_url');
-            $rtmpUrl = rtrim((string) $rtmpBase, '/') . '/' . $stream->rtmp_stream_key;
-
-            // Skip if a forwarder to this exact URL is already running.
-            $existing = Http::timeout(5)
-                ->withToken($token)
-                ->get("{$engineUrl}/api/v1/forward/list")
-                ->json();
-
-            if (is_array($existing)) {
-                foreach ($existing as $fwd) {
-                    if (($fwd['url'] ?? '') === $rtmpUrl
-                        && ($fwd['state'] ?? '') === 'running') {
-                        Log::info('Cricket: PGM forwarder already running', ['url' => $rtmpUrl]);
-                        return;
-                    }
-                }
-            }
-
-            $res = Http::timeout(10)
-                ->withToken($token)
-                ->withHeaders(['Content-Type' => 'application/json'])
-                ->post("{$engineUrl}/api/v1/room/{$roomId}/forward", [
-                    'camera_id' => $cameraId,
-                    'source' => 'camera',
-                    'kind' => 'rtmp',
-                    'url' => $rtmpUrl,
-                    'bitrate_kbps' => (int) config('cricket.streaming.forwarder_bitrate_kbps', 4000),
-                ]);
-
-            if ($res->successful()) {
-                Log::info('Cricket: PGM forwarder started', [
-                    'room_id' => $roomId,
-                    'url' => $rtmpUrl,
-                ]);
-            } else {
-                Log::warning('Cricket: PGM forwarder start failed', [
-                    'status' => $res->status(),
-                    'body' => $res->body(),
-                ]);
-            }
-        } catch (\Throwable $e) {
-            Log::warning('Cricket: PGM forwarder error (non-critical)', [
-                'error' => $e->getMessage(),
-            ]);
-        }
-    }
-
-    /**
-     * Returns the id of the first room with a program (PGM) source set, or
-     * null when no room is on air. Keeps the forwarder bound to the Studio's
-     * active room instead of an arbitrary entry in the room list.
-     *
-     * @param  array<int, array<string, mixed>>  $rooms
-     */
-    private function programSource(string $engineUrl, string $token, array $rooms): ?array
-    {
-        foreach ($rooms as $room) {
-            $id = $room['id'] ?? null;
-            if (!is_string($id) || $id === '') {
-                continue;
-            }
-
-            try {
-                $res = Http::timeout(2)
-                    ->withToken($token)
-                    ->get("{$engineUrl}/api/v1/program/" . urlencode($id));
-
-                if (!$res->successful()) {
-                    continue;
-                }
-
-                $program = $res->json();
-                $camera = is_array($program) ? ($program['camera_id'] ?? null) : null;
-
-                if (!is_string($camera) || $camera === '') {
-                    continue;
-                }
-
-                return ['room_id' => $id, 'camera_id' => $camera];
-            } catch (\Throwable $e) {
-                // Probe failures are non-critical — try the next room.
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Stop any running PGM forwarder on the engine. Called when the
-     * last live stream for a match is deactivated.
+     * Stop every cricket forwarder on the engine. Called when the last live
+     * stream for a match is deactivated, so SRS stops segmenting a feed
+     * nobody is watching.
      */
     private function stopPgmForwarder(): void
     {
-        try {
-            $engineUrl = rtrim((string) config('services.media_engine.url', ''), '/');
-            if ($engineUrl === '') {
-                return;
-            }
+        $engineUrl = rtrim((string) config('services.media_engine.url', ''), '/');
+        if ($engineUrl === '') {
+            return;
+        }
 
-            $token = $this->mintDirectorToken();
+        try {
+            $token = app(\App\Services\MediaEngineTokenService::class)->mint(
+                role: 'admin',
+                subject: 'laravel-stream-controller',
+                perms: ['studio_director'],
+                ttlSeconds: 120,
+            );
 
             $forwarders = Http::timeout(5)
                 ->withToken($token)
@@ -596,7 +321,7 @@ class StreamController extends Controller
                     continue;
                 }
                 $key = $fwd['key'] ?? '';
-                if ($key === '') {
+                if (!is_string($key) || $key === '') {
                     continue;
                 }
                 $res = Http::timeout(5)
@@ -612,20 +337,6 @@ class StreamController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
-    }
-
-    /**
-     * Mint a short-lived admin JWT with studio_director permission
-     * for server-to-server calls to the Rust media engine.
-     */
-    private function mintDirectorToken(): string
-    {
-        return app(MediaEngineTokenService::class)->mint(
-            role: 'admin',
-            subject: 'laravel-stream-controller',
-            perms: ['studio_director'],
-            ttlSeconds: 120,
-        );
     }
 
     public function destroy(string $matchId, string $streamId): \Illuminate\Http\JsonResponse
