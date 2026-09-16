@@ -16,7 +16,7 @@ use App\Http\Controllers\Cricket\PublicMatchController;
 use App\Http\Controllers\Cricket\ReplayController;
 use App\Http\Controllers\Cricket\SponsorController;
 use App\Http\Controllers\Cricket\SquadController;
-use App\Http\Controllers\Cricket\StreamController;
+use App\Http\Controllers\Cricket\LiveVideoController;
 use App\Http\Controllers\Cricket\TeamController;
 use App\Http\Controllers\Cricket\TournamentSetupController;
 use App\Http\Controllers\Cricket\TournamentBrandController;
@@ -132,16 +132,13 @@ Route::prefix('api/v1/cricket/manager')
         Route::put('active-match', [MatchContextController::class, 'update']);
         Route::delete('active-match', [MatchContextController::class, 'destroy']);
 
-        // Camera stream health — reports whether the engine's PGM→SRS
-        // forwarder is actually running for a match's on-air camera. The
-        // forwarder is what writes the SRS HLS segments the public player
-        // and the Studio tiles read, so a false here explains an HLS 404.
-        Route::get('matches/{matchId}/stream-health', [StreamController::class, 'health']);
-
-        // Idempotent forwarder recovery: re-asserts the engine→SRS bridge
-        // for every stream still marked live. Used by the console's
-        // "Reconnect stream" action and safe to call at any time.
-        Route::post('matches/{matchId}/stream-resync', [StreamController::class, 'resync']);
+        // Live video — sourced from the Todd Broadcaster, not the manager.
+        // The manager only reports health and can re-assert the engine→SRS
+        // bridge; there is no camera CRUD, because cameras belong to the
+        // broadcaster (see LiveVideoController).
+        Route::get('matches/{matchId}/video-health', [LiveVideoController::class, 'health']);
+        Route::post('matches/{matchId}/video-resync', [LiveVideoController::class, 'resync']);
+        Route::post('matches/{matchId}/video-stop', [LiveVideoController::class, 'stop']);
 
         // Live Scoring
         Route::post('matches/{matchId}/score', [LiveScoreController::class, 'update']);
@@ -162,14 +159,6 @@ Route::prefix('api/v1/cricket/manager')
         // Squad / Lineup management — playing XI & batting order (Phase 0)
         Route::get('matches/{matchId}/squads', [SquadController::class, 'index']);
         Route::put('matches/{matchId}/squads/{teamId}', [SquadController::class, 'upsert']);
-
-        // Stream Management
-        Route::get('matches/{matchId}/streams', [StreamController::class, 'index']);
-        Route::post('matches/{matchId}/streams', [StreamController::class, 'store']);
-        Route::put('matches/{matchId}/streams/{streamId}', [StreamController::class, 'update']);
-        Route::post('matches/{matchId}/streams/{streamId}/activate', [StreamController::class, 'activate']);
-        Route::post('matches/{matchId}/streams/{streamId}/deactivate', [StreamController::class, 'deactivate']);
-        Route::delete('matches/{matchId}/streams/{streamId}', [StreamController::class, 'destroy']);
 
         // Voice-to-Score AI
         Route::get('voice-score/health', [VoiceScoreController::class, 'health']);

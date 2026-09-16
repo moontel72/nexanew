@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use App\Models\Cricket\MatchModel;
-use App\Models\Cricket\StreamEndpoint;
 use App\Services\Cricket\CricketDataCleanupService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -19,12 +18,15 @@ use Illuminate\Support\Facades\DB;
  * "Orphaned" here means one of:
  *   - a child row pointing at a match that no longer exists,
  *   - a match whose row is gone-but-not-force-deleted (soft-deleted),
- *   - a stream/score tied to a soft-deleted match, which is what keeps a
- *     deleted fixture's video tile or scoreboard reachable by stale URL.
+ *   - a score tied to a soft-deleted match, which is what keeps a deleted
+ *     fixture's scoreboard reachable by stale URL.
  *
  * Teams and players are deliberately NOT hard-deleted: they use the Trash
  * flow and must stay restorable. Their *fixtures* are detached instead, via
  * `cleanup:teams`.
+ *
+ * Live video is not checked here. It is sourced from the Todd Broadcaster and
+ * carries no database rows to orphan; `purgeMatch` tears its forwarder down.
  */
 class CleanupCricketOrphans extends Command
 {
@@ -32,14 +34,13 @@ class CleanupCricketOrphans extends Command
         {--dry-run : Report what would be removed without deleting anything}
         {--force   : Skip the confirmation prompt}';
 
-    protected $description = 'Remove orphaned cricket child records (soft-deleted matches, dangling innings/scores/streams)';
+    protected $description = 'Remove orphaned cricket child records (soft-deleted matches, dangling innings/scores)';
 
     /** Child tables holding a `match_id` that must always have a live parent. */
     private const MATCH_CHILD_TABLES = [
         'cricket_commentary',
         'cricket_match_sponsors',
         'cricket_match_managers',
-        'cricket_streams',
         'cricket_voice_score_logs',
         'cricket_match_squads',
         'cricket_best_xi',
@@ -110,23 +111,6 @@ class CleanupCricketOrphans extends Command
 
             foreach ($counts as $table => $count) {
                 $totals[$table] = ($totals[$table] ?? 0) + $count;
-            }
-        }
-
-        // Streams whose match row vanished entirely (no parent to scan above).
-        // `withoutGlobalScopes` matters here: the model soft-deletes, so the
-        // default scope would hide exactly the rows we need to purge.
-        $liveMatchIds = DB::table('cricket_matches')->whereNull('deleted_at')->pluck('id')->all();
-
-        $danglingStreamIds = DB::table('cricket_streams')
-            ->when(!empty($liveMatchIds), fn ($q) => $q->whereNotIn('match_id', $liveMatchIds))
-            ->pluck('id')
-            ->all();
-
-        if (!empty($danglingStreamIds)) {
-            $totals['cricket_streams'] = ($totals['cricket_streams'] ?? 0) + count($danglingStreamIds);
-            if (!$dryRun) {
-                StreamEndpoint::withTrashed()->whereIn('id', $danglingStreamIds)->forceDelete();
             }
         }
 

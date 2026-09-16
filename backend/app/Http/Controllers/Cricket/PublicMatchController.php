@@ -177,21 +177,37 @@ class PublicMatchController extends Controller
     }
 
     /**
-     * Get streaming URLs for a match.
+     * Live video URL for a match, sourced from the Todd Broadcaster.
+     *
+     * The playlist URL is *derived* from the match id rather than read from
+     * a camera registry. That is deliberate: playback must not depend on a
+     * database row, because a missing row is indistinguishable from "no
+     * stream" and silently breaks the player.
+     *
+     * A sample of the SS stream-name scheme:
+     *   cricket_match_{matchId}_cam1
+     *
+     * `available` reflects whether the engine is actually writing HLS
+     * segments right now. It is advisory — the player can still try the
+     * playlist, and a broadcaster that starts later will begin serving it.
      */
     public function streamUrl(string $matchId): \Illuminate\Http\JsonResponse
     {
-        $streams = \App\Models\Cricket\StreamEndpoint::where('match_id', $matchId)
-            ->where('stream_status', 'live')
-            ->orderBy('is_primary', 'desc')
-            ->orderBy('camera_number')
-            ->get(['id', 'camera_label', 'camera_number', 'hls_playlist_url', 'is_primary']);
+        $sync = app(\App\Services\Cricket\CricketStreamSyncService::class);
 
-        if ($streams->isEmpty()) {
-            return response()->json(['message' => 'No active streams for this match.'], 404);
-        }
+        $health = $sync->healthForMatch($matchId);
 
-        return response()->json(['streams' => $streams]);
+        return response()->json([
+            'streams' => [[
+                'id' => $sync->streamNameFor($matchId),
+                'camera_label' => 'Live',
+                'camera_number' => 1,
+                'hls_playlist_url' => $health['hls_url'],
+                'is_primary' => true,
+            ]],
+            'available' => $health['forwarder_state'] === 'running',
+            'source' => 'broadcaster',
+        ]);
     }
 
     /**

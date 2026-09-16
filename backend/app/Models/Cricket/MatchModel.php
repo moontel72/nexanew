@@ -103,11 +103,6 @@ class MatchModel extends Model
         return $this->hasMany(Commentary::class, 'match_id')->orderBy('ball_number', 'desc');
     }
 
-    public function streams()
-    {
-        return $this->hasMany(StreamEndpoint::class, 'match_id');
-    }
-
     public function matchManagers()
     {
         return $this->hasMany(MatchManager::class, 'match_id');

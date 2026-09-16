@@ -2,32 +2,30 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Cricket\StreamEndpoint;
+use App\Models\Cricket\MatchModel;
 use App\Services\Cricket\CricketStreamSyncService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Keeps the engine→SRS forwarder alive for every stream marked `live`.
+ * Keeps live video flowing to the public page for every match in progress.
  *
- * The public HLS playlist only exists while a forwarder is actually writing
- * to SRS. Activation wires that forwarder once, at the moment a director
- * switches a camera on air — a single shot that cannot survive the normal
- * events of a match day:
+ * The public HLS playlist only exists while the engine→SRS forwarder is
+ * running, and that forwarder is tied to one broadcaster publishing session.
+ * It therefore cannot survive the normal events of a match day:
  *
  *   - the broadcaster's phone drops Wi-Fi and reconnects (new WHIP session,
  *     new RTP tracks, old forwarder permanently dead),
- *   - the engine restarts (all in-memory forwarder state is lost while the
- *     database still says `live`),
- *   - the camera was activated before its publisher connected (the forwarder
- *     waited for video that never arrived, then gave up).
+ *   - the engine restarts (all in-memory forwarder state is lost),
+ *   - the match was started before the broadcaster went on air (nothing to
+ *     forward yet).
  *
- * In every one of those cases the stream row says `live`, the public page
- * shows its player, and `/hls/live/{key}.m3u8` returns 404 with nothing in
- * the logs to explain why. This command is the watchdog that notices and
- * re-arms the forwarder.
+ * In each case the public page shows its player and
+ * `/hls/live/cricket_match_{matchId}_cam1.m3u8` returns 404 with nothing in
+ * the logs to explain why. This command notices and re-arms the forwarder.
  *
- * Idempotent: a healthy forwarder is detected and left untouched.
+ * Idempotent: a healthy forwarder is detected and left untouched, and a match
+ * with no live broadcaster camera is skipped without noise.
  */
 class CricketStreamWatchdog extends Command
 {
@@ -35,20 +33,23 @@ class CricketStreamWatchdog extends Command
                             {--match= : Only check one match id}
                             {--dry-run : Report what would be re-armed without changing anything}';
 
-    protected $description = 'Re-arms the engine→SRS forwarder for streams marked live (recovers HLS 404s)';
+    protected $description = 'Re-arms the engine→SRS forwarder for matches in progress (recovers HLS 404s)';
 
     public function handle(CricketStreamSyncService $sync): int
     {
-        $query = StreamEndpoint::query()->where('stream_status', 'live');
+        // Video only matters while a match is being played. Including every
+        // other status would probe the engine for feeds nobody is watching.
+        $query = MatchModel::query()
+            ->whereIn('status', ['in_progress', 'innings_break']);
 
         if ($match = $this->option('match')) {
-            $query->where('match_id', $match);
+            $query->where('id', $match);
         }
 
-        $streams = $query->get();
+        $matches = $query->get();
 
-        if ($streams->isEmpty()) {
-            $this->info('No live streams to check.');
+        if ($matches->isEmpty()) {
+            $this->info('No matches in progress.');
 
             return self::SUCCESS;
         }
@@ -56,38 +57,31 @@ class CricketStreamWatchdog extends Command
         $dryRun = (bool) $this->option('dry-run');
         $repaired = 0;
 
-        foreach ($streams as $stream) {
-            $health = $sync->healthFor($stream);
+        foreach ($matches as $match) {
+            $health = $sync->healthForMatch((string) $match->id);
 
             if ($health['forwarder_state'] === 'running') {
-                $this->line(sprintf(
-                    '  ok      cam%s %s — forwarder running',
-                    $stream->camera_number,
-                    $stream->rtmp_stream_key
+                $this->line(sprintf('  ok      %s — forwarder running', $match->id));
+
+                continue;
+            }
+
+            if ($dryRun) {
+                $this->warn(sprintf(
+                    '  BROKEN  %s — forwarder %s (would re-arm)',
+                    $match->id,
+                    $health['forwarder_state']
                 ));
 
                 continue;
             }
 
-            $this->warn(sprintf(
-                '  BROKEN  cam%s %s — forwarder %s%s',
-                $stream->camera_number,
-                $stream->rtmp_stream_key,
-                $health['forwarder_state'],
-                $health['forwarder_error'] ? ' (' . $health['forwarder_error'] . ')' : ''
-            ));
-
-            if ($dryRun) {
-                $this->line('          would re-arm (dry run)');
-
-                continue;
-            }
-
-            if ($sync->resyncStream($stream)) {
+            // Silence here is the common case: the broadcaster has not gone
+            // on air yet, so there is nothing to forward. Only report a
+            // re-arm that actually changed something.
+            if ($sync->resyncMatch((string) $match->id)) {
                 $repaired++;
-                $this->line('          re-armed');
-            } else {
-                $this->line('          re-arm skipped (no usable broadcaster camera yet)');
+                $this->info(sprintf('  RE-ARMED %s — live video restored', $match->id));
             }
         }
 
@@ -97,7 +91,7 @@ class CricketStreamWatchdog extends Command
             ]);
             $this->info("Re-armed {$repaired} forwarder(s).");
         } else {
-            $this->info('Nothing to re-arm.');
+            $this->info('No forwarders needed re-arming.');
         }
 
         return self::SUCCESS;

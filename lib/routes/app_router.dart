@@ -41,7 +41,6 @@ import 'package:trace_odd/features/cricket/presentation/blocs/player_career/play
 import 'package:trace_odd/features/cricket/presentation/blocs/match_analytics/match_analytics_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/match_list/match_list_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/live_score/live_score_bloc.dart';
-import 'package:trace_odd/features/cricket/presentation/blocs/camera_switcher/camera_switcher_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/voice_score/voice_score_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/sponsor/sponsor_bloc.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
@@ -395,7 +394,6 @@ class AppRouter {
               BlocProvider(create: (_) => MatchListBloc(repo: repo)),
               BlocProvider(create: (_) => TournamentHubBloc(repo: repo)),
               BlocProvider(create: (_) => LiveScoreBloc(repo: repo)),
-              BlocProvider(create: (_) => CameraSwitcherBloc(repo: repo)),
               BlocProvider(create: (_) => VoiceScoreBloc(repo: repo)),
               BlocProvider(create: (_) => SponsorBloc(repo: repo)),
             ],

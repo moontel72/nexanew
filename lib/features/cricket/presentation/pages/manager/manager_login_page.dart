@@ -7,7 +7,6 @@ import '../../blocs/cricket_auth/cricket_auth_bloc.dart';
 import '../../blocs/match_list/match_list_bloc.dart';
 import '../../blocs/tournament_hub/tournament_hub_bloc.dart';
 import '../../blocs/live_score/live_score_bloc.dart';
-import '../../blocs/camera_switcher/camera_switcher_bloc.dart';
 import '../../blocs/voice_score/voice_score_bloc.dart';
 import '../../blocs/sponsor/sponsor_bloc.dart';
 import '../../../data/repositories/cricket_repository.dart';
@@ -121,8 +120,9 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
                               : Icons.visibility,
                           color: CricketColors.textSecondary,
                         ),
-                        onPressed: () =>
-                            setState(() => _obscurePassword = !_obscurePassword),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                       ),
                     ),
                     obscureText: _obscurePassword,
@@ -154,10 +154,6 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
                                   ),
                                   BlocProvider(
                                     create: (_) => LiveScoreBloc(repo: repo),
-                                  ),
-                                  BlocProvider(
-                                    create: (_) =>
-                                        CameraSwitcherBloc(repo: repo),
                                   ),
                                   BlocProvider(
                                     create: (_) => VoiceScoreBloc(repo: repo),

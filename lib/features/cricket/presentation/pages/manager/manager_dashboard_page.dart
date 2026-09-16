@@ -9,7 +9,6 @@ import '../../blocs/scoring_control/scoring_control_bloc.dart';
 import '../../blocs/correction/correction_bloc.dart';
 import '../../blocs/match_list/match_list_bloc.dart';
 import '../../blocs/tournament_hub/tournament_hub_bloc.dart';
-import '../../blocs/camera_switcher/camera_switcher_bloc.dart';
 import '../../blocs/voice_score/voice_score_bloc.dart';
 import '../../blocs/sponsor/sponsor_bloc.dart';
 import '../../blocs/team/team_bloc.dart';
@@ -21,7 +20,7 @@ import '../../../data/models/cricket_models.dart';
 import '../../../data/repositories/cricket_repository.dart';
 import 'manager_login_page.dart';
 import 'manager_score_page.dart';
-import 'camera_switcher_page.dart';
+import 'live_video_page.dart';
 import 'voice_score_page.dart';
 import 'sponsor_manage_page.dart';
 import 'team_register_page.dart';
@@ -552,21 +551,14 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
                   ),
                 ),
                 Missile3DButton(
-                  label: 'Camera Switcher',
-                  icon: Icons.videocam,
+                  label: 'Live Video',
+                  icon: Icons.live_tv,
                   color: const Color(0xFF2563EB),
-                  subtitle: 'Toggle & manage camera feeds',
+                  subtitle: 'Broadcaster feed status & reconnect',
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => BlocProvider(
-                        create: (_) => CameraSwitcherBloc(
-                          repo: RepositoryProvider.of<CricketRepository>(
-                            context,
-                          ),
-                        ),
-                        child: CameraSwitcherPage(matchId: _selectedMatchId!),
-                      ),
+                      builder: (_) => LiveVideoPage(matchId: _selectedMatchId!),
                     ),
                   ),
                 ),

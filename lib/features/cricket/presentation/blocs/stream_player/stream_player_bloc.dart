@@ -57,12 +57,6 @@ final class SwitchCamera extends StreamPlayerEvent {
   const SwitchCamera(this.index);
 }
 
-final class ActivateStream extends StreamPlayerEvent {
-  final String matchId;
-  final String streamId;
-  const ActivateStream(this.matchId, this.streamId);
-}
-
 /// Realtime program-feed change pushed by the manager's camera switch.
 final class _StreamContextUpdated extends StreamPlayerEvent {
   final CricketStreamUpdate update;
@@ -82,7 +76,6 @@ class StreamPlayerBloc extends Bloc<StreamPlayerEvent, StreamPlayerState> {
       super(StreamPlayerInitial()) {
     on<LoadStreams>(_onLoad);
     on<SwitchCamera>(_onSwitch);
-    on<ActivateStream>(_onActivate);
     on<_StreamContextUpdated>(_onStreamContextUpdated);
   }
 
@@ -155,14 +148,6 @@ class StreamPlayerBloc extends Bloc<StreamPlayerEvent, StreamPlayerState> {
         activeCameraIndex: e.index,
       ),
     );
-  }
-
-  Future<void> _onActivate(
-    ActivateStream e,
-    Emitter<StreamPlayerState> emit,
-  ) async {
-    final ok = await _repo.activateStream(e.matchId, e.streamId);
-    if (ok) add(LoadStreams(e.matchId));
   }
 
   @override

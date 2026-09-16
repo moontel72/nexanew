@@ -16,7 +16,6 @@ use App\Models\Cricket\Player;
 use App\Models\Cricket\ReplayChunk;
 use App\Models\Cricket\ReplayClip;
 use App\Models\Cricket\ReplayEvent;
-use App\Models\Cricket\StreamEndpoint;
 use App\Models\Cricket\Team;
 use App\Models\Cricket\Tournament;
 use App\Models\Cricket\VoiceScoreLog;
@@ -58,7 +57,6 @@ class CricketDataCleanupService
                 'commentary' => Commentary::where('match_id', $matchId)->delete(),
                 'match_sponsors' => MatchSponsor::where('match_id', $matchId)->delete(),
                 'match_managers' => MatchManager::where('match_id', $matchId)->delete(),
-                'streams' => StreamEndpoint::where('match_id', $matchId)->delete(),
                 'voice_score_logs' => VoiceScoreLog::where('match_id', $matchId)->delete(),
                 'match_squads' => MatchSquad::where('match_id', $matchId)->delete(),
                 'best_xi' => BestXi::where('match_id', $matchId)->delete(),
@@ -79,8 +77,30 @@ class CricketDataCleanupService
 
         $this->flushMatchCaches($matchId);
         $this->broadcastContextCleared($matchId);
+        $this->stopLiveVideo($matchId);
 
         return $counts;
+    }
+
+    /**
+     * Tears down the engine→SRS forwarder for a deleted match.
+     *
+     * Without this SRS keeps segmenting the feed into
+     * `/hls/live/cricket_match_{matchId}_cam1.m3u8` and the playlist stays
+     * fetchable after the match is gone, so anyone with the old URL — or a
+     * cached player — keeps streaming a deleted fixture.
+     */
+    private function stopLiveVideo(string $matchId): void
+    {
+        try {
+            app(\App\Services\Cricket\CricketStreamSyncService::class)
+                ->stopForwarderForMatch($matchId);
+        } catch (\Throwable $e) {
+            Log::warning('Cricket: forwarder teardown failed (non-critical)', [
+                'match_id' => $matchId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

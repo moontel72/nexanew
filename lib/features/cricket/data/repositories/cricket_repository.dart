@@ -622,121 +622,48 @@ class CricketRepository {
   // Manager Auth endpoints
   // ────────────────────────────────────────────────────────────
 
-  Future<List<StreamModel>> getManagerStreams(String matchId) async {
-    try {
-      final res = await _http.get(
-        Uri.parse(
-          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/streams',
-        ),
-        headers: await _authHeaders(),
-      );
-      if (res.statusCode == 200) {
-        final list = jsonDecode(res.body) as List;
-        return list.map((s) => StreamModel.fromJson(s)).toList();
-      }
-      return [];
-    } catch (_) {
-      return [];
-    }
-  }
+  // ────────────────────────────────────────────────────────────
+  // Live video (sourced from the Todd Broadcaster)
+  // ────────────────────────────────────────────────────────────
+  //
+  // There is deliberately no camera CRUD here. Cameras belong to the
+  // broadcaster, which publishes them into the Todd Studio room over WHIP;
+  // the engine forwards the on-air camera to SRS. The manager's only job is
+  // to know whether that bridge is up, and to re-assert it if it died.
 
-  Future<bool> activateStream(String matchId, String streamId) async {
-    try {
-      final res = await _http.post(
-        Uri.parse(
-          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/streams/$streamId/activate',
-        ),
-        headers: await _authHeaders(),
-      );
-      return res.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  Future<bool> deactivateStream(String matchId, String streamId) async {
-    try {
-      final res = await _http.post(
-        Uri.parse(
-          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/streams/$streamId/deactivate',
-        ),
-        headers: await _authHeaders(),
-      );
-      return res.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  /// Create a new camera stream row for a match. The backend generates the
-  /// RTMP stream key when one is not supplied — the returned model carries
-  /// the ingest URL + stream key for the mobile camera operator.
-  /// Throws with the server message when creation fails.
-  Future<StreamModel> createStream(
-    String matchId, {
-    required String cameraLabel,
-    required int cameraNumber,
-    String? rtmpIngestUrl,
-    bool isPrimary = false,
-  }) async {
-    final res = await _http.post(
+  /// Live video health for a match: whether viewers can actually watch.
+  ///
+  /// Throws so the screen can show the real reason (auth failure, unknown
+  /// match) instead of silently rendering an empty state.
+  Future<Map<String, dynamic>> getVideoHealth(String matchId) async {
+    final res = await _http.get(
       Uri.parse(
-        '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/streams',
+        '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/video-health',
       ),
       headers: await _authHeaders(),
-      body: jsonEncode({
-        'camera_label': cameraLabel,
-        'camera_number': cameraNumber,
-        if (rtmpIngestUrl != null && rtmpIngestUrl.isNotEmpty)
-          'rtmp_ingest_url': rtmpIngestUrl,
-        'is_primary': isPrimary,
-      }),
     );
-    if (res.statusCode != 201) {
+    if (res.statusCode != 200) {
       throw Exception(_apiError(res));
     }
-    return StreamModel.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+    return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
-  Future<bool> updateStream(
-    String matchId,
-    String streamId, {
-    String? cameraLabel,
-    String? rtmpIngestUrl,
-    String? hlsPlaylistUrl,
-    bool? isPrimary,
-  }) async {
-    try {
-      final res = await _http.put(
-        Uri.parse(
-          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/streams/$streamId',
-        ),
-        headers: await _authHeaders(),
-        body: jsonEncode({
-          if (cameraLabel != null) 'camera_label': cameraLabel,
-          if (rtmpIngestUrl != null) 'rtmp_ingest_url': rtmpIngestUrl,
-          if (hlsPlaylistUrl != null) 'hls_playlist_url': hlsPlaylistUrl,
-          if (isPrimary != null) 'is_primary': isPrimary,
-        }),
-      );
-      return res.statusCode == 200;
-    } catch (_) {
-      return false;
+  /// Re-asserts the engine→SRS bridge. Idempotent and safe at any time.
+  ///
+  /// Returns the backend's own message, which distinguishes "reconnected"
+  /// from "no live broadcaster camera yet" — the operator needs to know
+  /// which of the two they are looking at.
+  Future<Map<String, dynamic>> resyncVideo(String matchId) async {
+    final res = await _http.post(
+      Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/video-resync',
+      ),
+      headers: await _authHeaders(),
+    );
+    if (res.statusCode != 200) {
+      throw Exception(_apiError(res));
     }
-  }
-
-  Future<bool> deleteStream(String matchId, String streamId) async {
-    try {
-      final res = await _http.delete(
-        Uri.parse(
-          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/streams/$streamId',
-        ),
-        headers: await _authHeaders(),
-      );
-      return res.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   /// Submit a ball to the score. Returns the fresh score snapshot on
@@ -1675,9 +1602,7 @@ class CricketRepository {
   /// Upload the tournament brand logo (manager branding) — returns the
   /// relative /storage/… URL to save on the tournament's logo_url.
   Future<String?> uploadBrandLogo(Uint8List bytes, String fileName) async {
-    final uri = Uri.parse(
-      '${ApiConfig.apiBaseUrl}/cricket/manager/brand/logo',
-    );
+    final uri = Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/brand/logo');
     final request = http.MultipartRequest('POST', uri)
       ..headers.addAll(await _authHeadersMultipart())
       ..files.add(

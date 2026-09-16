@@ -227,7 +227,8 @@ class MatchModel {
         .where((w) => w.isNotEmpty && !filler.contains(w.toLowerCase()))
         .toList();
 
-    if (words.isEmpty) return name.substring(0, name.length.clamp(0, 3)).toUpperCase();
+    if (words.isEmpty)
+      return name.substring(0, name.length.clamp(0, 3)).toUpperCase();
 
     final letters = words.map((w) => w[0]).take(3).join();
     return letters.toUpperCase();
@@ -608,6 +609,11 @@ class DeliveryModel {
   );
 }
 
+/// One playable feed of a match.
+///
+/// The backend derives these from the broadcaster's on-air camera, so there
+/// is no camera registry behind them — a feed exists as soon as the engine is
+/// writing its HLS playlist.
 class StreamModel {
   final String id;
   final String cameraLabel;
@@ -638,12 +644,21 @@ class StreamModel {
     rtmpIngestUrl: json['rtmp_ingest_url']?.toString(),
     rtmpStreamKey: json['rtmp_stream_key']?.toString(),
     hlsPlaylistUrl: json['hls_playlist_url']?.toString(),
-    streamStatus: json['stream_status']?.toString() ?? 'offline',
+    // `stream_status` no longer travels from the backend: the feed's
+    // existence *is* the status now. Kept as a field because
+    // `StreamPlayerBloc` reads `isLive`, and defaulting it to 'live' when
+    // the playlist is known avoids reporting a playable feed as offline.
+    streamStatus:
+        json['stream_status']?.toString() ??
+        (json['hls_playlist_url'] != null ? 'live' : 'offline'),
     isPrimary: json['is_primary'] as bool? ?? false,
     failoverPriority: (json['failover_priority'] as num?)?.toInt() ?? 0,
   );
 
-  bool get isLive => streamStatus == 'live';
+  bool get isLive =>
+      streamStatus == 'live' &&
+      hlsPlaylistUrl != null &&
+      hlsPlaylistUrl!.isNotEmpty;
 }
 
 /// Realtime program-feed context pushed by the backend when the manager

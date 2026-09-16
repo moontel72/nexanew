@@ -18,7 +18,6 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
-import 'package:trace_odd/features/cricket/presentation/blocs/camera_switcher/camera_switcher_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/cricket_auth/cricket_auth_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/live_score/live_score_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/match_analytics/match_analytics_bloc.dart';
@@ -90,7 +89,6 @@ class CricketManagerApp extends StatelessWidget {
                 BlocProvider(create: (_) => MatchListBloc(repo: repo)),
                 BlocProvider(create: (_) => TournamentHubBloc(repo: repo)),
                 BlocProvider(create: (_) => LiveScoreBloc(repo: repo)),
-                BlocProvider(create: (_) => CameraSwitcherBloc(repo: repo)),
                 BlocProvider(create: (_) => VoiceScoreBloc(repo: repo)),
                 BlocProvider(create: (_) => SponsorBloc(repo: repo)),
               ],
