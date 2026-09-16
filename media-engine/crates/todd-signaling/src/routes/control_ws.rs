@@ -354,6 +354,7 @@ mod tests {
                 runs: 99,
                 wickets: 2,
                 overs: 12.0,
+                overs_display: "12.0".to_string(),
                 run_rate: 8.25,
                 batter_on_strike: "R. Khan".to_string(),
                 batter_non_strike: "A. Singh".to_string(),

@@ -250,8 +250,8 @@ class _ScoreHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final teamA = match?.teamADisplay ?? 'TBD';
-    final teamB = match?.teamBDisplay ?? 'TBD';
+    final teamA = match?.teamADisplay ?? kMissingTeamLabel;
+    final teamB = match?.teamBDisplay ?? kMissingTeamLabel;
     final batting = score.battingTeam ?? '—';
     final bowling = score.bowlingTeam ?? '—';
 

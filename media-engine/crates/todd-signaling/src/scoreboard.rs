@@ -63,7 +63,13 @@ pub struct BallByBallState {
     pub bowling_team: String,
     pub runs: u32,
     pub wickets: u32,
+    /// True fractional overs (`balls / 6`) — for run-rate maths only.
+    /// For display always use `overs_display`.
     pub overs: f64,
+    /// Overs in cricket notation (`3.5` = 3 overs and 5 balls). This is the
+    /// value every UI must render; `overs` would show `3.8` for the same
+    /// state because it is a decimal fraction of an over, not a notation.
+    pub overs_display: String,
     pub run_rate: f64,
     pub batter_on_strike: String,
     pub batter_non_strike: String,
@@ -237,6 +243,14 @@ pub struct ManagerInnings {
     pub wickets: Option<u32>,
     #[serde(default)]
     pub balls: Option<u32>,
+    /// Cricket overs *notation* (`12.3` = 12 overs + 3 balls), as a string.
+    ///
+    /// Overs are not a decimal number: `0.5` means "five balls", not "half
+    /// an over". Deriving it as `balls / 6.0` produces `0.833` for five
+    /// balls, which the UI renders as `0.8` — a different, wrong value. The
+    /// manager sends the notation directly so both panels agree.
+    #[serde(default)]
+    pub overs_display: Option<String>,
     #[serde(default)]
     pub batter_on_strike: Option<String>,
     #[serde(default)]
@@ -305,15 +319,33 @@ fn map_ball_by_ball(raw: ManagerResponse) -> BallByBallState {
     let balls = inn.balls.unwrap_or(0);
     let score = inn.score.unwrap_or(0);
     let last_event = classify_last_event(&inn);
+
+    // Overs are a notation, not a decimal: `0.5` == five balls. Never derive
+    // them as `balls / 6.0` — five balls would become `0.833` and render as
+    // `0.8`, disagreeing with the manager panel (which shows `0.5`). Prefer
+    // the manager's own notation so the two can never diverge.
+    let overs_display = inn
+        .overs_display
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| format_overs_notation(balls));
+
+    // Run rate needs the true fractional overs (balls / 6), which is a real
+    // decimal — distinct from the display notation above.
+    let overs_actual = f64::from(balls) / 6.0;
+
     BallByBallState {
         match_id: raw.match_id,
         batting_team: inn.batting_team.unwrap_or_else(|| "Batting".to_string()),
         bowling_team: inn.bowling_team.unwrap_or_else(|| "Bowling".to_string()),
         runs: score,
         wickets: inn.wickets.unwrap_or(0),
-        overs: f64::from(balls) / 6.0,
-        run_rate: if balls > 0 {
-            f64::from(score) / (f64::from(balls) / 6.0)
+        overs: overs_actual,
+        overs_display,
+        run_rate: if overs_actual > 0.0 {
+            f64::from(score) / overs_actual
         } else {
             0.0
         },
@@ -329,6 +361,12 @@ fn map_ball_by_ball(raw: ManagerResponse) -> BallByBallState {
         updated_at_ms: Utc::now().timestamp_millis(),
         last_event,
     }
+}
+
+/// Renders a legal-ball count as cricket overs notation: 5 balls → `0.5`,
+/// 23 balls → `3.5`. Used only when the manager omits `overs_display`.
+fn format_overs_notation(balls: u32) -> String {
+    format!("{}.{}", balls / 6, balls % 6)
 }
 
 /// Classifies the most recent ball into a popup/replay-ready event.
@@ -958,9 +996,7 @@ async fn handle_push_event(
                         next = %match_id,
                         "cricket active match flipped — cleared previous score"
                     );
-                    control.publish(ControlEvent::ScoreCleared {
-                        match_id: previous,
-                    });
+                    control.publish(ControlEvent::ScoreCleared { match_id: previous });
                 }
             }
 
@@ -1373,6 +1409,7 @@ mod tests {
                 score: Some(128),
                 wickets: Some(4),
                 balls: Some(86),
+                overs_display: None,
                 batter_on_strike: Some("R. Khan".to_string()),
                 batter_non_strike: Some("A. Singh".to_string()),
                 bowler: Some("M. Patel".to_string()),
@@ -1391,7 +1428,56 @@ mod tests {
         assert_eq!(state.runs, 128);
         assert_eq!(state.wickets, 4);
         assert_eq!(state.overs, 86.0 / 6.0);
+        // 86 balls is 14 overs and 2 balls — notation is NOT 86/6 = 14.33.
+        assert_eq!(state.overs_display, "14.2");
         assert_eq!(state.recent_balls, vec!["4", "W"]);
+    }
+
+    /// Regression: five balls must read `0.5`, never `0.8`.
+    ///
+    /// The old mapping did `balls / 6.0`, so 5 balls became `0.833` and the
+    /// Studio rounded it to `0.8` while the manager panel showed `0.5`. The
+    /// two panels disagreed on over count and consequently on CRR.
+    #[test]
+    fn partial_over_uses_cricket_notation() {
+        let state = map_ball_by_ball(ManagerResponse {
+            match_id: "m".to_string(),
+            innings: Some(ManagerInnings {
+                balls: Some(5),
+                score: Some(9),
+                wickets: Some(1),
+                ..Default::default()
+            }),
+        });
+
+        assert_eq!(state.overs_display, "0.5");
+        // Run rate still uses the true fraction: 9 / (5/6) = 10.8.
+        assert!((state.run_rate - 10.8).abs() < 0.0001);
+    }
+
+    /// The manager's own notation wins when supplied, so a notation the
+    /// engine cannot re-derive (e.g. after a correction) is preserved.
+    #[test]
+    fn manager_overs_display_takes_precedence() {
+        let state = map_ball_by_ball(ManagerResponse {
+            match_id: "m".to_string(),
+            innings: Some(ManagerInnings {
+                balls: Some(5),
+                overs_display: Some("3.5".to_string()),
+                ..Default::default()
+            }),
+        });
+
+        assert_eq!(state.overs_display, "3.5");
+    }
+
+    #[test]
+    fn format_overs_notation_matches_cricket_rules() {
+        assert_eq!(format_overs_notation(0), "0.0");
+        assert_eq!(format_overs_notation(5), "0.5");
+        assert_eq!(format_overs_notation(6), "1.0");
+        assert_eq!(format_overs_notation(23), "3.5");
+        assert_eq!(format_overs_notation(86), "14.2");
     }
 
     #[test]
@@ -1638,6 +1724,7 @@ mod tests {
             runs,
             wickets,
             overs: 0.0,
+            overs_display: "0.0".to_string(),
             run_rate: 0.0,
             batter_on_strike: "—".to_string(),
             batter_non_strike: "—".to_string(),

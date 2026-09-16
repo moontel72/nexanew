@@ -31,13 +31,22 @@ class MatchCard extends StatelessWidget {
     this.onTap,
   });
 
+  /// Display label for a side: short code, then full name, then the shared
+  /// placeholder. The duplicate-name suffix is only added when the API gave
+  /// us a *separate* short code — otherwise the two halves would repeat the
+  /// same string.
+  String _sideLabel(String? display, String? name, String? short) {
+    final label = display ?? kMissingTeamLabel;
+    if (name == null || short == null) return label;
+    if (name == label) return label;
+    return '$label · $name';
+  }
+
   String get _teamALabel =>
-      '${match.teamADisplay ?? 'TBD'} ${match.teamAName != null && match.teamAShort != null ? '· ${match.teamAName}' : ''}'
-          .trim();
+      _sideLabel(match.teamADisplay, match.teamAName, match.teamAShort);
 
   String get _teamBLabel =>
-      '${match.teamBDisplay ?? 'TBD'} ${match.teamBName != null && match.teamBShort != null ? '· ${match.teamBName}' : ''}'
-          .trim();
+      _sideLabel(match.teamBDisplay, match.teamBName, match.teamBShort);
 
   String? get _venueLabel {
     if (match.groundName != null && match.groundName!.isNotEmpty) {

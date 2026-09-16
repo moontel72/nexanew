@@ -494,7 +494,8 @@ class _MatchGridTile extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            '${match.teamADisplay ?? 'TBD'}\nvs\n${match.teamBDisplay ?? 'TBD'}',
+            '${match.teamADisplay ?? kMissingTeamLabel}\nvs\n'
+            '${match.teamBDisplay ?? kMissingTeamLabel}',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: CricketColors.textPrimary,

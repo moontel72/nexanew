@@ -70,7 +70,8 @@ class FixtureSchedulerPage extends StatelessWidget {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          '"${match.teamAName ?? 'TBD'} vs ${match.teamBName ?? 'TBD'}" '
+          '"${match.teamAName ?? kMissingTeamLabel} vs '
+          '${match.teamBName ?? kMissingTeamLabel}" '
           'will be removed from the schedule.',
           style: const TextStyle(color: Color(0xFFBDD8DB)),
         ),

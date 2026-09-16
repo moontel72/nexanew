@@ -76,12 +76,16 @@ class Innings extends Model
 
     public function battingTeam()
     {
-        return $this->belongsTo(Team::class, 'batting_team_id');
+        // `withTrashed` for the same reason as `MatchModel::teamA`: a
+        // retired (Trash) team must still resolve here, otherwise the
+        // snapshot's `batting_team_name` degrades to an empty string and the
+        // Studio lower-third loses its label mid-match.
+        return $this->belongsTo(Team::class, 'batting_team_id')->withTrashed();
     }
 
     public function bowlingTeam()
     {
-        return $this->belongsTo(Team::class, 'bowling_team_id');
+        return $this->belongsTo(Team::class, 'bowling_team_id')->withTrashed();
     }
 
     /**

@@ -2,8 +2,10 @@
 
 namespace App\Models\Cricket;
 
+use App\Services\Cricket\CricketDataCleanupService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class Team extends Model
@@ -45,6 +47,56 @@ class Team extends Model
                 $team->team_code = self::generateUniqueCode();
             }
         });
+
+        // A team's display name is embedded in two surfaces that outlive the
+        // row: the cached `full_snapshot` of every live score (which the
+        // media engine republishes verbatim to the Studio lower-third) and
+        // the SRS/overlay state keyed by match id. Renaming a team — or
+        // moving it to Trash — must therefore flush those caches, otherwise
+        // the overlay keeps burning the previous name indefinitely.
+        static::saved(function (Team $team): void {
+            $team->flushFixtureSnapshots();
+        });
+
+        static::softDeleted(function (Team $team): void {
+            $team->flushFixtureSnapshots();
+        });
+
+        static::restored(function (Team $team): void {
+            $team->flushFixtureSnapshots();
+        });
+    }
+
+    /**
+     * Flushes the cached live snapshot of every fixture this team plays in.
+     *
+     * Delegates to the cleanup service so the flush semantics (score cache
+     * + active-match pointer + overlay clear) live in exactly one place.
+     * Non-fatal by design: cache maintenance must never break a team save.
+     */
+    private function flushFixtureSnapshots(): void
+    {
+        try {
+            $matchIds = MatchModel::withTrashed()
+                ->where('team_a_id', $this->id)
+                ->orWhere('team_b_id', $this->id)
+                ->pluck('id')
+                ->all();
+
+            if (empty($matchIds)) {
+                return;
+            }
+
+            $cleanup = app(CricketDataCleanupService::class);
+            foreach ($matchIds as $matchId) {
+                $cleanup->flushMatchCaches((string) $matchId);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Cricket: team fixture cache flush failed (non-critical)', [
+                'team_id' => $this->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private static function generateUniqueCode(): string

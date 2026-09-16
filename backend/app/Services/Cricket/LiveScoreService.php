@@ -1184,6 +1184,10 @@ class LiveScoreService
             'bowling_team_name' => $innings->bowlingTeam->name ?? '',
             'score' => "{$innings->total_runs}/{$innings->total_wickets}",
             'overs' => $innings->total_overs,
+            // Authoritative legal-ball count. `overs` is a *notation*, not a
+            // decimal, so consumers must never derive balls from it (nor
+            // overs from balls by dividing by six).
+            'total_balls' => $innings->total_balls,
             'target' => $target,
             'crr' => $crr,
             'rrr' => $rrr,

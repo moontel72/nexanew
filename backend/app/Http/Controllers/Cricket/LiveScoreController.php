@@ -269,7 +269,15 @@ class LiveScoreController extends Controller
     private function mapToEngineFeed(string $matchId, array $snapshot): array
     {
         [$runs, $wickets] = $this->splitScoreString($snapshot['score'] ?? '0/0');
-        $balls = $this->ballsFromOvers((float) ($snapshot['overs'] ?? 0.0));
+
+        // Overs travel as *notation* (`0.5` == five balls), never as a
+        // ball count. The engine used to receive a ball count and divide by
+        // six, so five balls became `0.833` and rendered as `0.8` while the
+        // manager panel showed `0.5`. Prefer the authoritative ball count
+        // when present — it avoids a lossy float round-trip — and fall back
+        // to parsing the notation from snapshots written by older versions.
+        $balls = $this->ballsFromSnapshot($snapshot);
+        $oversDisplay = $this->oversNotation($balls);
 
         $striker = $this->playerName($snapshot['current']['striker'] ?? null);
         $nonStriker = $this->playerName($snapshot['current']['non_striker'] ?? null);
@@ -292,6 +300,7 @@ class LiveScoreController extends Controller
                 'score' => $runs,
                 'wickets' => $wickets,
                 'balls' => $balls,
+                'overs_display' => $oversDisplay,
                 'batter_on_strike' => $striker,
                 'batter_non_strike' => $nonStriker,
                 'bowler' => $bowler,
@@ -302,12 +311,41 @@ class LiveScoreController extends Controller
         ];
     }
 
+    /**
+     * Total legal balls for the current innings.
+     *
+     * `total_balls` is the authoritative counter (it is what the service
+     * increments per legal delivery). Snapshots without it fall back to the
+     * overs notation, which is lossless for the 0–5 fractional digit range.
+     */
+    private function ballsFromSnapshot(array $snapshot): int
+    {
+        if (isset($snapshot['total_balls']) && is_numeric($snapshot['total_balls'])) {
+            return max(0, (int) $snapshot['total_balls']);
+        }
+
+        $innings = $snapshot['innings'] ?? null;
+        if (is_array($innings) && isset($innings['total_balls']) && is_numeric($innings['total_balls'])) {
+            return max(0, (int) $innings['total_balls']);
+        }
+
+        return $this->ballsFromOvers((float) ($snapshot['overs'] ?? 0.0));
+    }
+
     /** "123/4" → [123, 4]. */
     private function splitScoreString(string $score): array
     {
         $parts = explode('/', $score, 2);
 
         return [(int) ($parts[0] ?? 0), (int) ($parts[1] ?? 0)];
+    }
+
+    /** Legal-ball count → cricket overs notation: 5 balls → "0.5". */
+    private function oversNotation(int $balls): string
+    {
+        $balls = max(0, $balls);
+
+        return intdiv($balls, 6) . '.' . ($balls % 6);
     }
 
     /** Overs notation (12.3 = 12 overs + 3 balls) → total legal balls. */

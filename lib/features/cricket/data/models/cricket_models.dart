@@ -6,6 +6,14 @@
 /// NOTE: short_code and tournament_id are nullable in DB since migration 000004.
 /// TeamModel.fromJson handles null short_code with empty string fallback.
 
+/// Shown when a fixture's team relation did not resolve. Intentionally not a
+/// team-like token: placeholders that look like abbreviations (`T1`, `T2`)
+/// read as real data and mask a broken API join.
+const String kMissingTeamLabel = 'Unnamed team';
+
+/// Shown when neither side of a fixture resolved.
+const String kMissingFixtureLabel = 'Fixture teams unavailable';
+
 class TournamentModel {
   final String id;
   final String name;
@@ -177,22 +185,52 @@ class MatchModel {
   /// and no flat `team_a_short` key, so reading only the flat key left every
   /// short code null from `index()` — which is what pushed the UI onto its
   /// placeholder labels.
+  ///
+  /// Candidate order: flat key → `short_code` → `team_code` → `abbreviation`
+  /// → initials derived from the team name. `name` is deliberately no longer
+  /// a candidate: returning the full name from a *short code* reader made
+  /// `teamAShort` and `teamAName` identical and hid the difference between
+  /// "the API gave us a short code" and "we fabricated a label".
   static String? _teamShortOf(
     dynamic value,
     Map<String, dynamic> json,
     String flatKey,
   ) {
-    final flat = json[flatKey]?.toString();
+    final flat = json[flatKey]?.toString().trim();
     if (flat != null && flat.isNotEmpty) return flat;
 
     if (value is Map) {
-      for (final key in const ['short_code', 'team_code', 'name']) {
-        final candidate = value[key]?.toString();
+      for (final key in const ['short_code', 'team_code', 'abbreviation']) {
+        final candidate = value[key]?.toString().trim();
         if (candidate != null && candidate.isNotEmpty) return candidate;
       }
+
+      // Last resort: derive initials from the registered name so a team with
+      // no code still gets a stable, real label (`Hero Club Kufri` → `HCK`)
+      // instead of pushing the widget onto a generic placeholder.
+      final name = value['name']?.toString().trim();
+      if (name != null && name.isNotEmpty) return _initials(name);
     }
 
     return null;
+  }
+
+  /// Up to three initials from a team name, skipping filler words.
+  ///
+  /// `Hero Club Kufri` → `HCK`, `Rising Star Naushahra` → `RSN`. Filler words
+  /// ("Club", "Cricket", …) are skipped because including them produces
+  /// labels like `HCC` that no operator would recognise.
+  static String _initials(String name) {
+    const filler = {'club', 'the', 'of', 'and', 'cricket', 'team'};
+    final words = name
+        .split(RegExp(r'[\s\-]+'))
+        .where((w) => w.isNotEmpty && !filler.contains(w.toLowerCase()))
+        .toList();
+
+    if (words.isEmpty) return name.substring(0, name.length.clamp(0, 3)).toUpperCase();
+
+    final letters = words.map((w) => w[0]).take(3).join();
+    return letters.toUpperCase();
   }
 
   /// Team id from either shape — covers the flat `team_a_id` key (detail
@@ -219,22 +257,42 @@ class MatchModel {
   /// The away team's display label: short code first, then full name.
   String? get teamBDisplay => teamBShort ?? teamBName;
 
+  /// True when the API response carried no usable team data for this side.
+  ///
+  /// Distinguished from a legitimately-named team so callers can show a
+  /// *data-missing* state instead of a plausible-looking placeholder. A
+  /// fixture that resolved both names is never flagged, however the names
+  /// were derived.
+  bool get hasTeamA => teamAName != null || teamAId != null;
+  bool get hasTeamB => teamBName != null || teamBId != null;
+
+  /// True when at least one side is unresolvable.
+  ///
+  /// This is the condition that used to be papered over with a hardcoded
+  /// `T1 vs T2` label, which made a broken join look like real fixture data
+  /// on the Live Console and in the Studio overlay.
+  bool get hasMissingTeams => !hasTeamA || !hasTeamB;
+
   /// Match title for list rows, app bars and overlays.
   ///
   /// Single source of truth so every screen renders the same thing. Prefers
   /// short codes, then full names, and falls back per side — a fixture whose
   /// second team is missing still renders "HERO vs …" rather than collapsing
   /// to a generic placeholder for both.
+  ///
+  /// The placeholder is deliberately *not* a team-like token. `T1`/`T2` read
+  /// as real team abbreviations and sent operators hunting for a team that
+  /// never existed; `Unnamed team` states plainly that the join failed.
   String get displayTitle {
     final a = teamADisplay;
     final b = teamBDisplay;
 
     if (a != null && b != null) return '$a vs $b';
-    if (a != null) return '$a vs TBD';
-    if (b != null) return 'TBD vs $b';
+    if (a != null) return '$a vs ${kMissingTeamLabel}';
+    if (b != null) return '${kMissingTeamLabel} vs $b';
 
     // Neither team resolved — the fixture has no usable team data at all.
-    return 'Fixture TBD';
+    return kMissingFixtureLabel;
   }
 
   factory MatchModel.fromJson(Map<String, dynamic> json) => MatchModel(
@@ -1671,9 +1729,9 @@ class ScorecardModel {
     final b = teamBDisplay;
 
     if (a != null && b != null) return '$a vs $b';
-    if (a != null) return '$a vs TBD';
-    if (b != null) return 'TBD vs $b';
+    if (a != null) return '$a vs $kMissingTeamLabel';
+    if (b != null) return '$kMissingTeamLabel vs $b';
 
-    return 'Fixture TBD';
+    return kMissingFixtureLabel;
   }
 }

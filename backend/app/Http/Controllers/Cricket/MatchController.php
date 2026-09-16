@@ -282,8 +282,15 @@ class MatchController extends Controller
                     'id' => $match->id,
                     'status' => $match->status,
                     'tournament_id' => $match->tournament_id,
-                    'team_a_short' => $fresh->teamA?->short_code ?? $fresh->teamA?->name,
-                    'team_b_short' => $fresh->teamB?->short_code ?? $fresh->teamB?->name,
+                    // Short codes only — a full name is not a short code, and
+                    // substituting one here made consumers believe the
+                    // backend had supplied an abbreviation when it had not.
+                    // The Flutter model derives its own display label from
+                    // name + short_code, so this field must stay honest.
+                    'team_a_short' => $fresh->teamA?->short_code,
+                    'team_b_short' => $fresh->teamB?->short_code,
+                    'team_a' => $fresh->teamA?->name,
+                    'team_b' => $fresh->teamB?->name,
                 ]
             );
         } catch (\Throwable $e) {
