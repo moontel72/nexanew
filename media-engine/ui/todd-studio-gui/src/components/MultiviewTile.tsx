@@ -77,20 +77,10 @@ export function MultiviewTile({
   const rendering = isHls ? hlsRendering : whep.rendering;
   const error = isHls ? hlsError : whep.error;
 
-  // The badge reports *routing*, not just transport. `active` already drives
-  // the tile's border, but the badge kept showing the source kind ("LIVE"/
-  // "HLS"), so a director who pressed Take and moved a camera to Program saw
-  // no confirmation on the tile itself. Program wins over preview, which wins
-  // over the transport label — that is the order an operator reads when
-  // scanning the wall.
-  const modeLabel =
-    active === "pgm" ? "PGM" : active === "pvw" ? "PVW" : isHls ? "HLS" : "LIVE";
-
-  // Program output is what viewers receive, so it is the one badge that should
-  // not depend on this browser's own stream health — a director must be able
-  // to tell which source is on air even if their local preview is still
-  // connecting.
-  const badgeOk = active === "pgm" || connected;
+  // The transport label, used only when this tile is neither on Program nor
+  // on Preview. Routing wins because a director scanning the wall needs to
+  // know *where* a source is routed before *how* it arrives.
+  const modeLabel = isHls ? "HLS" : "LIVE";
 
   return (
     <div
@@ -126,14 +116,24 @@ export function MultiviewTile({
       />
       <div className="absolute inset-x-0 top-0 flex items-center justify-between bg-black/60 px-2 py-1 text-xs">
         <span className="font-mono">{label ?? `${roomId}/${cameraId}`}</span>
-        <span
-          className={cn(
-            badgeOk ? "text-emerald-400" : "text-amber-400",
-            active === "pgm" && "font-bold tracking-wide",
-          )}
-        >
-          {!live ? "OFF" : connected ? modeLabel : active ?? "…"}
-        </span>
+        {/* Routing state is a filled badge, not just coloured text.
+            The tile border already turns red on Program and green on Preview,
+            but a director scanning the wall reads the badge first — and a
+            coloured word on a busy frame is easy to miss. Program is the
+            loudest because it is what viewers receive. */}
+        {active === "pgm" ? (
+          <span className="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+            PGM
+          </span>
+        ) : active === "pvw" ? (
+          <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+            PVW
+          </span>
+        ) : (
+          <span className={cn(!live ? "text-amber-400" : connected ? "text-emerald-400" : "text-amber-400")}>
+            {!live ? "OFF" : connected ? modeLabel : "…"}
+          </span>
+        )}
       </div>
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-2 text-center text-xs text-destructive">
