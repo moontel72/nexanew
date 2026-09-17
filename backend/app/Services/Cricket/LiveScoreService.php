@@ -58,8 +58,16 @@ class LiveScoreService
                 'liveScore',
             ])->findOrFail($matchId);
 
+            if ($match->status === 'innings_break') {
+                throw new \RuntimeException(
+                    'Scoring is paused during a break. Tap RESUME in the Live Console to continue.'
+                );
+            }
+
             if ($match->status !== 'in_progress') {
-                throw new \RuntimeException('Match is not in progress.');
+                throw new \RuntimeException(
+                    'Match is not in progress (status: ' . $match->status . ').'
+                );
             }
 
             $innings = $match->innings
@@ -214,8 +222,17 @@ class LiveScoreService
                 'liveScore',
             ])->findOrFail($matchId);
 
+            // Corrections are scoring too, so a break blocks them as well.
+            if ($match->status === 'innings_break') {
+                throw new \RuntimeException(
+                    'Scoring is paused during a break. Tap RESUME in the Live Console to continue.'
+                );
+            }
+
             if ($match->status !== 'in_progress') {
-                throw new \RuntimeException('Match is not in progress.');
+                throw new \RuntimeException(
+                    'Match is not in progress (status: ' . $match->status . ').'
+                );
             }
 
             $innings = $match->innings->where('status', 'in_progress')->first();
