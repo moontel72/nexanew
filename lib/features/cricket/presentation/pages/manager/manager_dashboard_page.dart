@@ -396,6 +396,29 @@ class _LiveConsoleTab extends StatefulWidget {
 class _LiveConsoleTabState extends State<_LiveConsoleTab> {
   String? _selectedMatchId;
 
+  /// Opens the live-video screen for the selected match.
+  ///
+  /// The repository is re-provided explicitly. `MaterialPageRoute` builds
+  /// above this page's providers — the Navigator sits above them in the tree
+  /// — so the pushed screen would otherwise resolve `CricketRepository` to
+  /// nothing and throw "Provider<...> not found" on its first frame. Every
+  /// other push from this file does the same.
+  void _openLiveVideo(BuildContext context) {
+    final matchId = _selectedMatchId;
+    if (matchId == null || matchId.isEmpty) return;
+
+    final repo = RepositoryProvider.of<CricketRepository>(context);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RepositoryProvider.value(
+          value: repo,
+          child: LiveVideoPage(matchId: matchId),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<MatchListBloc, MatchListState>(
@@ -555,12 +578,7 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
                   icon: Icons.live_tv,
                   color: const Color(0xFF2563EB),
                   subtitle: 'Broadcaster feed status & reconnect',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => LiveVideoPage(matchId: _selectedMatchId!),
-                    ),
-                  ),
+                  onTap: () => _openLiveVideo(context),
                 ),
                 Missile3DButton(
                   label: 'Voice-to-Score',
@@ -749,10 +767,7 @@ class _GoLivePanel extends StatelessWidget {
                     ),
                     label: Text(
                       onBreak ? 'RESUME' : 'BREAK',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                      ),
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
                     ),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(
