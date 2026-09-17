@@ -32,6 +32,18 @@ use tokio::task::JoinHandle;
 use crate::hw::{h264_encode_plan, resolve_encoder, EncodePlan};
 use crate::media::{MediaCodec, RtpChunk};
 
+/// How long to wait for an audio bus to prove it is carrying frames.
+///
+/// A track can be negotiated in the offer and still never send a packet — a
+/// phone with the mic muted, or a publisher that only captured video. A branch
+/// built for that input stalls `flvmux` (it waits for the stream that never
+/// arrives), and the failure takes video egress with it. Bounding the wait
+/// means a genuinely silent bus is dropped rather than blocking the output.
+///
+/// 1.5s is well inside one video keyframe interval at the profiles this engine
+/// targets, so a working audio bus primes long before the video queue drains.
+const AUDIO_PRIME_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(1500);
+
 pub struct GstForwarder {
     pipeline: gst::Pipeline,
     /// Push tasks; aborted on drop.
@@ -117,6 +129,41 @@ impl GstForwarder {
             }
         };
 
+        // An audio bus counts as present only once it has actually delivered
+        // a chunk. A registered track is not enough: the broadcaster
+        // negotiates Opus in its offer even when nothing is feeding it, and a
+        // branch built for that silent input stalls the mux — `flvmux` waits
+        // for the missing stream, so the *video* never reaches SRS either.
+        //
+        // Measured against the live engine: video-only egress completed and
+        // published while video plus a silent audio branch timed out, and
+        // neither `ignore-inactive-pads` nor `start-time-selection=first` on
+        // the audiomixer changed that. Dropping the branch is the only shape
+        // that works, so the wait is bounded and the bus is dropped if it
+        // stays quiet.
+        let mut live_audio: Vec<(AudioBus, mpsc::Receiver<RtpChunk>, RtpChunk)> = Vec::new();
+        for (bus, mut rx) in audio_rx {
+            let deadline = tokio::time::Instant::now() + AUDIO_PRIME_TIMEOUT;
+            let primed = loop {
+                match tokio::time::timeout_at(deadline, rx.recv()).await {
+                    Ok(Some(chunk)) => break Some(chunk),
+                    // Channel closed — the publisher went away.
+                    Ok(None) => break None,
+                    Err(_elapsed) => break None,
+                }
+            };
+
+            match primed {
+                Some(chunk) => live_audio.push((bus, rx, chunk)),
+                None => tracing::info!(
+                    bus = %bus.as_str(),
+                    "audio bus produced no frames within the prime window; forwarding without it"
+                ),
+            }
+        }
+
+        let has_audio = !live_audio.is_empty();
+
         let detected = crate::hw::detect_encoders();
         let description = build_description(
             target,
@@ -125,7 +172,7 @@ impl GstForwarder {
             &spec,
             audio_cfg,
             &detected,
-            !audio_rx.is_empty(),
+            has_audio,
         )?;
 
         let pipeline = gst::parse::launch(&description)
@@ -150,13 +197,15 @@ impl GstForwarder {
         let video_rx = std::mem::replace(video_rx, closed_channel());
         push_tasks.push(spawn_push_task(video_src, video_rx, Some(first)));
 
-        for (bus, rx) in audio_rx {
+        for (bus, rx, primed) in live_audio {
             let name = format!("audio_{}", bus.as_str());
             match pipeline
                 .by_name(&name)
                 .and_then(|element| element.downcast::<AppSrc>().ok())
             {
-                Some(appsrc) => push_tasks.push(spawn_push_task(appsrc, rx, None)),
+                // `Some(primed)` seeds the branch with the chunk already
+                // drained while waiting, so the prime is not discarded.
+                Some(appsrc) => push_tasks.push(spawn_push_task(appsrc, rx, Some(primed))),
                 None => {
                     tracing::warn!(bus = %bus.as_str(), "audio appsrc not in pipeline; dropping bus");
                 }
