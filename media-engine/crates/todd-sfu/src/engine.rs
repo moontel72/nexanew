@@ -1821,6 +1821,15 @@ impl Engine {
         // bus via the RID convention. Subscribing here (before the pipeline
         // exists) is what keeps chunks flowing into the forwarder's channel
         // while the background task waits for the first one.
+        //
+        // Only tracks the publisher actually registered are subscribed.
+        // A mixer config that *enables* a bus is not evidence that anything
+        // is feeding it: a video-only publisher (mic muted, or no audio track
+        // at all) still has Commentary/Ambient enabled by default, and
+        // building an audio branch for them produced an appsrc that never
+        // received a buffer. The depayloader then failed to negotiate and took
+        // the entire pipeline down — video included — with
+        // `not-negotiated (-4)`. Video-only output is normal and must work.
         let mut video_rx = self.router.subscribe(room_id, camera_id, &rid);
         let mut audio_rx: Vec<(AudioBus, tokio::sync::mpsc::Receiver<_>)> = Vec::new();
         for (audio_rid, _ssrc, codec) in self.router.audio_tracks(room_id, camera_id) {
@@ -1831,6 +1840,14 @@ impl Engine {
             if target.audio.bus(bus).enabled {
                 audio_rx.push((bus, self.router.subscribe(room_id, camera_id, &audio_rid)));
             }
+        }
+
+        if audio_rx.is_empty() {
+            tracing::info!(
+                room = %room_id,
+                camera = %camera_id,
+                "no live audio tracks on publisher; forwarding video only"
+            );
         }
 
         let encoder = target.encoder;

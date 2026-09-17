@@ -444,6 +444,14 @@ fn build_description(
     };
 
     // ---- audio stage -------------------------------------------------
+    // One branch per *live* audio bus. `has_audio` is decided by the caller
+    // from the router's registered tracks, never from the mixer config: an
+    // enabled bus with no publisher feeding it produced an `appsrc` that never
+    // received a buffer, and the un-negotiated depayloader then took the whole
+    // pipeline down with `not-negotiated (-4)` — killing the video egress too.
+    // Broadcasting video-only is normal (a phone with the mic muted, or a
+    // publisher that only sent a video track), and it must not break output.
+    //
     // The bus mixer is declared once, with its output chain, and every bus
     // then links into it with `mix.`.
     //
@@ -480,8 +488,16 @@ fn build_description(
                 1.0
             };
             audio_branches.push(format!(
-                "appsrc name=audio_{} format=time is-live=true do-timestamp=true \
+                // `is-live=false` and a `queue` before the depayloader are what
+                // let a bus stay silent without killing the pipeline. With
+                // `is-live=true` GStreamer expects a buffer immediately, so an
+                // input that never produced one failed negotiation with
+                // `not-negotiated (-4)` and took the video egress down with it.
+                // A queue absorbs that silence instead: the branch simply
+                // carries no audio until its publisher sends some.
+                "appsrc name=audio_{} format=time do-timestamp=true is-live=false \
                  caps=\"application/x-rtp,media=audio,encoding-name=OPUS,clock-rate=48000\" \
+                 ! queue max-size-time=200000000 leaky=downstream \
                  ! rtpopusdepay ! opusdec ! audioconvert ! audioresample \
                  ! volume name=vol_{} volume={factor:.6} ! mix.",
                 bus.as_str(),
@@ -603,14 +619,68 @@ mod tests {
     use super::*;
     use todd_common::media::AudioBus;
 
+    /// Regression: a video-only publisher must still produce a working
+    /// pipeline.
+    ///
+    /// The audio buses are enabled by default, so the description used to
+    /// build an `appsrc ! rtpopusdepay` branch even when nothing fed it. With
+    /// `is-live=true` the depayloader negotiated immediately, never received a
+    /// buffer, and failed with `not-negotiated (-4)` — which took the video
+    /// egress down with it and left the public page dark for a publisher that
+    /// simply sent no audio.
+    #[test]
+    fn audio_branch_survives_a_silent_bus() {
+        let target = ForwardTarget {
+            camera_id: "cam-1".to_string(),
+            source: Default::default(),
+            kind: ForwardKind::Rtmp,
+            url: "rtmp://example.test/live/key".to_string(),
+            encoder: EncoderKind::Auto,
+            bitrate_kbps: 4000,
+            keyframe_interval: 60,
+            rid: None,
+            audio: AudioMixerConfig::default(),
+        };
+        let description = build_description(
+            &target,
+            MediaCodec::H264,
+            EncoderKind::Auto,
+            &EncoderSpec::default(),
+            &AudioMixerConfig::default(),
+            &[EncoderKind::X264],
+            true,
+        )
+        .expect("description builds");
+
+        // A silent bus must not drive its appsrc as a live source: that is
+        // what forced negotiation against zero buffers. Only the audio
+        // branches are checked — the video appsrc is legitimately live, since
+        // the pipeline is only built once a video chunk has arrived.
+        for branch in description.split("appsrc name=audio_").skip(1) {
+            assert!(!branch.contains("is-live=true"), "{branch}");
+            assert!(branch.contains("leaky=downstream"), "{branch}");
+        }
+
+        // Sanity: the audio branches really are in the description, so the
+        // loop above is not vacuously true.
+        assert!(description.contains("appsrc name=audio_"), "{description}");
+        assert!(description.contains("audiomixer name=mix"), "{description}");
+    }
+
     /// The description builder is gst-gated, but the *string* it produces
     /// must be structurally valid — tested here without GStreamer.
     #[test]
     fn description_links_branches_into_mux() {
         let target = ForwardTarget {
             camera_id: "cam-1".to_string(),
+            source: Default::default(),
             kind: ForwardKind::Rtmp,
             url: "rtmp://example.test/live/key".to_string(),
+            encoder: EncoderKind::Auto,
+            bitrate_kbps: 4000,
+            keyframe_interval: 60,
+            rid: None,
+            audio: AudioMixerConfig::default(),
         };
         let description = build_description(
             &target,
@@ -627,16 +697,34 @@ mod tests {
         assert!(description.contains("name=mux"));
         assert!(description.contains("rtmpsink"));
         assert!(description.contains("rtph264depay"));
-        // Passthrough: no encoder element for H.264 sources.
-        assert!(!description.contains("enc"));
+        // Passthrough: the *video* path skips decode+encode for H.264.
+        //
+        // Checked on the video stage specifically rather than by rejecting
+        // any "enc" substring: the audio chain legitimately contains
+        // `voaacenc`, and the old blanket assertion failed on it as soon as
+        // this test could finally be compiled (it is gst-gated, so it had
+        // never run).
+        let video_stage = description
+            .split("rtph264depay")
+            .nth(1)
+            .and_then(|rest| rest.split("audio_").next())
+            .unwrap_or("");
+        assert!(!video_stage.contains("x264enc"), "{video_stage}");
+        assert!(!video_stage.contains("avdec_h264"), "{video_stage}");
     }
 
     #[test]
     fn passthrough_skips_encoders_vp8_reencodes() {
         let target = ForwardTarget {
             camera_id: "cam-1".to_string(),
+            source: Default::default(),
             kind: ForwardKind::Srt,
             url: "srt://127.0.0.1:9000".to_string(),
+            encoder: EncoderKind::Auto,
+            bitrate_kbps: 4000,
+            keyframe_interval: 60,
+            rid: None,
+            audio: AudioMixerConfig::default(),
         };
         let vp8 = build_description(
             &target,
@@ -656,8 +744,14 @@ mod tests {
     fn audio_buses_appear_in_description() {
         let target = ForwardTarget {
             camera_id: "cam-1".to_string(),
+            source: Default::default(),
             kind: ForwardKind::File,
             url: "/tmp/out.mkv".to_string(),
+            encoder: EncoderKind::Auto,
+            bitrate_kbps: 4000,
+            keyframe_interval: 60,
+            rid: None,
+            audio: AudioMixerConfig::default(),
         };
         let description = build_description(
             &target,
@@ -680,8 +774,14 @@ mod tests {
     fn program_description_passthrough_video_and_reencodes_audio() {
         let target = ForwardTarget {
             camera_id: "ignored-for-program".to_string(),
+            source: Default::default(),
             kind: ForwardKind::Rtmp,
             url: "rtmp://a.rtmp.youtube.com/live2/key".to_string(),
+            encoder: EncoderKind::Auto,
+            bitrate_kbps: 4000,
+            keyframe_interval: 60,
+            rid: None,
+            audio: AudioMixerConfig::default(),
         };
         let description =
             build_program_description(&target, EncoderKind::Auto, &EncoderSpec::default())
