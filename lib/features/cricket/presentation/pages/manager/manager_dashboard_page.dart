@@ -646,6 +646,12 @@ class _GoLivePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final live = match.isLive;
+    // `isLive` covers both playing states, but a break is not the same as
+    // playing: the panel must offer a way *back* from it. Without this the
+    // button stayed on BREAK after a break was called, so the only reachable
+    // transition was `innings_break -> innings_break` and the control looked
+    // frozen.
+    final onBreak = match.status == 'innings_break';
     final readyForLive = match.status == 'toss_done';
 
     return Container(
@@ -674,7 +680,9 @@ class _GoLivePanel extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                live ? 'MATCH IS LIVE' : 'MATCH NOT LIVE',
+                onBreak
+                    ? 'MATCH PAUSED (BREAK)'
+                    : (live ? 'MATCH IS LIVE' : 'MATCH NOT LIVE'),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -686,7 +694,9 @@ class _GoLivePanel extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            live
+            onBreak
+                ? 'Scoring is paused. Tap RESUME to continue the match.'
+                : live
                 ? 'Public viewers on cricket.traceodd.com are receiving this match.'
                 : readyForLive
                 ? 'Toss recorded — activate the public live stream now.'
@@ -727,14 +737,22 @@ class _GoLivePanel extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    icon: const Icon(
-                      Icons.pause_circle_outline,
+                    // One button, two states: BREAK pauses a running match,
+                    // RESUME returns from that pause. The backend accepts both
+                    // directions, so whichever is shown always succeeds.
+                    icon: Icon(
+                      onBreak
+                          ? Icons.play_circle_outline
+                          : Icons.pause_circle_outline,
                       color: Colors.white,
                       size: 18,
                     ),
-                    label: const Text(
-                      'BREAK',
-                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    label: Text(
+                      onBreak ? 'RESUME' : 'BREAK',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
                     ),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(
@@ -742,7 +760,10 @@ class _GoLivePanel extends StatelessWidget {
                       ),
                     ),
                     onPressed: () => context.read<MatchListBloc>().add(
-                      UpdateMatchStatus(match.id, 'innings_break'),
+                      UpdateMatchStatus(
+                        match.id,
+                        onBreak ? 'in_progress' : 'innings_break',
+                      ),
                     ),
                   ),
                 ),

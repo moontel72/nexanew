@@ -114,7 +114,7 @@ class MatchController extends Controller
             'teamA', 'teamB', 'ground',
             'innings', 'liveScore',
             'matchManagers.cricketManager',
-            'streams', 'matchSponsors.sponsor',
+            'matchSponsors.sponsor',
             'commentary' => fn($q) => $q->latest('ball_number')->limit(50),
         ])->findOrFail($id);
 
@@ -223,21 +223,34 @@ class MatchController extends Controller
         $newStatus = $request->status === 'live' ? 'in_progress' : $request->status;
 
         $allowedTransitions = [
-            'scheduled'     => ['cancelled'],
-            'cancelled'     => ['scheduled'],
-            'toss_done'     => ['in_progress'],
-            'in_progress'   => ['in_progress', 'innings_break', 'completed'],
-            'innings_break' => ['in_progress', 'completed'],
+            'scheduled'     => ['scheduled', 'cancelled'],
+            'cancelled'     => ['cancelled', 'scheduled'],
+            'toss_pending'  => ['toss_pending', 'toss_done', 'cancelled'],
+            'toss_done'     => ['toss_done', 'in_progress', 'cancelled'],
+            // `in_progress` and `innings_break` are interchangeable: a break is
+            // a pause inside the same live match, not a separate phase. The
+            // BREAK button toggles between the two, so both directions must be
+            // legal — allowing only `in_progress -> innings_break` (the old
+            // table) made a second tap return 422, which the console showed as
+            // a button that did nothing.
+            //
+            // Repeating the *current* status is allowed so a double-tap, a
+            // retry after a dropped response, or a stale UI cannot fail.
+            'in_progress'   => ['in_progress', 'innings_break', 'completed', 'cancelled'],
+            'innings_break' => ['innings_break', 'in_progress', 'completed', 'cancelled'],
             // A finished fixture can be moved back to the schedule or
             // cancelled, so a completed match is never stuck in the live
             // console.
-            'completed'     => ['scheduled', 'cancelled'],
+            'completed'     => ['completed', 'scheduled', 'cancelled'],
         ];
 
         if (!in_array($newStatus, $allowedTransitions[$match->status] ?? [], true)) {
-            $hint = $newStatus === 'in_progress'
-                ? 'Record the toss first (Scoring Console → Record Toss).'
-                : null;
+            $hint = match ($newStatus) {
+                'in_progress' => 'Record the toss first (Scoring Console → Record Toss).',
+                'innings_break' => 'Start the match before calling a break.',
+                default => null,
+            };
+
             return response()->json([
                 'message' => "Fixture status cannot change from {$match->status} to {$request->status}.",
                 'hint' => $hint,

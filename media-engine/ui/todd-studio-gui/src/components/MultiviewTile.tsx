@@ -76,7 +76,21 @@ export function MultiviewTile({
   const connected = isHls ? hlsConnected : whep.connected;
   const rendering = isHls ? hlsRendering : whep.rendering;
   const error = isHls ? hlsError : whep.error;
-  const modeLabel = isHls ? "HLS" : "LIVE";
+
+  // The badge reports *routing*, not just transport. `active` already drives
+  // the tile's border, but the badge kept showing the source kind ("LIVE"/
+  // "HLS"), so a director who pressed Take and moved a camera to Program saw
+  // no confirmation on the tile itself. Program wins over preview, which wins
+  // over the transport label — that is the order an operator reads when
+  // scanning the wall.
+  const modeLabel =
+    active === "pgm" ? "PGM" : active === "pvw" ? "PVW" : isHls ? "HLS" : "LIVE";
+
+  // Program output is what viewers receive, so it is the one badge that should
+  // not depend on this browser's own stream health — a director must be able
+  // to tell which source is on air even if their local preview is still
+  // connecting.
+  const badgeOk = active === "pgm" || connected;
 
   return (
     <div
@@ -112,8 +126,13 @@ export function MultiviewTile({
       />
       <div className="absolute inset-x-0 top-0 flex items-center justify-between bg-black/60 px-2 py-1 text-xs">
         <span className="font-mono">{label ?? `${roomId}/${cameraId}`}</span>
-        <span className={cn(connected ? "text-emerald-400" : "text-amber-400")}>
-          {!live ? "OFF" : connected ? modeLabel : "…"}
+        <span
+          className={cn(
+            badgeOk ? "text-emerald-400" : "text-amber-400",
+            active === "pgm" && "font-bold tracking-wide",
+          )}
+        >
+          {!live ? "OFF" : connected ? modeLabel : active ?? "…"}
         </span>
       </div>
       {error && (
