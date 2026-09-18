@@ -58,6 +58,17 @@ class CricketRepository {
     await prefs.remove(_tokenKey);
   }
 
+  /// True when a Cricket Manager bearer token is available.
+  ///
+  /// The public portal and the manager console share this repository. The
+  /// public host blocks `/api/v1/cricket/manager/*` with a 403, and the
+  /// browser logs every rejected request, so manager-only calls must be
+  /// skipped entirely on the public side rather than sent and refused.
+  Future<bool> hasManagerToken() async {
+    await _loadToken();
+    return _bearerToken != null && _bearerToken!.isNotEmpty;
+  }
+
   Future<Map<String, String>> _authHeaders() async {
     await _loadToken();
     return _bearerToken != null
@@ -344,8 +355,18 @@ class CricketRepository {
   // ────────────────────────────────────────────────────────────
 
   /// List the manager's sponsor library (bound to the active tournament).
+  ///
+  /// Manager-only: this route is behind the Cricket Manager bearer token, and
+  /// the public host blocks `/api/v1/cricket/manager/*` outright with a 403.
+  /// When no manager token is present (the public portal shares this
+  /// repository) the request is skipped entirely rather than sent and
+  /// rejected — the browser logs every failed request, so issuing it from a
+  /// public page produced a console full of 403s for a list that page never
+  /// renders.
   Future<List<SponsorModel>> getSponsors({String? tournamentId}) async {
     try {
+      if (!await hasManagerToken()) return const [];
+
       final params = <String, String>{
         'per_page': '100',
         if (tournamentId != null) 'tournament_id': tournamentId,
@@ -780,8 +801,15 @@ class CricketRepository {
   }
 
   /// Fetch a single match via the manager endpoint (includes team ids).
+  ///
+  /// Manager-only, so the public portal — which shares this repository —
+  /// gets no result instead of a 403 in the console. Callers already treat a
+  /// null match as "detail unavailable" and fall back to the list data they
+  /// were given.
   Future<MatchModel?> getMatch(String matchId) async {
     try {
+      if (!await hasManagerToken()) return null;
+
       final res = await _http.get(
         Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId'),
         headers: await _authHeaders(),
