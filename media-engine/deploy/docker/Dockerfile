@@ -52,7 +52,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /src/target/release/${BIN} /usr/local/bin/todd
-RUN useradd -r -u 10001 todd
+
+# ---- non-root runtime -------------------------------------------------------
+RUN useradd -r -u 10001 todd \
+    && mkdir -p /home/todd/.cache/gstreamer-1.0 \
+    && chown -R todd:todd /home/todd
+
+# GStreamer writes its plugin registry into `$XDG_CACHE_HOME/gstreamer-1.0` on
+# first use. Without an explicit, writable cache home the non-root `todd` user
+# falls back to a path it cannot create, so every container start re-scans
+# every plugin (slow startup plus `Failed to write registry` warnings).
+ENV XDG_CACHE_HOME=/home/todd/.cache \
+    GST_REGISTRY_REUSE_PLUGIN_SCANNER=no \
+    GST_REGISTRY=/home/todd/.cache/gstreamer-1.0/registry.bin \
+    HOME=/home/todd
+
 USER todd
 EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/todd"]

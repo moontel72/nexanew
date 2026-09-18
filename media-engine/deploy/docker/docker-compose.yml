@@ -67,14 +67,35 @@ services:
       timeout: 5s
       retries: 3
 
-  # ---- room-state store (reserved for HA/Phase 2 scale-out) ----------------
-  # The engine currently keeps room state in memory. Redis is wired here
-  # so the shared-state migration is a config change, not an architecture
-  # change.
+  # ---- room-state store -----------------------------------------------------
+  # Studio runs with `ROOM_STORE=redis`, so this holds real room/program
+  # state. Persistence is therefore on: with `--save "" --appendonly no`
+  # every `docker compose restart`, image upgrade or host reboot wiped every
+  # room and forced the operator to re-create matches.
+  #
+  # RDB snapshots are the cheap, low-write option (a snapshot every 60s if
+  # >=100 keys changed, and on shutdown); the volume keeps them across
+  # container replacement. Enable AOF too (`--appendonly yes`) if losing up to
+  # one snapshot window is unacceptable.
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "no",
+        "--save",
+        "60",
+        "100",
+        "--save",
+        "300",
+        "10",
+        "--dir",
+        "/data",
+      ]
+    volumes:
+      - redis-data:/data
     ports:
       - "127.0.0.1:6379:6379"
     healthcheck:
@@ -93,3 +114,8 @@ services:
     volumes:
       - ./coturn.conf:/etc/coturn/turnserver.conf:ro
     profiles: ["turn"]
+
+# Named so the Redis snapshots survive `docker compose down` + `up` and image
+# upgrades — the whole point of enabling persistence above.
+volumes:
+  redis-data:

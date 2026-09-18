@@ -99,6 +99,8 @@ pub struct GstProgramMixer {
     audio_tx: broadcast::Sender<RtpChunk>,
     width: u32,
     height: u32,
+    /// Target output frame rate, used to size animation steps.
+    fps: u32,
     /// source key ("room/camera") → slot index bindings.
     bindings: Mutex<HashMap<String, usize>>,
     /// bus name → bound audio feed keys (camera/rid).
@@ -114,6 +116,12 @@ pub struct GstProgramMixer {
 impl Drop for GstProgramMixer {
     fn drop(&mut self) {
         let _ = self.pipeline.set_state(gst::State::Null);
+        // Poisoned locks are not trusted, but on drop there is nothing left
+        // to rebuild them for: the tasks they guarded are being aborted here,
+        // and the whole mixer is going away with them.
+        poison::clear_poison(&self.tasks);
+        poison::clear_poison(&self.audio_tasks);
+        poison::clear_poison(&self.slots);
         if let Ok(tasks) = self.tasks.lock() {
             for task in tasks.iter() {
                 task.abort();
@@ -139,6 +147,34 @@ impl Drop for GstProgramMixer {
 /// Key of a source in the binding table.
 pub fn source_key(source: &SourceRef) -> String {
     format!("{}/{}", source.room_id, source.camera_id)
+}
+
+/// Sanitizes a stinger / overlay URI before it is interpolated into a
+/// pipeline description.
+///
+/// Same problem as forwarder target URLs: `gst_parse_launch` has no escaping
+/// of its own, so an asset URL containing a quote would terminate the string
+/// it lives in and the rest would be parsed as pipeline syntax. Only the
+/// characters that are structurally safe inside a quoted value are kept.
+fn sanitize_uri(raw: &str) -> String {
+    let cleaned: String = raw
+        .trim()
+        .chars()
+        .filter(|c| {
+            !matches!(
+                c,
+                '"' | '\\' | '#' | '!' | ',' | ';' | '=' | '\r' | '\n'
+            ) && !c.is_control()
+        })
+        .collect();
+    if cleaned != raw.trim() {
+        tracing::warn!(
+            original = %raw.trim(),
+            sanitized = %cleaned,
+            "URI contained characters GStreamer would parse as pipeline syntax; they were removed"
+        );
+    }
+    cleaned
 }
 
 /// Audio feed key: "camera/rid" — identifies one live audio track.
@@ -343,6 +379,7 @@ impl GstProgramMixer {
             audio_tx,
             width: config.width,
             height: config.height,
+            fps: config.fps,
             bindings: Mutex::new(HashMap::new()),
             audio_bindings: Mutex::new(HashMap::new()),
             audio_tasks: Mutex::new(HashMap::new()),
@@ -383,12 +420,16 @@ impl GstProgramMixer {
                 } else {
                     format!("{}\n{}", scoreboard.title, scoreboard.subtitle)
                 };
-                let _ = self.lowerthird.set_property_from_str("text", &text);
+                set_props(&self.lowerthird, &[("text", text)]);
             }
         }
-        let _ = self
-            .lt_alpha
-            .set_property_from_str("alpha", if lowerthird_on { "1.0" } else { "0.0" });
+        set_props(
+            &self.lt_alpha,
+            &[(
+                "alpha",
+                if lowerthird_on { "1.0" } else { "0.0" }.to_string(),
+            )],
+        );
 
         // Event popup: fade in, hold, fade out.
         if let Some(popup) = &overlays.popup {
@@ -398,15 +439,18 @@ impl GstProgramMixer {
                 }
                 _ => popup.text.clone(),
             };
-            let _ = self.popup.set_property_from_str("text", &text);
+            set_props(&self.popup, &[("text", text)]);
             let duration = popup.duration_ms.clamp(500, 10_000);
             let fade = (duration / 5).clamp(100, 1000);
             let hold = duration.saturating_sub(2 * fade);
             let alpha = self.pop_alpha.clone();
+            // Fall back to the nominal rate if the mixer was built with an
+            // unvalidated `fps` of 0.
+            let fps = if self.fps == 0 { ANIMATION_FPS } else { self.fps };
             let task = tokio::spawn(async move {
-                animate_sync(&alpha, 0.0, 1.0, fade).await;
+                animate_sync(&alpha, 0.0, 1.0, fade, fps).await;
                 tokio::time::sleep(Duration::from_millis(hold)).await;
-                animate_sync(&alpha, 1.0, 0.0, fade).await;
+                animate_sync(&alpha, 1.0, 0.0, fade, fps).await;
             });
             self.push_task(task);
         }
@@ -414,19 +458,18 @@ impl GstProgramMixer {
         // Corner watermark / channel logo.
         match &overlays.watermark {
             Some(watermark) => {
-                let _ = self
-                    .watermark
-                    .set_property_from_str("location", &watermark.asset_url);
-                let _ = self
-                    .watermark
-                    .set_property_from_str("relative-x", &watermark.x.to_string());
-                let _ = self
-                    .watermark
-                    .set_property_from_str("relative-y", &watermark.y.to_string());
-                let _ = self.watermark.set_property_from_str("alpha", "1.0");
+                set_props(
+                    &self.watermark,
+                    &[
+                        ("location", watermark.asset_url.clone()),
+                        ("relative-x", watermark.x.to_string()),
+                        ("relative-y", watermark.y.to_string()),
+                        ("alpha", "1.0".to_string()),
+                    ],
+                );
             }
             None => {
-                let _ = self.watermark.set_property_from_str("alpha", "0.0");
+                set_props(&self.watermark, &[("alpha", "0.0".to_string())]);
             }
         }
 
@@ -440,32 +483,45 @@ impl GstProgramMixer {
                     .filter(|url| !url.trim().is_empty())
                 {
                     Some(url) => {
-                        let _ = self.brand_logo.set_property_from_str("location", url);
-                        let _ = self
-                            .brand_logo
-                            .set_property_from_str("relative-x", &brand.x.to_string());
-                        let _ = self
-                            .brand_logo
-                            .set_property_from_str("relative-y", &brand.y.to_string());
-                        let _ = self.brand_logo.set_property_from_str("alpha", "1.0");
+                        set_props(
+                            &self.brand_logo,
+                            &[
+                                ("location", url.to_string()),
+                                ("relative-x", brand.x.to_string()),
+                                ("relative-y", brand.y.to_string()),
+                                ("alpha", "1.0".to_string()),
+                            ],
+                        );
                     }
                     None => {
-                        let _ = self.brand_logo.set_property_from_str("alpha", "0.0");
+                        set_props(&self.brand_logo, &[("alpha", "0.0".to_string())]);
                     }
                 }
                 match brand.text.as_deref().filter(|t| !t.trim().is_empty()) {
                     Some(text) => {
-                        let _ = self.brand_text.set_property_from_str("text", text);
-                        let _ = self.brand_text_alpha.set_property_from_str("alpha", "1.0");
+                        set_props(
+                            &self.brand_text,
+                            &[("text", text.to_string())],
+                        );
+                        set_props(
+                            &self.brand_text_alpha,
+                            &[("alpha", "1.0".to_string())],
+                        );
                     }
                     None => {
-                        let _ = self.brand_text_alpha.set_property_from_str("alpha", "0.0");
+                        set_props(
+                            &self.brand_text_alpha,
+                            &[("alpha", "0.0".to_string())],
+                        );
                     }
                 }
             }
             None => {
-                let _ = self.brand_logo.set_property_from_str("alpha", "0.0");
-                let _ = self.brand_text_alpha.set_property_from_str("alpha", "0.0");
+                set_props(&self.brand_logo, &[("alpha", "0.0".to_string())]);
+                set_props(
+                    &self.brand_text_alpha,
+                    &[("alpha", "0.0".to_string())],
+                );
             }
         }
 
@@ -473,13 +529,14 @@ impl GstProgramMixer {
         // on every vote so WHEP/RTMP viewers follow the tally.
         match &overlays.poll {
             Some(poll) => {
-                let _ = self
-                    .poll
-                    .set_property_from_str("text", &format_poll_text(poll));
-                let _ = self.poll_alpha.set_property_from_str("alpha", "1.0");
+                set_props(
+                    &self.poll,
+                    &[("text", format_poll_text(poll))],
+                );
+                set_props(&self.poll_alpha, &[("alpha", "1.0".to_string())]);
             }
             None => {
-                let _ = self.poll_alpha.set_property_from_str("alpha", "0.0");
+                set_props(&self.poll_alpha, &[("alpha", "0.0".to_string())]);
             }
         }
     }
@@ -511,19 +568,30 @@ impl GstProgramMixer {
                 } else {
                     1.0
                 };
-                let _ = volume.set_property_from_str("volume", &format!("{factor:.6}"));
+                set_props(
+                    &volume,
+                    &[("volume", format!("{factor:.6}"))],
+                );
             }
             if let Some(amplify) = self.pipeline.by_name(&format!("again_{}", bus.as_str())) {
                 let linear = 10f32.powf(spec.gain_db / 20.0);
-                let _ = amplify.set_property_from_str("amplification", &format!("{linear:.4}"));
+                set_props(
+                    &amplify,
+                    &[("amplification", format!("{linear:.4}"))],
+                );
             }
             if let Some(delay) = self.pipeline.by_name(&format!("adelay_{}", bus.as_str())) {
-                // `adelay_{bus}` is a pass-through `identity` unless the host
-                // actually ships a delay element (see `build_description`), and
-                // only a real delay element accepts the `delay` property.
-                if delay.find_property("delay").is_some() {
+                // `adelay_{bus}` is a `queue` held at zero latency by default
+                // (see `build_description`); `min-threshold-time` is its delay
+                // in nanoseconds. The property is checked first because a
+                // host shipping a different element build (or the old
+                // `identity` pass-through) would otherwise reject the write.
+                if delay.find_property("min-threshold-time").is_some() {
                     let nanos = spec.delay_ms.saturating_mul(1_000_000);
-                    let _ = delay.set_property_from_str("delay", &nanos.to_string());
+                    set_props(
+                        &delay,
+                        &[("min-threshold-time", nanos.to_string())],
+                    );
                 }
             }
         }
@@ -542,15 +610,12 @@ impl GstProgramMixer {
         // Poison-tolerant: a panic while a mixer lock was held poisons it for
         // the rest of the process lifetime, and panicking on the poison turns
         // every later vision switch into a dropped connection (nginx 502).
-        // The guarded state is small and rebuildable, so recover and report.
-        let mut bindings = self.audio_bindings.lock().unwrap_or_else(|poisoned| {
-            tracing::warn!("audio bindings mutex was poisoned; recovering");
-            poisoned.into_inner()
-        });
-        let mut tasks = self.audio_tasks.lock().unwrap_or_else(|poisoned| {
-            tracing::warn!("audio tasks mutex was poisoned; recovering");
-            poisoned.into_inner()
-        });
+        // The guarded state is a cache of what the pipeline holds, so a
+        // poisoned table is *discarded* and rebuilt rather than trusted —
+        // `bindings_for` treats an empty table as "nothing is bound yet" and
+        // the loop below re-derives every entry from `feeds`.
+        let mut bindings = poison::lock_resetting(&self.audio_bindings, "audio_bindings", HashMap::new);
+        let mut tasks = poison::lock_resetting(&self.audio_tasks, "audio_tasks", HashMap::new);
 
         for bus in AudioBus::ALL {
             let bus_name = bus.as_str().to_string();
@@ -635,21 +700,15 @@ impl GstProgramMixer {
             return;
         }
         {
-            let mut guard = self.current.lock().unwrap_or_else(|poisoned| {
-                tracing::warn!("mixer state mutex was poisoned; recovering");
-                poisoned.into_inner()
-            });
+            // Resetting is the conservative choice here too: the guarded plan
+            // is immediately overwritten below anyway, so trusting a
+            // half-written value would only risk reading a mangled one.
+            let mut guard = poison::lock_resetting(&self.current, "current", ScenePlan::default);
             *guard = plan.clone();
         }
 
-        let mut bindings = self.bindings.lock().unwrap_or_else(|poisoned| {
-            tracing::warn!("mixer bindings mutex was poisoned; recovering");
-            poisoned.into_inner()
-        });
-        let mut slots = self.slots.lock().unwrap_or_else(|poisoned| {
-            tracing::warn!("mixer slots mutex was poisoned; recovering");
-            poisoned.into_inner()
-        });
+        let mut bindings = poison::lock_resetting(&self.bindings, "bindings", HashMap::new);
+        let mut slots = poison::lock_resetting(&self.slots, "slots", Vec::new);
 
         // Rebind slots: same source keeps its running task, everything
         // else is re-pointed.
@@ -700,7 +759,7 @@ impl GstProgramMixer {
         // Slots that are no longer used render nothing.
         for (index, slot) in slots.iter().enumerate() {
             if index >= plan.slots.len() {
-                let _ = slot.alpha.set_property_from_str("alpha", "0.0");
+                set_props(&slot.alpha, &[("alpha", "0.0".to_string())]);
             }
         }
 
@@ -714,7 +773,7 @@ impl GstProgramMixer {
                     } else {
                         "0.0".to_string()
                     };
-                    let _ = slot.alpha.set_property_from_str("alpha", &target);
+                    set_props(&slot.alpha, &[("alpha", target)]);
                 }
             }
             TransitionKind::Fade => {
@@ -726,9 +785,9 @@ impl GstProgramMixer {
                     } else {
                         0.0
                     };
-                    let _ = slot.alpha.set_property_from_str("alpha", "0.0");
+                    set_props(&slot.alpha, &[("alpha", "0.0".to_string())]);
                     let alpha = slot.alpha.clone();
-                    let task = animate_alpha(alpha, 0.0, target, duration);
+                    let task = animate_alpha(alpha, 0.0, target, duration, self.animation_fps());
                     self.push_task(task);
                 }
             }
@@ -737,7 +796,7 @@ impl GstProgramMixer {
                 // across the frame over the duration.
                 for (index, slot_plan) in plan.slots.iter().enumerate() {
                     let slot = &slots[index];
-                    let _ = slot.alpha.set_property_from_str("alpha", "1.0");
+                    set_props(&slot.alpha, &[("alpha", "1.0".to_string())]);
                     let pixels = slot_plan.rect.to_pixels(self.width, self.height);
                     let from = PixelRect {
                         x: 0,
@@ -746,7 +805,7 @@ impl GstProgramMixer {
                         height: pixels.height,
                     };
                     let pad = slot.pad.clone();
-                    let task = animate_rect(pad, from, pixels, duration);
+                    let task = animate_rect(pad, from, pixels, duration, self.animation_fps());
                     self.push_task(task);
                 }
             }
@@ -759,19 +818,26 @@ impl GstProgramMixer {
                     } else {
                         "0.0".to_string()
                     };
-                    let _ = slot.alpha.set_property_from_str("alpha", &target);
+                    set_props(&slot.alpha, &[("alpha", target)]);
                 }
                 let asset = stinger_asset.filter(|url| !url.trim().is_empty());
                 match asset {
                     Some(url) if self.stinger_src.find_property("uri").is_some() => {
-                        let _ = self.stinger_src.set_property_from_str("uri", &url);
+                        set_props(&self.stinger_src, &[("uri", sanitize_uri(url))]);
                         let alpha = self.stinger_alpha.clone();
-                        let up = animate_alpha(alpha.clone(), 0.0, 1.0, duration / 2);
+                        let up = animate_alpha(
+                            alpha.clone(),
+                            0.0,
+                            1.0,
+                            duration / 2,
+                            self.animation_fps(),
+                        );
                         let down = {
                             let alpha = alpha.clone();
+                            let fps = self.animation_fps();
                             tokio::spawn(async move {
                                 tokio::time::sleep(Duration::from_millis(duration / 2)).await;
-                                animate_sync(&alpha, 1.0, 0.0, duration / 2).await;
+                                animate_sync(&alpha, 1.0, 0.0, duration / 2, fps).await;
                             })
                         };
                         self.push_task(up);
@@ -791,12 +857,59 @@ impl GstProgramMixer {
     }
 
     fn push_task(&self, task: JoinHandle<()>) {
-        let mut tasks = self.tasks.lock().unwrap_or_else(|poisoned| {
-            tracing::warn!("mixer tasks mutex was poisoned; recovering");
-            poisoned.into_inner()
-        });
+        // An empty list here loses nothing but the abort-on-drop guarantee:
+        // the tasks still end on their own when their alpha/pad disappears.
+        let mut tasks = poison::lock_resetting(&self.tasks, "tasks", Vec::new);
         tasks.retain(|task| !task.is_finished());
         tasks.push(task);
+    }
+
+    /// The output frame rate animations should step at, falling back to the
+    /// nominal rate when the mixer was built with an unvalidated `fps` of 0.
+    fn animation_fps(&self) -> u32 {
+        if self.fps == 0 {
+            ANIMATION_FPS
+        } else {
+            self.fps
+        }
+    }
+}
+
+/// Helper for poisoned-mutex recovery: resets the guarded state instead of
+/// trusting whatever was half-written when the panic unwound.
+mod poison {
+    use std::sync::{Mutex, MutexGuard};
+
+    /// Locks `mutex`, replacing a poisoned payload with `fresh()`.
+    ///
+    /// `poisoned.into_inner()` hands back the *stale* value, and the guarded
+    /// structures here are not crash-safe: a panic between "rebind slot 2" and
+    /// "rebind slot 3" leaves a table that references tasks which were already
+    /// aborted. Trusting that produced transitions that pointed at dead
+    /// bindings. Resetting is safe precisely because every one of these
+    /// structures is a *cache* of what the pipeline already holds — the
+    /// rebuild path re-derives it from the live scene plan.
+    pub(super) fn lock_resetting<T>(mutex: &Mutex<T>, label: &str, fresh: impl FnOnce() -> T) -> MutexGuard<'_, T> {
+        match mutex.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                tracing::warn!(
+                    state = label,
+                    "mutex was poisoned by a panic; discarding the half-written state and rebuilding it"
+                );
+                drop(poisoned);
+                let mut guard = mutex
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
+                *guard = fresh();
+                guard
+            }
+        }
+    }
+
+    /// Drops a poisoned payload without reading it (used by `Drop`).
+    pub(super) fn clear_poison<T>(mutex: &Mutex<T>) {
+        let _ = mutex.clear_poison();
     }
 }
 
@@ -810,50 +923,151 @@ fn fallback_source(room: &str) -> SourceRef {
 /// Applies a slot's target geometry to its compositor pad.
 fn set_slot_rect(slot: &SlotRuntime, plan: &SlotPlan, width: u32, height: u32) {
     let rect = plan.rect.to_pixels(width, height);
-    let _ = slot.pad.set_property_from_str("xpos", &rect.x.to_string());
-    let _ = slot.pad.set_property_from_str("ypos", &rect.y.to_string());
-    let _ = slot
-        .pad
-        .set_property_from_str("width", &rect.width.to_string());
-    let _ = slot
-        .pad
-        .set_property_from_str("height", &rect.height.to_string());
-    let _ = slot
-        .pad
-        .set_property_from_str("zorder", &plan.zorder.to_string());
+    set_pad_geometry(
+        &slot.pad,
+        &[
+            ("xpos", rect.x.to_string()),
+            ("ypos", rect.y.to_string()),
+            ("width", rect.width.to_string()),
+            ("height", rect.height.to_string()),
+            ("zorder", plan.zorder.to_string()),
+        ],
+    );
+}
+
+/// Writes several string properties on one element, reporting each failure.
+///
+/// `gst::prelude::GObjectExtManualGst::set_property_from_str` **panics** on an
+/// unknown property or an unparsable value — it has no `Result` to inspect. A
+/// panic here unwinds the request task, which the operator sees as an opaque
+/// 502 with the picture left on its previous value. Deserializing the value
+/// first turns that into a logged, skipped update.
+fn set_props(element: &gst::Element, props: &[(&str, String)]) {
+    for (name, value) in props {
+        if let Err(e) = set_prop_checked(element, name, value) {
+            tracing::warn!(
+                element = %element.name(),
+                property = name,
+                value = %value,
+                error = %e,
+                "gst property update failed; element keeps its previous value"
+            );
+        }
+    }
+}
+
+/// Writes the compositor pad geometry (a distinct type from `gst::Element`).
+fn set_pad_geometry(pad: &gst::Pad, props: &[(&str, String)]) {
+    for (name, value) in props {
+        if let Err(e) = set_prop_checked(pad, name, value) {
+            tracing::warn!(
+                pad = %pad.name(),
+                property = name,
+                value = %value,
+                error = %e,
+                "gst pad property update failed; pad keeps its previous value"
+            );
+        }
+    }
+}
+
+/// The fallible half of a string property write, shared by elements and pads.
+///
+/// `GObjectExtManualGst::set_property_from_str` **panics** on an unknown
+/// property or an unparsable value — it has no `Result` to inspect. A panic
+/// here unwinds the request task, which the operator sees as an opaque 502 with
+/// the picture left on its previous value. `GstValueExt::deserialize_with_pspec`
+/// is what that method uses internally; going through it directly keeps the
+/// same semantics but reports the failure instead of aborting.
+///
+/// `glib` is reached through `gst::glib` because the crate depends on
+/// `gstreamer`, not on `glib` itself.
+#[cfg(feature = "gst")]
+fn set_prop_checked(
+    target: &impl IsA<gst::glib::Object>,
+    name: &str,
+    value: &str,
+) -> Result<(), String> {
+    use gst::prelude::GstValueExt;
+
+    let pspec = target
+        .find_property(name)
+        .ok_or_else(|| format!("no property '{name}' on '{}'", target.type_()))?;
+    let deserialized = gst::glib::Value::deserialize_with_pspec(value, &pspec)
+        .map_err(|e| format!("'{value}' is not valid for {name}: {e}"))?;
+    target.set_property_from_value(name, &deserialized);
+    Ok(())
 }
 
 /// Animates an `alpha` element property over `duration_ms` (spawned task).
-fn animate_alpha(alpha: gst::Element, from: f32, to: f32, duration_ms: u64) -> JoinHandle<()> {
+fn animate_alpha(
+    alpha: gst::Element,
+    from: f32,
+    to: f32,
+    duration_ms: u64,
+    fps: u32,
+) -> JoinHandle<()> {
     tokio::spawn(async move {
-        animate_sync(&alpha, from, to, duration_ms).await;
+        animate_sync(&alpha, from, to, duration_ms, fps).await;
     })
 }
 
+/// Frames per second the animation stepper falls back to when the caller does
+/// not know the output rate.
+///
+/// The step interval is derived from `1000 / fps` rather than hardcoded at
+/// 16 ms: at 24 fps output a 16 ms step animates almost three times faster
+/// than the frame rate can show, burning CPU on values that are overwritten
+/// before they are ever rendered.
+pub(crate) const ANIMATION_FPS: u32 = 30;
+/// Upper bound on animation steps, so a long fade cannot spawn thousands of
+/// property writes (each one crosses into the GStreamer object lock).
+const MAX_ANIMATION_STEPS: u64 = 120;
+
+/// Derives the `(step_count, step_ms)` pair for an animation of
+/// `duration_ms` at `fps`.
+fn animation_steps(duration_ms: u64, fps: u32) -> (u64, u64) {
+    // `min_fps` keeps the arithmetic honest for a caller that passes 0 (a
+    // config that was never validated): one step per second, never a
+    // division by zero.
+    let interval_ms = (1000 / fps.max(1) as u64).max(1);
+    let steps = (duration_ms / interval_ms).clamp(2, MAX_ANIMATION_STEPS);
+    (steps, (duration_ms / steps).max(1))
+}
+
 /// Steps an `alpha` element property from `from` to `to` (blocking).
-async fn animate_sync(alpha: &gst::Element, from: f32, to: f32, duration_ms: u64) {
-    let steps = (duration_ms / 16).clamp(2, 120) as u32;
-    let step_ms = (duration_ms / steps as u64).max(1);
+async fn animate_sync(alpha: &gst::Element, from: f32, to: f32, duration_ms: u64, fps: u32) {
+    let (steps, step_ms) = animation_steps(duration_ms, fps);
     for index in 1..=steps {
         tokio::time::sleep(Duration::from_millis(step_ms)).await;
         let progress = ease_progress(index as f32 / steps as f32);
         let value = from + (to - from) * progress;
-        let _ = alpha.set_property_from_str("alpha", &format!("{value:.4}"));
+        set_props(alpha, &[("alpha", format!("{value:.4}"))]);
     }
 }
 
 /// Animates a compositor pad rect (wipe reveal).
-fn animate_rect(pad: gst::Pad, from: PixelRect, to: PixelRect, duration_ms: u64) -> JoinHandle<()> {
+fn animate_rect(
+    pad: gst::Pad,
+    from: PixelRect,
+    to: PixelRect,
+    duration_ms: u64,
+    fps: u32,
+) -> JoinHandle<()> {
     tokio::spawn(async move {
-        let steps = (duration_ms / 16).clamp(2, 120) as u32;
-        let step_ms = (duration_ms / steps as u64).max(1);
+        let (steps, step_ms) = animation_steps(duration_ms, fps);
         for index in 1..=steps {
             tokio::time::sleep(Duration::from_millis(step_ms)).await;
             let progress = ease_progress(index as f32 / steps as f32);
             let x = from.x + ((to.x - from.x) as f32 * progress).round() as i32;
             let width = from.width + ((to.width - from.width) as f32 * progress).round() as i32;
-            let _ = pad.set_property_from_str("xpos", &x.to_string());
-            let _ = pad.set_property_from_str("width", &width.max(1).to_string());
+            set_pad_geometry(
+                &pad,
+                &[
+                    ("xpos", x.to_string()),
+                    ("width", width.max(1).to_string()),
+                ],
+            );
         }
     })
 }
@@ -878,14 +1092,24 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
     // asset is actually configured. Otherwise a black live pattern holds the
     // slot (same element name, so the runtime uri swap and the build-time
     // lookup still resolve).
+    //
+    // `uridecodebin` is a multi-stream source: its `pad-added` signal can hand
+    // back the asset's *audio* pad first. Linking that into `videoconvert` is
+    // a caps mismatch, and because the link is created inside the signal
+    // handler it took the compositor down with it (`not-negotiated`), not just
+    // the stinger. `decodebin` + an explicit `video/x-raw` selector forces the
+    // only stream that reaches the compositor to be raw video — any audio pad
+    // is simply left unlinked.
     match config
         .stinger_asset_url
         .as_deref()
         .filter(|url| !url.trim().is_empty())
     {
         Some(url) => branches.push(format!(
-            "uridecodebin name=stinger_src uri=\"{url}\" ! videoconvert ! videoscale \
-             ! alpha name=stinger_alpha alpha=0.0 ! comp."
+            "uridecodebin name=stinger_src uri=\"{}\" ! \
+             video/x-raw ! videoconvert ! videoscale \
+             ! alpha name=stinger_alpha alpha=0.0 ! comp.",
+            sanitize_uri(url)
         )),
         None => branches.push(
             "videotestsrc name=stinger_src pattern=black is-live=true \
@@ -952,14 +1176,20 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
     );
 
     // ---- audio stage: one branch per bus + silence keep-alive pad -----
-    // The lip-sync slot is a named `identity` pass-through, not `audiodelay`:
-    // that element is no longer shipped by GStreamer (nothing in the 1.24
-    // plugin set registers it), and referencing it made `gst_parse_launch`
-    // reject the *whole* mixer description with `no element "audiodelay"`.
-    // That single missing element silently downgraded PGM to passthrough and
-    // blocked add_program_forwarder with 409, so the public HLS stream never
-    // started. `apply_audio_config()` still looks up `adelay_{bus}`; it now
-    // finds the pass-through and has nothing to set.
+    //
+    // Lip-sync correction uses a named `queue` with `min-threshold-time`
+    // instead of `audiodelay`: that element is no longer shipped by
+    // GStreamer (nothing in the 1.24 plugin set registers it), and
+    // referencing it made `gst_parse_launch` reject the *whole* mixer
+    // description with `no element "audiodelay"`. That single missing element
+    // silently downgraded PGM to passthrough and blocked add_program_forwarder
+    // with 409, so the public HLS stream never started.
+    //
+    // A `queue` always exists in coreelements, and its `min-threshold-time`
+    // (nanoseconds) holds every buffer back by exactly that much before it is
+    // pushed downstream — the same effect `audiodelay` had, so
+    // `apply_audio_config()` can really honour `delay_ms` now instead of
+    // writing to a pass-through that ignored it.
     //
     // Each bus also has to reach the mixer through `audioconvert`: linking a
     // `tee` src pad straight into `audiomixer` fails at parse time with
@@ -971,7 +1201,7 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
              ! rtpopusdepay ! opusdec ! audioconvert ! audioresample \
              ! volume name=avol_{bus} \
              ! audioamplify name=again_{bus} amplification=1.0 \
-             ! identity name=adelay_{bus} \
+             ! queue name=adelay_{bus} min-threshold-time=0 max-size-time=1000000000 \
              ! tee name=btee_{bus} \
              btee_{bus}. ! queue ! audioconvert ! audioresample \
              ! audio/x-raw,format=S16LE,rate=48000,channels=2 \

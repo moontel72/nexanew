@@ -92,7 +92,7 @@ pub struct PixelRect {
 }
 
 /// The resolved render plan for one scene.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct ScenePlan {
     pub slots: Vec<SlotPlan>,
 }

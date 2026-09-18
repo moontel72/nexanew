@@ -1152,6 +1152,15 @@ impl Engine {
             Err(AppError::Conflict(status.error.clone().unwrap_or_default()))
         };
 
+        // Reserve the WebRTC target explicitly, and at the *endpoint*, so the
+        // reason is recorded in the same status the operator polls instead of
+        // failing later inside the pipeline builder. The old path surfaced a
+        // bare 501 with no `ForwardingStatus`, which left the door open to a
+        // watchdog retry loop and no UI explanation.
+        if target.kind == todd_common::types::ForwardKind::WebRtcViewer {
+            return failed(todd_transcode::forwarder::WEBRTC_VIEWER_UNAVAILABLE.to_string());
+        }
+
         if self.forwarders.contains_key(&key) {
             return failed(format!("program forwarder {key} already exists"));
         }
@@ -1783,6 +1792,15 @@ impl Engine {
             return Err(AppError::Conflict(format!(
                 "forwarder {key} already exists"
             )));
+        }
+
+        // Rejected up front with the same message every other path uses, so the
+        // operator gets an actionable explanation instead of a bare 501 (and no
+        // forwarder is ever registered that the watchdog would keep retrying).
+        if target.kind == tod_common::types::ForwardKind::WebRtcViewer {
+            return Err(AppError::Unsupported(
+                todd_transcode::forwarder::WEBRTC_VIEWER_UNAVAILABLE.to_string(),
+            ));
         }
 
         // Select the simulcast layer to forward. `lowest_video_rid` (not

@@ -172,12 +172,21 @@ pub struct AudioMixerConfig {
     pub master_volume_db: f32,
 }
 
+/// Every bus is enabled by default so an incoming stream is never dropped
+/// silently.
+///
+/// This used to enable only Commentary and Ambient. A publisher sending on the
+/// `sfx` or `music` RID then had its audio discarded while every API response
+/// and the mixer view reported success — there was no error and no UI cue, so
+/// the stream was simply missing its effects. Enabling all four costs nothing
+/// when nothing feeds a bus (a silent input contributes silence to the mix),
+/// and it removes a surprising, invisible failure mode.
 fn default_buses() -> Vec<AudioBusSpec> {
     AudioBus::ALL
         .iter()
         .map(|bus| AudioBusSpec {
             bus: *bus,
-            enabled: *bus == AudioBus::Commentary || *bus == AudioBus::Ambient,
+            enabled: true,
             ..AudioBusSpec::default()
         })
         .collect()
@@ -279,12 +288,13 @@ mod tests {
     }
 
     #[test]
-    fn default_mixer_enables_commentary_and_ambient() {
+    fn default_mixer_enables_every_bus() {
         let cfg = AudioMixerConfig::default();
-        assert!(cfg.bus(AudioBus::Commentary).enabled);
-        assert!(cfg.bus(AudioBus::Ambient).enabled);
-        assert!(!cfg.bus(AudioBus::Sfx).enabled);
-        assert!(!cfg.bus(AudioBus::Music).enabled);
+        // All four: a publisher on the sfx/music RID must not have its audio
+        // dropped by a default it never agreed to.
+        for bus in AudioBus::ALL {
+            assert!(cfg.bus(bus).enabled, "{} disabled by default", bus.as_str());
+        }
         assert!(cfg.has_audible_input());
     }
 
