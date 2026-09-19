@@ -72,6 +72,14 @@ jobs:
       - name: Cargo check with GStreamer feature
         run: cargo check --manifest-path media-engine/Cargo.toml -p todd-signaling -p todd-sfu --features gst
 
+      # The `gst`-gated unit tests (pipeline descriptions, audio-branch
+      # selection, mixer) live behind `#![cfg(feature = "gst")]`, so the
+      # workspace test run below never compiles them. This is the only job with
+      # GStreamer 1.24 installed, so it is the only place they can execute.
+      # Without this step a green build says nothing about forwarder.rs.
+      - name: Cargo test with GStreamer feature
+        run: cargo test --manifest-path media-engine/Cargo.toml -p todd-transcode --features gst
+
   build-and-push:
     needs: check-gst
     runs-on: ubuntu-latest

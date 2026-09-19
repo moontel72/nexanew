@@ -452,7 +452,11 @@ impl GstForwarder {
             }
         }
 
-        let has_audio = !live_audio.is_empty();
+        // The buses that primed are the only ones the pipeline may declare a
+        // branch for: `build_description` builds exactly this list, and the push
+        // tasks below are attached to exactly this list. A declared-but-unfed
+        // branch stalls the mux and takes the video down with it.
+        let live_buses: Vec<AudioBus> = live_audio.iter().map(|(bus, _, _)| *bus).collect();
 
         let detected = crate::hw::detect_encoders();
         let description = build_description(
@@ -462,7 +466,7 @@ impl GstForwarder {
             &spec,
             audio_cfg,
             &detected,
-            has_audio,
+            &live_buses,
         )?;
 
         // Share the caller's router receivers instead of consuming them, so a
@@ -826,6 +830,11 @@ fn spawn_push_task(
 ///
 /// Branches link into the mux via named-element delayed linking
 /// (`! mux.`), the canonical GStreamer syntax for multi-stream muxers.
+///
+/// `live_buses` is authoritative: the description declares exactly one audio
+/// branch per entry and nothing else. The caller must attach a push task to that
+/// same set — a branch that is declared but never fed stalls the mux and takes
+/// the video down with it (see the audio-stage comment below).
 #[allow(clippy::too_many_arguments)]
 fn build_description(
     target: &ForwardTarget,
@@ -834,7 +843,7 @@ fn build_description(
     spec: &EncoderSpec,
     audio_cfg: &AudioMixerConfig,
     detected: &[EncoderKind],
-    has_audio: bool,
+    live_buses: &[AudioBus],
 ) -> Result<String, AppError> {
     // ---- video stage -------------------------------------------------
     let rtp_caps = match codec {
@@ -877,13 +886,20 @@ fn build_description(
     };
 
     // ---- audio stage -------------------------------------------------
-    // One branch per *live* audio bus. `has_audio` is decided by the caller
-    // from the router's registered tracks, never from the mixer config: an
-    // enabled bus with no publisher feeding it produced an `appsrc` that never
-    // received a buffer, and the un-negotiated depayloader then took the whole
-    // pipeline down with `not-negotiated (-4)` — killing the video egress too.
-    // Broadcasting video-only is normal (a phone with the mic muted, or a
-    // publisher that only sent a video track), and it must not break output.
+    // One branch per bus the caller proved is *live*, and nothing else.
+    //
+    // This used to be a `has_audio: bool` while the loop below re-derived the
+    // branch list from the mixer config (`AudioBus::ALL` filtered by `enabled`).
+    // With every bus enabled by default that declared four `appsrc` branches
+    // while the caller attached a push task to only the one bus that had primed.
+    // The three starved branches never prerolled the `audiomixer`, `flvmux`
+    // waited for a stream that never arrived, and the *video* never reached SRS
+    // either — which is why the public page stayed dark while the forwarder was
+    // reported as broken.
+    //
+    // The mixer config still supplies per-bus gain and mute; it no longer decides
+    // which branches exist. Video-only output (an empty `live_buses`) is the
+    // normal case for a muted mic and must always work.
     //
     // The bus mixer is declared once, with its output chain, and every bus
     // then links into it with `mix.`.
@@ -897,18 +913,15 @@ fn build_description(
     // bus dB value is converted (and clamped) before it is emitted - a raw
     // 0.0 dB would otherwise be silence.
     let mut audio_branches: Vec<String> = Vec::new();
-    if has_audio {
+    if !live_buses.is_empty() {
         audio_branches.push(
             "audiomixer name=mix ! audioconvert ! audioresample \
              ! voaacenc bitrate=128000 ! aacparse \
              ! queue name=aq max-size-time=1000000000 ! mux."
                 .to_string(),
         );
-        for bus in AudioBus::ALL {
-            let bus_cfg = audio_cfg.bus(bus);
-            if !bus_cfg.enabled {
-                continue;
-            }
+        for bus in live_buses {
+            let bus_cfg = audio_cfg.bus(*bus);
             let db = if bus_cfg.muted {
                 -60.0f32
             } else {
@@ -1048,17 +1061,74 @@ mod tests {
     use super::*;
     use todd_common::media::AudioBus;
 
-    /// Regression: a video-only publisher must still produce a working
-    /// pipeline.
+    /// Regression: a branch may only be declared for a bus that is actually
+    /// being fed.
     ///
-    /// The audio buses are enabled by default, so the description used to
-    /// build an `appsrc ! rtpopusdepay` branch even when nothing fed it. With
-    /// `is-live=true` the depayloader negotiated immediately, never received a
-    /// buffer, and failed with `not-negotiated (-4)` — which took the video
-    /// egress down with it and left the public page dark for a publisher that
-    /// simply sent no audio.
+    /// The description used to be built from the mixer config (`AudioBus::ALL`
+    /// filtered by `enabled`) while the push tasks were attached only to the
+    /// buses that had primed. With every bus enabled by default that declared
+    /// four `appsrc` branches and fed one; the starved branches never prerolled
+    /// the `audiomixer`, `flvmux` waited for a stream that never arrived, and
+    /// the video never reached SRS. A silent bus must therefore be *absent*,
+    /// not merely quiet.
     #[test]
-    fn audio_branch_survives_a_silent_bus() {
+    fn only_live_buses_get_an_audio_branch() {
+        let target = ForwardTarget {
+            camera_id: "cam-1".to_string(),
+            source: Default::default(),
+            kind: ForwardKind::Rtmp,
+            url: "rtmp://example.test/live/key".to_string(),
+            encoder: EncoderKind::Auto,
+            bitrate_kbps: 4000,
+            keyframe_interval: 60,
+            rid: None,
+            audio: AudioMixerConfig::default(),
+        };
+        let live = [AudioBus::Commentary];
+        let description = build_description(
+            &target,
+            MediaCodec::H264,
+            EncoderKind::Auto,
+            &EncoderSpec::default(),
+            &AudioMixerConfig::default(),
+            &[EncoderKind::X264],
+            &live,
+        )
+        .expect("description builds");
+
+        // The one live bus is present, and it is safe to stay quiet: a bus must
+        // not drive its appsrc as a live source, because that is what forced
+        // negotiation against zero buffers. Only the audio branches are checked
+        // — the video appsrc is legitimately live, since the pipeline is only
+        // built once a video chunk has arrived.
+        assert!(
+            description.contains("appsrc name=audio_commentary"),
+            "{description}"
+        );
+        for branch in description.split("appsrc name=audio_").skip(1) {
+            assert!(!branch.contains("is-live=true"), "{branch}");
+            assert!(branch.contains("leaky=downstream"), "{branch}");
+        }
+
+        // Every other bus is `enabled` in the mixer config but was never proven
+        // live. Declaring a branch for it is exactly the bug, so the description
+        // must not mention it at all.
+        for bus in AudioBus::ALL {
+            if bus == AudioBus::Commentary {
+                continue;
+            }
+            assert!(
+                !description.contains(&format!("name=audio_{}", bus.as_str())),
+                "{} was declared but is not fed: {description}",
+                bus.as_str()
+            );
+        }
+    }
+
+    /// Video-only output is a first-class case, not something the engine has to
+    /// tolerate: with no live bus there must be no audio stage at all.
+    #[test]
+    fn no_live_buses_means_no_audio_stage() {
         let target = ForwardTarget {
             camera_id: "cam-1".to_string(),
             source: Default::default(),
@@ -1077,23 +1147,15 @@ mod tests {
             &EncoderSpec::default(),
             &AudioMixerConfig::default(),
             &[EncoderKind::X264],
-            true,
+            &[],
         )
         .expect("description builds");
 
-        // A silent bus must not drive its appsrc as a live source: that is
-        // what forced negotiation against zero buffers. Only the audio
-        // branches are checked — the video appsrc is legitimately live, since
-        // the pipeline is only built once a video chunk has arrived.
-        for branch in description.split("appsrc name=audio_").skip(1) {
-            assert!(!branch.contains("is-live=true"), "{branch}");
-            assert!(branch.contains("leaky=downstream"), "{branch}");
-        }
-
-        // Sanity: the audio branches really are in the description, so the
-        // loop above is not vacuously true.
-        assert!(description.contains("appsrc name=audio_"), "{description}");
-        assert!(description.contains("audiomixer name=mix"), "{description}");
+        assert!(!description.contains("appsrc name=audio_"), "{description}");
+        assert!(!description.contains("audiomixer name=mix"), "{description}");
+        assert!(description.contains("name=video_src"), "{description}");
+        assert!(description.contains("flvmux"), "{description}");
+        assert!(description.contains("rtmpsink"), "{description}");
     }
 
     /// The description builder is gst-gated, but the *string* it produces
@@ -1118,7 +1180,7 @@ mod tests {
             &EncoderSpec::default(),
             &AudioMixerConfig::default(),
             &[EncoderKind::X264],
-            true,
+            &[AudioBus::Commentary],
         )
         .expect("description builds");
 
@@ -1162,15 +1224,21 @@ mod tests {
             &EncoderSpec::default(),
             &AudioMixerConfig::default(),
             &[EncoderKind::X264],
-            false,
+            &[],
         )
         .expect("vp8 description builds");
         assert!(vp8.contains("x264enc"));
         assert!(vp8.contains("vp8dec"));
     }
 
+    /// The description declares exactly the buses it is handed — one branch
+    /// each, no more and no fewer.
+    ///
+    /// This replaces an earlier test that asserted the *opposite* invariant
+    /// ("the default mixer enables every bus, so each one gets a branch"),
+    /// which is why a green `--features gst` run never caught the outage.
     #[test]
-    fn audio_buses_appear_in_description() {
+    fn description_declares_exactly_the_live_buses() {
         let target = ForwardTarget {
             camera_id: "cam-1".to_string(),
             source: Default::default(),
@@ -1182,6 +1250,7 @@ mod tests {
             rid: None,
             audio: AudioMixerConfig::default(),
         };
+        let live = [AudioBus::Ambient, AudioBus::Music];
         let description = build_description(
             &target,
             MediaCodec::H264,
@@ -1189,16 +1258,27 @@ mod tests {
             &EncoderSpec::default(),
             &AudioMixerConfig::default(),
             &[EncoderKind::X264],
-            true,
+            &live,
         )
         .expect("description builds");
-        // The default mixer enables every bus, so each one gets a branch.
-        for bus in AudioBus::ALL {
+
+        // Declared...
+        for bus in live {
             assert!(
                 description.contains(&format!("name=audio_{}", bus.as_str())),
-                "{description}"
+                "{} missing: {description}",
+                bus.as_str()
             );
         }
+        // ...and nothing else, even though the default config enables all four.
+        for bus in [AudioBus::Commentary, AudioBus::Sfx] {
+            assert!(
+                !description.contains(&format!("name=audio_{}", bus.as_str())),
+                "{} declared but not live: {description}",
+                bus.as_str()
+            );
+        }
+
         assert!(description.contains("audiomixer name=mix"));
         assert!(description.contains("aacparse"));
     }

@@ -87,6 +87,7 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
     final healthy = _health?['healthy'] == true;
     final state = _health?['forwarder_state']?.toString() ?? 'unknown';
     final hlsUrl = _health?['hls_url']?.toString();
+    final forwarderError = _health?['forwarder_error']?.toString();
 
     return Scaffold(
       backgroundColor: CricketColors.background,
@@ -120,6 +121,14 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
 
                 // The one thing the operator needs to know at a glance.
                 _StatusCard(healthy: healthy, state: state),
+
+                // The engine's own failure text. Without it the screen says
+                // "BROKEN" and nothing else — the dead end that made a dead
+                // forwarder look like a playback problem.
+                if (!healthy && forwarderError != null) ...[
+                  const SizedBox(height: 12),
+                  _Banner(text: forwarderError, color: CricketColors.wicket),
+                ],
 
                 const SizedBox(height: 16),
 

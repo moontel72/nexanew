@@ -138,6 +138,15 @@ pub struct Engine {
     pub(crate) overlays: Arc<DashMap<String, OverlayState>>,
     /// Runtime status of every output forwarder, keyed by forwarder key.
     pub(crate) forwarder_status: Arc<DashMap<String, ForwardingStatus>>,
+    /// The target each camera forwarder was created from, keyed by the same
+    /// forwarder key.
+    ///
+    /// Kept so the watchdog can rebuild a dead pipeline with the *same*
+    /// parameters. `ForwardingStatus` carries only `kind` and `url`, so a target
+    /// reconstructed from it silently lost the encoder, bitrate, keyframe
+    /// interval, simulcast rid and mixer config.
+    #[cfg(feature = "gst")]
+    pub(crate) forwarder_targets: Arc<DashMap<String, todd_common::types::ForwardTarget>>,
     /// Running RTSP/RTMP ingest adapters, keyed by "{room}/{camera}".
     #[cfg(feature = "gst")]
     pub(crate) ingests: Arc<DashMap<String, Arc<todd_transcode::ingest::GstIngest>>>,
@@ -177,6 +186,8 @@ impl Engine {
             audio: Arc::new(DashMap::new()),
             overlays: Arc::new(DashMap::new()),
             forwarder_status: Arc::new(DashMap::new()),
+            #[cfg(feature = "gst")]
+            forwarder_targets: Arc::new(DashMap::new()),
             #[cfg(feature = "gst")]
             ingests: Arc::new(DashMap::new()),
             #[cfg(feature = "gst")]
@@ -1087,6 +1098,10 @@ impl Engine {
     #[cfg(feature = "gst")]
     pub async fn stop_forwarder(&self, key: &str) -> Result<ForwardingStatus, AppError> {
         let removed = self.forwarders.remove(key);
+        // An explicit stop is terminal for this target; a later start
+        // re-registers it. The status row is kept (marked `Stopped`) so the
+        // operator can still see what was stopped.
+        self.forwarder_targets.remove(key);
         let status = self
             .forwarder_status
             .get(key)
@@ -1887,6 +1902,10 @@ impl Engine {
             error: None,
         };
         self.forwarder_status.insert(key.clone(), starting);
+        // Remember what this forwarder was built from: the watchdog rebuilds
+        // from here, and a status row alone cannot reproduce the encoder,
+        // bitrate, keyframe interval, rid or mixer config.
+        self.forwarder_targets.insert(key.clone(), target.clone());
 
         let forwarders = Arc::clone(&self.forwarders);
         let status_map = Arc::clone(&self.forwarder_status);
@@ -1989,7 +2008,7 @@ impl Engine {
     /// Returns the keys that were re-armed.
     #[cfg(feature = "gst")]
     pub async fn rearm_stale_forwarders(&self) -> Vec<String> {
-        use todd_common::types::{ForwardSource, ForwardState, ForwardTarget};
+        use todd_common::types::{ForwardSource, ForwardState};
 
         let mut rearmed = Vec::new();
 
@@ -2036,17 +2055,17 @@ impl Engine {
                 continue;
             }
 
-            let Some(target) = self.forwarder_status.get(&key).map(|s| ForwardTarget {
-                camera_id: camera_id.clone(),
-                source: ForwardSource::Camera,
-                kind: s.kind,
-                url: s.url.clone(),
-                encoder: Default::default(),
-                bitrate_kbps: 0,
-                keyframe_interval: 0,
-                rid: None,
-                audio: Default::default(),
-            }) else {
+            // Rebuild from the original target rather than reconstructing one
+            // from the status row: the status carries only `kind` and `url`, so
+            // anything synthesised here silently dropped the encoder, bitrate,
+            // keyframe interval, simulcast rid and mixer config.
+            let Some(target) = self
+                .forwarder_targets
+                .get(&key)
+                .map(|entry| entry.value().clone())
+            else {
+                // No recorded target (created before this was stored): skip
+                // rather than rebuild with invented defaults.
                 continue;
             };
 

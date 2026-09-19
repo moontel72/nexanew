@@ -9,12 +9,12 @@ const files = [
   "app/Services/Cricket/CricketDataCleanupService.php",
   "app/Services/Cricket/ActiveMatchContextService.php",
   "app/Services/Cricket/LiveScoreService.php",
+  "app/Services/Cricket/CricketStreamSyncService.php",
   "app/Events/Cricket/CricketMatchContextCleared.php",
   "app/Http/Controllers/Cricket/MatchController.php",
   "app/Http/Controllers/Cricket/TeamController.php",
   "app/Http/Controllers/Cricket/TournamentSetupController.php",
   "app/Http/Controllers/Cricket/MatchContextController.php",
-  "app/Http/Controllers/Cricket/StreamController.php",
   "app/Http/Controllers/Cricket/PublicMatchController.php",
   "routes/panels/cricket.php",
 ];

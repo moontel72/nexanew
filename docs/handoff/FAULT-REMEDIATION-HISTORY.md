@@ -328,10 +328,23 @@ This is the setup that finally made real compilation possible. Reuse it.
        cargo check -p todd-signaling -p todd-sfu --features gst
    ```
 4. **Known limitation:** `cargo test --features gst` compiles but the test
-   binary dies with `STATUS_DLL_NOT_FOUND` (0xc0000135) because the GStreamer
-   DLLs are not on the runtime search path. Adding the `bin` dir to `PATH` did
-   **not** fix it in the attempt made here. **Consequence: the `gst`-gated unit
-   tests have still never been executed.** Ubuntu CI is the place to run them.
+   binary cannot start — it dies with a missing `glib-2.0-0.dll` (exit 127 here;
+   originally reported as `STATUS_DLL_NOT_FOUND` / `0xc0000135`).
+   **Cause, confirmed 2026-09-19:** the tree at `C:\gs-dev\extract` came from the
+   **devel** MSI, which ships headers, `.lib` files and `.pc` files and
+   **contains zero DLLs** (`bin/` holds only `.pdb` symbols). The DLLs live in
+   the separate **runtime** MSI. Adding the `bin` dir to `PATH` could never have
+   worked, because there is nothing there to load.
+   **Local limit:** the `gst` tests can be *compiled and linked*
+   (`cargo test -p todd-transcode --features gst --no-run` succeeds), but not
+   executed on this machine.
+5. **Correction (2026-09-19): "Ubuntu CI is the place to run them" was wrong.**
+   No CI job ran them either — every `cargo test` in `.github/workflows/` is
+   invoked **without** `--features gst`, and both `check-gst` jobs only ran
+   `cargo check`. The `gst`-gated tests had **never executed anywhere**.
+   `media-engine-build.yml` now runs
+   `cargo test -p todd-transcode --features gst` in the job that already installs
+   GStreamer 1.24.
 
 ---
 
@@ -608,7 +621,7 @@ curl -s http://127.0.0.1:1985/api/v1/streams/ | grep -a "cricket_match_"        
 docker logs --since 2m todd-studio | grep -ac "audio bus produced no frames"    # expect 0
 ```
 
-### 9.10 Proposed change (described, not implemented)
+### 9.10 The change (implemented 2026-09-19 — pending operator verification)
 
 **Core — make the declared set equal to the fed set.**
 
@@ -637,6 +650,24 @@ docker logs --since 2m todd-studio | grep -ac "audio bus produced no frames"    
 source-side only and does not satisfy the standing requirement — *the pipeline
 must be able to publish with zero audio branches, always*. The engine-side fix
 is required either way; doing both is optional.
+
+**What was actually changed (2026-09-19):**
+
+| File | Change |
+|---|---|
+| `todd-transcode/src/forwarder.rs` | `build_description` takes `live_buses: &[AudioBus]` instead of `has_audio: bool`; the audio loop iterates that slice instead of `AudioBus::ALL`; `build_with_callback` passes the primed set. Tests rewritten: `only_live_buses_get_an_audio_branch`, `no_live_buses_means_no_audio_stage`, `description_declares_exactly_the_live_buses` |
+| `todd-sfu/src/engine.rs` | New gst-gated `forwarder_targets` map records the original target; `rearm_stale_forwarders` rebuilds from it instead of synthesising defaults |
+| `.github/workflows/media-engine-build.yml` | New step: `cargo test -p todd-transcode --features gst` (see the §6.5 correction) |
+| `live_video_page.dart` | Renders `forwarder_error` under the status card |
+| `CricketStreamSyncService.php` | PGM camera must be `active`, not just `kind == 'whip'` (`isLiveBroadcasterCamera`) |
+| `.scripts/check-php-syntax.mjs` | Dropped the deleted `StreamController.php`; added `CricketStreamSyncService.php` |
+
+**Verified locally:** `cargo check -p todd-signaling -p todd-sfu --features gst`
+clean; `cargo check --workspace --all-targets` clean; `cargo test -p
+ todd-transcode --features gst --no-run` compiles **and links**; `dart analyze`
+clean; `check-php-syntax.mjs` clean.
+**Not verified:** the `gst` tests have not been *executed* (see §6.4), and no
+runtime test has been run against SRS. That is the operator's step.
 
 ### 9.11 Secondary findings (conflicts, stale artefacts, database)
 

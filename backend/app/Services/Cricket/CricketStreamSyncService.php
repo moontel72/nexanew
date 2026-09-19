@@ -272,7 +272,7 @@ class CricketStreamSyncService
             $program = $this->fetchJson("{$engineUrl}/api/v1/program/" . urlencode($roomId), $token);
             $cameraId = is_array($program) ? ($program['camera_id'] ?? null) : null;
 
-            if (is_string($cameraId) && $cameraId !== '' && $this->isBroadcasterCamera($cameras, $cameraId)) {
+            if (is_string($cameraId) && $cameraId !== '' && $this->isLiveBroadcasterCamera($cameras, $cameraId)) {
                 return ['room_id' => $roomId, 'camera_id' => $cameraId];
             }
 
@@ -285,16 +285,31 @@ class CricketStreamSyncService
     }
 
     /**
-     * True when this camera id is a broadcaster-published (WHIP) camera.
+     * True when this camera id is a broadcaster-published (WHIP) camera that is
+     * currently live.
+     *
+     * `active` matters as much as `kind`. The room keeps a camera entry after
+     * its publisher disconnects, so a `whip` camera can be registered while
+     * carrying no media — the same ghost entry the Studio tiles retry forever
+     * (409). Selecting one for the forwarder makes `add_forwarder` fail with
+     * "no video stream on camera … layer ''", so the bridge never starts and
+     * the public page stays dark for a match whose operator did nothing wrong.
+     *
+     * `room/list` computes `active` from live WHIP sessions and ingest
+     * adapters, so this is the same signal `firstLiveBroadcasterCamera()`
+     * already relies on.
      *
      * @param  array<int, array<string, mixed>>  $cameras
      */
-    private function isBroadcasterCamera(array $cameras, string $cameraId): bool
+    private function isLiveBroadcasterCamera(array $cameras, string $cameraId): bool
     {
         foreach ($cameras as $camera) {
-            if (($camera['id'] ?? null) === $cameraId) {
-                return ($camera['kind'] ?? '') === 'whip';
+            if (($camera['id'] ?? null) !== $cameraId) {
+                continue;
             }
+
+            return ($camera['kind'] ?? '') === 'whip'
+                && ($camera['active'] ?? false) === true;
         }
 
         return false;
