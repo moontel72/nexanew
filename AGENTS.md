@@ -127,3 +127,28 @@ node .githooks/validate-json-config.mjs --install   # git config core.hooksPath 
 - Media engine gst feature ke saath Docker image me build hota hai
   (`media-engine-build.yml`) — manually `--features gst` chalane ki
   zaroorat nahi.
+
+### ⚠️ Media engine par kaam karne se pehle — `gst` feature
+
+`cargo check --workspace` **`forwarder.rs`, `mixer_gst.rs` aur `audio.rs` ko
+compile hi nahi karta** (wo `#[cfg(feature = "gst")]` ke peeche hain). Green
+workspace build in files ke baare me kuch sabit nahi karta.
+
+CI jo command chalata hai, **wohi** chalayein:
+
+```sh
+cargo check -p todd-signaling -p todd-sfu --features gst
+```
+
+Iske liye `libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev`
+(GStreamer >= 1.24) chahiye. Windows par setup ka tareeqa
+`docs/handoff/FAULT-REMEDIATION-HISTORY.md` (§6) me likha hai.
+
+### Fault history — pehle ye parhein
+
+`docs/handoff/FAULT-REMEDIATION-HISTORY.md` me ek poori remediation cycle ki
+history hai: 11 reported faults, unmein se kaunse waqai faults the, kaunse
+fix verify hue, aur wo 5 compile errors jo pehle push ne CI par tor diye.
+
+Us file me ye bhi likha hai ke **reported streaming problem abhi bhi open
+hai** — in fixes se solve nahi hui. Naya kaam shuru karne se pehle usay parhein.

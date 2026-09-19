@@ -1,5 +1,16 @@
 # HANDOFF — Live Video Not Reaching the Public Page
 
+> **⚠️ READ FIRST: [`FAULT-REMEDIATION-HISTORY.md`](./FAULT-REMEDIATION-HISTORY.md)**
+>
+> After this report, 11 listed faults were remediated and pushed
+> (`4b4f1127`, then `b9b5db9d` to fix 5 compile errors it introduced).
+> That history file records what was actually wrong, which of the fixes were
+> verified, and — importantly — that **the problem described below is still
+> open.** None of those fixes address this outage.
+>
+> It also documents the `gst`-feature build gotcha that caused the failed
+> first push, and how to compile that feature locally.
+
 **For:** QODER EXPERT AGENT
 **Date:** 2026-09-18
 **Severity:** Critical — public stream has never played at `https://cricket.traceodd.com/`
