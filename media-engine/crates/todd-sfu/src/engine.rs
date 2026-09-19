@@ -1797,7 +1797,7 @@ impl Engine {
         // Rejected up front with the same message every other path uses, so the
         // operator gets an actionable explanation instead of a bare 501 (and no
         // forwarder is ever registered that the watchdog would keep retrying).
-        if target.kind == tod_common::types::ForwardKind::WebRtcViewer {
+        if target.kind == todd_common::types::ForwardKind::WebRtcViewer {
             return Err(AppError::Unsupported(
                 todd_transcode::forwarder::WEBRTC_VIEWER_UNAVAILABLE.to_string(),
             ));

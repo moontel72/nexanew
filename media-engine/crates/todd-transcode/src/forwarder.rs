@@ -298,22 +298,24 @@ fn spawn_input_pump(fanouts: Fanout, key: String, track_index: usize) {
 /// Copies one chunk to every live consumer, dropping it for any consumer that
 /// has fallen behind (`try_send` never waits).
 fn fan_out(senders: &[mpsc::Sender<RtpChunk>], chunk: RtpChunk) {
-    let mut chunk = chunk;
-    let total = senders.len();
-    for (index, tx) in senders.iter().enumerate() {
-        if index + 1 == total {
-            // The last consumer takes the original value, avoiding a clone.
-            let _ = tx.try_send(chunk);
+    // A chunk is moved into `try_send`, so the "remaining copy" is captured
+    // per iteration instead of being reassigned inside a match: on `Ok` the
+    // value is simply gone, and reusing a moved binding is a compile error.
+    // `None` therefore means "this was the last consumer".
+    let mut pending = Some(chunk);
+    for tx in senders {
+        let Some(current) = pending.take() else {
             return;
-        }
-        // Both arms carry the chunk back: a full consumer drops its copy, a
-        // closed one is about to be pruned — either way the next consumer
-        // still gets its own copy instead of the frame being swallowed here.
-        if let Err(returned) = tx.try_send(chunk) {
-            chunk = match returned {
+        };
+        // Both error arms carry the chunk back: a full consumer drops its
+        // copy, a closed one is about to be pruned — either way the remaining
+        // consumers still get their own copy instead of the frame being
+        // swallowed here.
+        if let Err(returned) = tx.try_send(current) {
+            pending = Some(match returned {
                 mpsc::error::TrySendError::Full(returned)
                 | mpsc::error::TrySendError::Closed(returned) => returned,
-            };
+            });
         }
     }
 }
@@ -425,6 +427,10 @@ impl GstForwarder {
         // the audiomixer changed that. Dropping the branch is the only shape
         // that works, so the wait is bounded and the bus is dropped if it
         // stays quiet.
+        // Prime in two passes so the router receivers stay available for the
+        // shared subscription below: `audio_rx` is consumed here to await the
+        // prime, so the receivers that survive are collected as we go rather
+        // than being read back out of `audio_rx` later.
         let mut live_audio: Vec<(AudioBus, mpsc::Receiver<RtpChunk>, RtpChunk)> = Vec::new();
         for (bus, mut rx) in audio_rx {
             let deadline = tokio::time::Instant::now() + AUDIO_PRIME_TIMEOUT;
@@ -465,20 +471,29 @@ impl GstForwarder {
         // precondition that can fail fails before shared state exists — a
         // registered consumer with no pipeline would hold the subscription and
         // silently swallow the room's media.
+        //
+        // Only buses that actually primed are registered: a silent bus was
+        // dropped above precisely because its branch must not exist, so giving
+        // it a shared channel would contradict that decision.
         let key = fanout_key(target);
         let tracks = 1 + live_audio.len();
         let (consumer_id, video_rx_out, audio_rx_out) = register_consumer(&key, tracks);
+        let primed_receivers: Vec<(String, mpsc::Receiver<RtpChunk>)> = live_audio
+            .iter_mut()
+            .map(|(bus, rx, _)| {
+                (
+                    bus.as_str().to_string(),
+                    std::mem::replace(rx, closed_channel()),
+                )
+            })
+            .collect();
         register_inputs(
             &key,
             std::iter::once((
                 "video".to_string(),
                 std::mem::replace(video_rx, closed_channel()),
             ))
-            .chain(
-                audio_rx
-                    .into_iter()
-                    .map(|(bus, rx)| (bus.as_str().to_string(), rx)),
-            )
+            .chain(primed_receivers)
             .collect(),
         );
 

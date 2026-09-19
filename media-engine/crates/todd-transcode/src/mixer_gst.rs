@@ -823,7 +823,10 @@ impl GstProgramMixer {
                 let asset = stinger_asset.filter(|url| !url.trim().is_empty());
                 match asset {
                     Some(url) if self.stinger_src.find_property("uri").is_some() => {
-                        set_props(&self.stinger_src, &[("uri", sanitize_uri(url))]);
+                        // `stinger_asset` is `Option<String>`, so `url` is a
+                        // `&String`; `sanitize_uri` takes `&str`. Deref-coercion
+                        // does not apply through the `filter` closure binding.
+                        set_props(&self.stinger_src, &[("uri", sanitize_uri(url.as_str()))]);
                         let alpha = self.stinger_alpha.clone();
                         let up = animate_alpha(
                             alpha.clone(),
@@ -889,7 +892,14 @@ mod poison {
     /// bindings. Resetting is safe precisely because every one of these
     /// structures is a *cache* of what the pipeline already holds — the
     /// rebuild path re-derives it from the live scene plan.
-    pub(super) fn lock_resetting<T>(mutex: &Mutex<T>, label: &str, fresh: impl FnOnce() -> T) -> MutexGuard<'_, T> {
+    /// Two lifetimes are needed because the guard borrows only `mutex`, while
+    /// `label` is borrowed independently — a single elided lifetime would make
+    /// the guard's lifetime depend on the label string too.
+    pub(super) fn lock_resetting<'a, T>(
+        mutex: &'a Mutex<T>,
+        label: &str,
+        fresh: impl FnOnce() -> T,
+    ) -> MutexGuard<'a, T> {
         match mutex.lock() {
             Ok(guard) => guard,
             Err(poisoned) => {
