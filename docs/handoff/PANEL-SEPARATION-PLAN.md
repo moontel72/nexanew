@@ -527,6 +527,22 @@ bus_owner, goods_fleet, passenger, cricket, studio
 registered — the Customer Super-App's backend is unreachable. Group 1's customer app cannot
 work until this is fixed.
 
+> **FIXED in `11dbaf8f`.** Decision: **register, not delete.** `routes/panels/` holds 11 files
+> and `consumer` was the only one missing from the array. The 4 endpoints
+> (`GET transit/search`, `POST fleet/auction`, `POST fleet/bid`, `POST chat/send`) are all
+> implemented by `ConsumerSuperAppController`, which exists, and the Flutter app already calls
+> them (`lib/core/navigation/panel_routes.dart:301-305`). Verified by clearing the route cache:
+> 0 routes before, 4 after; and all 11 panels now load (702 routes total).
+>
+> **Operational discovery made while verifying this — worth knowing:** the repo's local
+> `bootstrap/cache/routes-v7.php` was dated **April** and predated the entire panel route
+> system, so `artisan route:list` reported only **149 routes and none of the panels**. That file
+> is gitignored (only `.gitkeep` is tracked) and `deploy.yml:244-245` runs `optimize:clear`
+> then `optimize` on every deploy, so **production rebuilds it fresh — which is why the panels
+> work there.** Consequence for anyone debugging: **a stale local route cache makes every
+> `routes/panels/*.php` file look absent.** Clear the cache before concluding a panel route is
+> missing.
+
 ### 7b.2 Panel middleware is weak almost everywhere
 
 | Route file | Middleware | Verdict |
@@ -553,6 +569,61 @@ can reach platform-admin endpoints.
 
 This is the same class of defect as §8's "known bug" and is the concrete reason the
 **LOCK** step exists.
+
+---
+
+### 7b.4 Decision — `super_admin.php` admin middleware: **do NOT apply blind**
+
+`super_admin.php:6` guards 19 live routes with `auth:sanctum` only, so **any** authenticated
+account can reach platform-admin endpoints. The Flutter super-admin panel really does call them
+(`lib/core/navigation/panel_routes.dart:210-216` — `/financial/vouchers/pending`,
+`/security/audit-ledger`, …). This is a genuine privilege-escalation hole.
+
+**The obvious fix is `auth:admin` (`AdminMiddleware`). It was investigated and NOT applied,
+because it would very likely lock the owner out.**
+
+`AdminMiddleware` is a three-tier check, and for a super admin **tiers 1 and 2 cannot pass**:
+
+| Tier | Requires | Why a super admin fails it |
+|---|---|---|
+| 1 | `TenantAccount::isAdmin()` → `account_type === 'master_admin'` | `GlobalAuthController.php:345-347` sets `account_type` to `{fleet_type}_{role}` when there is a fleet assignment, and **`'global_identity'`** otherwise. A super admin has no fleet assignment, so it is `global_identity`. |
+| 2 | `$user->getAttribute('identity_type') === 'admin'` | `$user` is a **`TenantAccount`**, and `identity_type` is a **`GlobalIdentity`** column. `TenantAccount`'s fillable list (`app/Models/TenantAccount.php:18`) does not include it, so this reads `null`. |
+| 3 | a row in `master_admin_assignments` or `sub_admin_assignments` for the identity | **This is the only tier that can pass — and it cannot be verified from here (no DB access).** |
+
+If tier 3 has no row for the owner's account, adding the middleware returns **403 on every
+super-admin call** — the most critical panel in the system goes down. That is exactly the
+"project crash" this work must avoid.
+
+**The correct approach, therefore, is a shadow gate:**
+
+1. A middleware that runs the *same* three-tier check, **logs** the decision, and **passes the
+   request through regardless** while `SUPER_ADMIN_GATE_ENFORCE` is false (the default).
+2. Apply it to `super_admin.php` together with `auth:sanctum`. Zero behaviour change.
+3. The owner reads the logs, confirms their own account appears as *authorised* (or adds the
+   missing `master_admin_assignments` row), then flips the env var to `true`.
+4. **Enforcement becomes a config change, not a code change** — and a rollback is one env var.
+
+**Before that middleware is even written, one query settles it.** Run on the server:
+
+```sql
+SELECT global_identity_id, revoked_at FROM master_admin_assignments;
+SELECT id, email, account_type, global_identity_id FROM tenant_accounts WHERE email LIKE '%admin%';
+```
+
+If the owner's `global_identity_id` appears in the first result with `revoked_at IS NULL`, the
+gate can be applied directly and the shadow step is unnecessary.
+
+### 7b.5 Decision — `gitleaks`: scan the tree first, history later
+
+`gitleaks` defaults to scanning **git history**, which still contains
+`database_config.dart:54` (`awan1972`). Enabling it as-is would fail the build on a finding
+that has already been removed and is pending rotation — a red build that says nothing useful.
+
+**Add it against the working tree first** (`gitleaks detect --no-git --source . --redact`),
+which still catches any secret committed from now on, because a committed secret is present in
+the checked-out tree. **Once the passwords are rotated**, switch to history scanning (or add an
+allowlist entry for the historical commit with a note that it was rotated) so the old finding
+cannot hide a new one.
 
 ---
 
@@ -912,21 +983,30 @@ it is the single change that stops this problem recurring.
       creating that file* — the root cause. Verified 0 imports and `dart analyze` still clean.
 - [x] **Fix `tests.yml`** — **`e1e181b2`**. `master`/`*.x` → `main`/`mainnew`. Verified with a
       YAML parse.
-- [ ] **Register `consumer`** in the `PanelRouteServiceProvider` panels array — or delete
-      `consumer.php`. Either way, remove the dead code (§7b.1). **Needs a decision: register or
-      delete?**
-- [ ] **Add admin middleware to `super_admin.php`** — mirror the `BusFleetGate` pattern
-      (§7b.2). **Needs care: must not lock out the existing super-admin accounts.**
 - [ ] **Replace the hardcoded `root@135.181.46.27`** in `frontend-deploy.yml` with the same
       `vars.VPS_HOST` variable `deploy.yml` already uses. **Needs the repo variable to exist
-      first, or the deploy breaks.**
+      first, or the deploy breaks** — 9 hardcoded occurrences (lines 61, 90, 105, 145, 165-166,
+      185, 200, 214, 229).
+- [x] **Register `consumer`** in the `PanelRouteServiceProvider` panels array — **`11dbaf8f`**.
+      **Decision: register, not delete.** `routes/panels/` holds 11 files and `consumer` was the
+      only one absent from the array, so its 4 endpoints under `/api/v1/consumer` were 404.
+      All four are implemented by `ConsumerSuperAppController`, which exists, and the Flutter app
+      already calls them (`lib/core/navigation/panel_routes.dart:301-305`). Deleting would have
+      destroyed intended functionality. Verified: 0 routes before, 4 after; all 11 panels load.
+- [ ] **Add admin middleware to `super_admin.php`** — mirror the `BusFleetGate` pattern
+      (§7b.2). **NOT DONE, deliberately — see the decision note in §7b.4. Applying it blind
+      would lock the owner out of the Super Admin panel.**
 - [x] **Add `dart analyze` to CI** — **`ce560194`**. Runs after `flutter pub get`, before the
       builds. Uses `--no-fatal-warnings` because the tree carries a 57-warning backlog (0
       errors); verified the gate is *not* vacuous by confirming a deliberate type error makes
       it exit non-zero.
 - [ ] **Add `gitleaks` (or `trufflehog`) secret scanning to CI** — prevents the next credential
-      commit. **Note:** it scans history, so it will flag the already-removed credential. Add
-      it with an allowlist for that historical finding, once the passwords are rotated.
+      commit. **Not done yet; see §7b.5 for the safe configuration** (scan the tree, not
+      history, until the passwords are rotated).
+- [ ] **Resolve the 37 dependency advisories** — `composer audit` reported *37 security
+      vulnerability advisories affecting 11 packages* during the lock sync. **Pre-existing**,
+      not caused by any change in this cycle, and not yet triaged. Run `composer audit` for the
+      list; this is a hygiene item that needs its own reviewable change, not a quick win.
 - [x] **Move `missile_3d_button.dart`** into `lib/shared/widgets/buttons/` — **`3fbbeb90`**.
       6 import sites across 4 domains; git recorded it as a 100% rename. `shared → features`
       backward imports dropped **4 edges → 3**.
