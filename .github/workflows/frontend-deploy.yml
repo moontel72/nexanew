@@ -49,6 +49,27 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # ──────────────────────────────────────────────────────────────
+      # Static analysis gate — runs before any build or deploy work so a
+      # type error fails fast instead of shipping.
+      #
+      # `flutter build web` only checks the code reachable from ONE entry
+      # point, and only 8 of the 13 `lib/main_*.dart` targets are built at
+      # all. `dart analyze` covers the whole `lib/` tree, including the five
+      # unbuilt panels and every file no entry point imports.
+      #
+      # `--no-fatal-warnings` is deliberate: the tree currently carries 57
+      # pre-existing warnings (46 of them mechanical: unused_field 14,
+      # unused_local_variable 13, dead_null_aware_expression 12,
+      # unused_element 8, unused_import 5) plus 29 deprecation infos, and 0
+      # errors. Treating those as fatal would block every deploy until the
+      # backlog is cleared, which is a separate change. This gate therefore
+      # catches ERRORS today; tighten it by clearing the backlog and then
+      # dropping the flag.
+      # ──────────────────────────────────────────────────────────────
+      - name: Dart analyze
+        run: dart analyze --no-fatal-warnings
+
       # 🔥 SSH Setup
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
