@@ -37,10 +37,26 @@ jobs:
         with:
           php-version: "8.2"
 
-      - name: Install PHP dependencies (with Reverb)
+      # `composer install`, never `composer require`. This step used to run
+      #   composer require laravel/reverb --no-interaction ...
+      # which edited composer.json AND composer.lock *inside this runner*, and
+      # the mutated pair was then rsynced to the server. Both files were made
+      # consistent for production and never committed back, so the repository
+      # drifted: composer.json required laravel/reverb while composer.lock did
+      # not contain it. Production worked; a fresh checkout could not install,
+      # and `tests.yml` failed the moment it started running on the deploy
+      # branches.
+      #
+      # The lock is now the source of truth (laravel/reverb v1.11.1 is locked in
+      # and installed). Installing from it keeps the runner, the server and the
+      # repository identical, and stops this class of drift recurring.
+      #
+      # Adding a dependency is therefore a committed change:
+      #   cd backend && composer require <package>   (commit composer.json + .lock)
+      - name: Install PHP dependencies
         run: |
           cd backend
-          composer require laravel/reverb --no-interaction --prefer-dist --optimize-autoloader
+          composer install --prefer-dist --no-interaction --no-progress
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
