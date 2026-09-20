@@ -47,6 +47,17 @@ use crate::media::{MediaCodec, RtpChunk};
 /// targets, so a working audio bus primes long before the video queue drains.
 const AUDIO_PRIME_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(1500);
 
+/// Codecs a *video* branch can carry. Every video `appsrc` here declares these
+/// caps, so a chunk with any other codec must not reach it.
+const VIDEO_CODECS: &[MediaCodec] = &[MediaCodec::H264, MediaCodec::Vp8, MediaCodec::Vp9];
+
+/// Codecs an *audio* branch can carry.
+///
+/// The audio `appsrc`es declare `encoding-name=OPUS`. Pushing anything else into
+/// one is unrecoverable: `rtpopusdepay` rejects the payload and the branch dies
+/// with `not-negotiated (-4)`, which is what took the cricket bridge down.
+const AUDIO_CODECS: &[MediaCodec] = &[MediaCodec::Opus];
+
 /// Error text returned for every `ForwardKind::WebRtcViewer` attempt.
 ///
 /// Kept in one place so the API response, the recorded
@@ -436,7 +447,28 @@ impl GstForwarder {
             let deadline = tokio::time::Instant::now() + AUDIO_PRIME_TIMEOUT;
             let primed = loop {
                 match tokio::time::timeout_at(deadline, rx.recv()).await {
-                    Ok(Some(chunk)) => break Some(chunk),
+                    // Only an Opus chunk proves this bus is carrying audio.
+                    //
+                    // The router fans every media type of a layer out on one
+                    // subscription (see the video-side loop above), so the
+                    // first chunk on an audio receiver can be a *video*
+                    // chunk. Accepting it marked the bus live, and the H264
+                    // payload was then pushed into an appsrc whose caps say
+                    // `encoding-name=OPUS` — `rtpopusdepay` answered
+                    // `not-negotiated (-4)` and the whole bridge failed. The
+                    // video side has filtered by codec since the 501 incident;
+                    // the audio side never did.
+                    Ok(Some(chunk)) if matches!(chunk.codec, MediaCodec::Opus) => {
+                        break Some(chunk)
+                    }
+                    Ok(Some(other)) => {
+                        tracing::debug!(
+                            bus = %bus.as_str(),
+                            codec = ?other.codec,
+                            "ignoring non-Opus chunk on an audio bus while priming"
+                        );
+                        continue;
+                    }
                     // Channel closed — the publisher went away.
                     Ok(None) => break None,
                     Err(_elapsed) => break None,
@@ -520,7 +552,12 @@ impl GstForwarder {
             release_consumer(&key, consumer_id);
             return Err(AppError::Internal("video appsrc lookup failed".to_string()));
         };
-        push_tasks.push(spawn_push_task(video_src, video_rx_out, Some(first)));
+        push_tasks.push(spawn_push_task(
+            video_src,
+            video_rx_out,
+            Some(first),
+            VIDEO_CODECS,
+        ));
 
         // `register_consumer` returns the audio channels with the video one
         // already taken out, so this stays aligned with `live_audio`.
@@ -532,7 +569,12 @@ impl GstForwarder {
             {
                 // `Some(primed)` seeds the branch with the chunk already
                 // drained while waiting, so the prime is not discarded.
-                Some(appsrc) => push_tasks.push(spawn_push_task(appsrc, rx, Some(primed))),
+                Some(appsrc) => push_tasks.push(spawn_push_task(
+                    appsrc,
+                    rx,
+                    Some(primed),
+                    AUDIO_CODECS,
+                )),
                 None => {
                     tracing::warn!(bus = %bus.as_str(), "audio appsrc not in pipeline; dropping bus");
                 }
@@ -599,8 +641,8 @@ impl GstForwarder {
         let audio_rx = bridge_broadcast(audio);
 
         let mut push_tasks = Vec::new();
-        push_tasks.push(spawn_push_task(video_src, video_rx, None));
-        push_tasks.push(spawn_push_task(audio_src, audio_rx, None));
+        push_tasks.push(spawn_push_task(video_src, video_rx, None, VIDEO_CODECS));
+        push_tasks.push(spawn_push_task(audio_src, audio_rx, None, AUDIO_CODECS));
 
         tracing::info!(kind = ?target.kind, url = %target.url, "program forwarder started");
 
@@ -794,19 +836,45 @@ fn bridge_broadcast(mut from: broadcast::Receiver<RtpChunk>) -> mpsc::Receiver<R
 
 /// Spawns a blocking task that pushes chunks into an appsrc until the
 /// channel closes or the pipeline errors.
+///
+/// `accept` is the set of codecs this branch's caps can carry, and it is
+/// **enforced**, not advisory. The router fans every media type of a layer out
+/// on one subscription, so a receiver subscribed for one codec can deliver
+/// another: a video chunk arriving on an audio bus was pushed into an appsrc
+/// whose caps say `encoding-name=OPUS`, and `rtpopusdepay` then rejected the
+/// H264 payload with `not-negotiated (-4)` — killing the branch and the bridge
+/// with it. Passing the wrong-codec buffer downstream is never recoverable, so
+/// mismatched chunks are dropped here.
 fn spawn_push_task(
     appsrc: AppSrc,
     mut rx: mpsc::Receiver<RtpChunk>,
     first: Option<RtpChunk>,
+    accept: &'static [MediaCodec],
 ) -> JoinHandle<()> {
     tokio::task::spawn_blocking(move || {
         let mut first = first;
+        // One warning per task: a wrong-codec stream on this branch is worth
+        // reporting once, not once per frame.
+        let mut warned = false;
         loop {
             let chunk = match first.take() {
                 Some(c) => Some(c),
                 None => rx.blocking_recv(),
             };
             let Some(chunk) = chunk else { break };
+            if !accept.contains(&chunk.codec) {
+                if !warned {
+                    warned = true;
+                    tracing::warn!(
+                        appsrc = %appsrc.name(),
+                        codec = ?chunk.codec,
+                        expected = ?accept,
+                        "dropping chunk whose codec this branch cannot carry;
+                         the router fan-out delivered a different media type"
+                    );
+                }
+                continue;
+            }
             let mut buffer = match gst::Buffer::with_size(chunk.packet.len()) {
                 Ok(buffer) => buffer,
                 Err(e) => {
