@@ -63,7 +63,8 @@ const AUDIO_CODECS: &[MediaCodec] = &[MediaCodec::Opus];
 /// Kept in one place so the API response, the recorded
 /// [`ForwardingStatus`](todd_common::types::ForwardingStatus) and the docs
 /// cannot drift apart.
-pub const WEBRTC_VIEWER_UNAVAILABLE: &str = "WebRTC viewer fan-out is not available in this build: it needs a \
+pub const WEBRTC_VIEWER_UNAVAILABLE: &str =
+    "WebRTC viewer fan-out is not available in this build: it needs a \
      signaling service plus gst-plugins-rs `webrtcsink` (see docs/07-sfu-architecture.md). \
      Use Rtmp, Srt or File output instead";
 
@@ -137,7 +138,9 @@ fn forwarder_fanouts() -> &'static Fanout {
 /// The tables are self-healing (closed receivers are skipped on every pass),
 /// so the poisoned payload is safe to reuse. Returning early would instead
 /// stall whichever pump hit the poison, permanently.
-fn lock_fanouts(fanouts: &Fanout) -> std::sync::MutexGuard<'_, HashMap<String, SharedSubscription>> {
+fn lock_fanouts(
+    fanouts: &Fanout,
+) -> std::sync::MutexGuard<'_, HashMap<String, SharedSubscription>> {
     match fanouts.lock() {
         Ok(guard) => guard,
         Err(poisoned) => {
@@ -569,12 +572,9 @@ impl GstForwarder {
             {
                 // `Some(primed)` seeds the branch with the chunk already
                 // drained while waiting, so the prime is not discarded.
-                Some(appsrc) => push_tasks.push(spawn_push_task(
-                    appsrc,
-                    rx,
-                    Some(primed),
-                    AUDIO_CODECS,
-                )),
+                Some(appsrc) => {
+                    push_tasks.push(spawn_push_task(appsrc, rx, Some(primed), AUDIO_CODECS))
+                }
                 None => {
                     tracing::warn!(bus = %bus.as_str(), "audio appsrc not in pipeline; dropping bus");
                 }
@@ -587,7 +587,7 @@ impl GstForwarder {
         // signal that was missing: without it a dead RTMP connection stayed
         // reported as `Running` while SRS received nothing.
         let fail_label = format!("camera/{}", target.camera_id);
-        let _bus_task = watch_bus(&pipeline, fail_label, on_fail);
+        let _bus_task = watch_bus(&pipeline, fail_label, description.clone(), on_fail);
 
         Ok(GstForwarder {
             fanout_key: Some(key),
@@ -646,7 +646,12 @@ impl GstForwarder {
 
         tracing::info!(kind = ?target.kind, url = %target.url, "program forwarder started");
 
-        let _bus_task = watch_bus(&pipeline, "program".to_string(), on_fail);
+        let _bus_task = watch_bus(
+            &pipeline,
+            "program".to_string(),
+            description.clone(),
+            on_fail,
+        );
 
         Ok(GstForwarder {
             // Program forwarders own their broadcast receivers directly; the
@@ -681,10 +686,7 @@ fn sanitize_url(raw: &str) -> Result<String, AppError> {
     let cleaned: String = trimmed
         .chars()
         .filter(|c| {
-            !matches!(
-                c,
-                '"' | '\\' | '#' | '!' | ',' | ';' | '=' | '\r' | '\n'
-            ) && !c.is_control()
+            !matches!(c, '"' | '\\' | '#' | '!' | ',' | ';' | '=' | '\r' | '\n') && !c.is_control()
         })
         .collect();
     if cleaned.is_empty() {
@@ -743,7 +745,12 @@ fn closed_channel() -> mpsc::Receiver<RtpChunk> {
 /// This task is the missing signal. It logs the error and invokes `on_fail`
 /// (which marks the forwarder `Failed` and clears it) so a failure is
 /// visible and recoverable instead of silent.
-fn watch_bus<F>(pipeline: &gst::Pipeline, label: String, on_fail: F) -> JoinHandle<()>
+fn watch_bus<F>(
+    pipeline: &gst::Pipeline,
+    label: String,
+    description: String,
+    on_fail: F,
+) -> JoinHandle<()>
 where
     F: FnOnce(String) + Send + 'static,
 {
@@ -787,10 +794,19 @@ where
                         %label,
                         error = %err.error(),
                         debug = err.debug().unwrap_or_default().as_str(),
+                        pipeline = %description,
                         "forwarder pipeline error"
                     );
                     if let Some(cb) = on_fail.take() {
-                        cb(detail);
+                        // The failing element is not enough to diagnose a
+                        // negotiation error: the pipeline has to be
+                        // reproducible byte-for-byte, and the built description
+                        // is the only place it exists. Include it in the text the
+                        // caller records, so a remote operator can read the exact
+                        // failing pipeline without a debug build.
+                        cb(format!(
+                            "{detail}\n--- pipeline that failed ---\n{description}"
+                        ));
                     }
                     break;
                 }
@@ -1027,12 +1043,10 @@ fn build_description(
     // syntax rather than as part of the location.
     let location = sanitize_url(&target.url)?;
     let mux_tail = match &target.kind {
-        ForwardKind::Rtmp => format!(
-            "flvmux streamable=true name=mux ! rtmpsink location=\"{location}\" sync=false"
-        ),
-        ForwardKind::Srt => format!(
-            "mpegtsmux name=mux ! srtsink uri=\"{location}\" sync=false"
-        ),
+        ForwardKind::Rtmp => {
+            format!("flvmux streamable=true name=mux ! rtmpsink location=\"{location}\" sync=false")
+        }
+        ForwardKind::Srt => format!("mpegtsmux name=mux ! srtsink uri=\"{location}\" sync=false"),
         ForwardKind::File => {
             let mux = if location.ends_with(".mp4") {
                 "mp4mux"
@@ -1044,9 +1058,7 @@ fn build_description(
             format!("{mux} name=mux ! filesink location=\"{location}\" sync=false")
         }
         ForwardKind::WebRtcViewer => {
-            return Err(AppError::Unsupported(
-                WEBRTC_VIEWER_UNAVAILABLE.to_string(),
-            ))
+            return Err(AppError::Unsupported(WEBRTC_VIEWER_UNAVAILABLE.to_string()))
         }
     };
 
@@ -1088,12 +1100,10 @@ fn build_program_description(
 ) -> Result<String, AppError> {
     let location = sanitize_url(&target.url)?;
     let mux_tail = match &target.kind {
-        ForwardKind::Rtmp => format!(
-            "flvmux streamable=true name=mux ! rtmpsink location=\"{location}\" sync=false"
-        ),
-        ForwardKind::Srt => format!(
-            "mpegtsmux name=mux ! srtsink uri=\"{location}\" sync=false"
-        ),
+        ForwardKind::Rtmp => {
+            format!("flvmux streamable=true name=mux ! rtmpsink location=\"{location}\" sync=false")
+        }
+        ForwardKind::Srt => format!("mpegtsmux name=mux ! srtsink uri=\"{location}\" sync=false"),
         ForwardKind::File => {
             let mux = if location.ends_with(".mp4") {
                 "mp4mux"
@@ -1105,9 +1115,7 @@ fn build_program_description(
             format!("{mux} name=mux ! filesink location=\"{location}\" sync=false")
         }
         ForwardKind::WebRtcViewer => {
-            return Err(AppError::Unsupported(
-                WEBRTC_VIEWER_UNAVAILABLE.to_string(),
-            ))
+            return Err(AppError::Unsupported(WEBRTC_VIEWER_UNAVAILABLE.to_string()))
         }
     };
 
@@ -1220,7 +1228,10 @@ mod tests {
         .expect("description builds");
 
         assert!(!description.contains("appsrc name=audio_"), "{description}");
-        assert!(!description.contains("audiomixer name=mix"), "{description}");
+        assert!(
+            !description.contains("audiomixer name=mix"),
+            "{description}"
+        );
         assert!(description.contains("name=video_src"), "{description}");
         assert!(description.contains("flvmux"), "{description}");
         assert!(description.contains("rtmpsink"), "{description}");
