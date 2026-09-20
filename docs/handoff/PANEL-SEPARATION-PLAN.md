@@ -3,10 +3,14 @@
 **Status:** planning document. No code changed yet.
 **Read with:** `docs/handoff/FAULT-REMEDIATION-HISTORY.md` (separate scope: GStreamer faults).
 
-**Process:** this plan was reviewed by an independent agent (Qoder expert). Their findings
-were folded into this file and **both review documents were then deleted**
-(`REVIEW-REQUEST-FOR-QODER.md`, `QODER-REVIEW-2026-09-20.md`) — this file is now the single
-source of truth. Changes accepted from that review are marked **[Q]** below, with the reason.
+**Process:** this plan was reviewed twice by independent agents. Both reviews' findings were
+verified against the files and folded in here — accepted changes are marked **[Q]** with the
+reason. **This file is the master document.**
+
+**Companion:** `docs/handoff/PANEL-SEPARATION-RECOMMENDATIONS.md` holds the second review's
+full text. Its verified findings are already integrated here (§5b, §5c, §7, §7b, §7c, §9b);
+the file is kept for its detail on the target architecture and containment mechanisms, and as
+evidence. **Read this plan first; consult that file for depth, not for decisions.**
 
 **Working method per department:** separate → fix login/dashboard → own subdomain →
 **LOCK** → then continue that department's feature work. See §8.
@@ -298,6 +302,105 @@ now** so the rest can split later without a rewrite.
 > The single thing that makes server separation possible later is **API-only coupling**.
 > If one department's frontend reaches into another's models/database directly, no amount
 > of server planning will help. That is why Phase 6 is mandatory before Phase 9.
+
+---
+
+# 5b. The isolation model **[from the second review — the "how" of separation]**
+
+This is the part the first draft of this plan was missing: *how* a panel is actually kept
+separate, rather than just which files move where.
+
+## 5b.1 The governing rule
+
+**Each panel is a vertical slice that owns everything it needs and depends on nothing from
+another panel.** One direction only:
+
+```
+core  ←  shared  ←  features/<panel>
+                  ↗
+            main_<panel>.dart
+```
+
+- `core/` depends on nothing else in `lib/`.
+- `shared/` depends only on `core/` — **never** on `features/`.
+- `features/<panel>/` depends on `core/` + `shared/` — **never** on another `features/<other>/`.
+- `main_<panel>.dart` depends on exactly **one** panel, plus `shared/` and `core/`.
+
+**This model is already proven in this codebase.** `cricket/`, `reseller/` and `landing/`
+follow it and have never had a mixing bug. The goal is simply to make everything else look
+like them.
+
+## 5b.2 The concrete extractions, in order
+
+| # | Action | Why |
+|---|---|---|
+| 1 | **Extract `missile_3d_button`** out of `bus_operations` into `shared/widgets/` | imported by 5 files across 4 "panels" — a widget everyone uses cannot live inside one panel (B5) |
+| 2 | **Move `bus_tracking_models.dart`** to `shared/`, or move the telemetry bloc to BUS | `shared/bloc/telemetry_tracking/` imports it from BUS today (B4) |
+| 3 | **Extract the 4 fleet screens** (`route_scheduler`, `ticket_management`, `voucher_management`, `bonus_management`) out of SUPER into a neutral `shared/fleet/` | breaks the SUPER↔BUS cycle (B6) — both panels may import a neutral module without a cycle |
+| 4 | **Give GOODS its own** `driver_dashboard_page` / `conductor_dashboard_page` | today it imports BUS's verbatim (B8); if the layout is truly identical, extract the shared structure to `shared/` — do **not** have GOODS depend on BUS |
+| 5 | **Split `app_providers.dart`** (284 lines, 59 imports) into `features/<panel>/providers.dart` | it is the single biggest state leak (B3) |
+| 6 | **Replace the global auth globals** in `core/utils/auth_state.dart` with per-panel scoped auth | this is the Factory/Sub-Admin bug itself (§7c) |
+| 7 | **Split the router** per §7 — **only after 1–6** | splitting first just re-mixes the same coupled imports across more files |
+| 8 | **Make `main.dart` a thin launcher** — Super Admin only | it currently boots Factory auth, BUS `TicketVaultService` and the all-panel router (B2) |
+
+**Each panel's `main_*.dart` should end up under ~50 lines:** init Flutter, wrap in that panel's
+`providers.dart`, set that panel's router, run. `main_cricket_manager.dart` and
+`main_reseller.dart` already have this shape.
+
+## 5b.3 Target folder layout
+
+```
+lib/
+├── core/          constants, network, storage, utils, errors   (no panel logic)
+├── shared/
+│   ├── widgets/              ← missile_3d_button lives HERE
+│   │   └── design_system/    ← tokens, typography, spacing, palettes (D4)
+│   ├── fleet/                ← neutral screens extracted from SUPER
+│   ├── bloc/  models/
+└── features/
+    ├── nexa_admin/           presentation/ bloc/ data/ routes/ providers.dart theme.dart
+    ├── factory/              admin/ store_keeper/ driver/ routes/ providers.dart
+    ├── bus_operations/       presentation/ bloc/ data/ routes/ providers.dart
+    ├── goods_operations/     … own driver + conductor pages, no BUS import
+    ├── cricket/              manager/ public/ routes/ providers.dart   (reference model)
+    ├── reseller/             routes/ providers.dart                    (reference model)
+    ├── customer/ storekeeper/ auth/ landing/
+```
+
+Every panel folder gains a **`providers.dart`** (its own registrations) and a **`routes/`**
+(its own router). `theme.dart` per panel extends the shared design system rather than
+redefining it.
+
+## 5b.4 Storage isolation
+
+Web panels share a browser origin today, so `SharedPreferences` keys are panel-scoped **by
+convention only** (`busFleet_fleet_role`, `cricket_manager_token`). Nothing stops `main.dart`
+reading a BUS key. Target: a `StorageKeys` class per panel with a **mandatory compile-time
+prefix**, enforced by lint — and, once each panel is on its own subdomain, a separate
+`localStorage` origin as a second layer.
+
+---
+
+# 5c. Containment — how one panel cannot break another **[the owner's specific question]**
+
+Today there is **no** such guarantee: all 8 panels rebuild together, share auth state, and
+import each other. Eight mechanisms, in priority order.
+
+| # | Mechanism | What it fixes |
+|---|---|---|
+| 1 | **CI boundary enforcement** — `analysis_options.yaml` rules + a dependency-cruiser script that **fails the build** on `shared → features` or `features/A → features/B` | stops new coupling merging. Documented rules get broken; enforced ones do not. Existing 4 edges are grandfathered as tracked debt |
+| 2 | **Path-filtered per-panel CI** — each panel its own workflow with a `paths:` filter on its feature folder and `main_*.dart` | today `frontend-deploy.yml` triggers on `lib/**`, so **any** change redeploys **all 8**. A cricket-only change can block every panel |
+| 3 | **Per-panel test gates** — widget + bloc + integration + contract tests, run in that panel's workflow | there are **zero** Flutter tests today (a 17-line placeholder) |
+| 4 | **No shared mutable globals** — delete `auth_state.dart` globals; per-panel scoped state | the exact mechanism of the Factory/Sub-Admin bug (§7c) |
+| 5 | **Staging + versioned artifacts + rollback** — build `v1.2.3-abc1234/`, deploy to staging, promote by symlink switch, roll back by switching the symlink back | today: `rsync --delete` straight to production, **no staging, no rollback, no history** |
+| 6 | **Secret scanning** — `gitleaks`/`trufflehog` in CI | would have caught `database_config.dart:54` before it was committed |
+| 7 | **CODEOWNERS per panel** — a PR touching `features/<panel>/` needs that panel's reviewer; `shared/` needs all dependents | prevents one developer's panel work silently breaking another |
+| 8 | **Weekly dependency-graph audit** — scheduled job that graphs panel→panel edges and fails on new crossings | catches re-coupling that slips through a barrel file or re-export |
+
+**Mechanisms 1, 2 and 4 are the ones that directly answer "one panel must not break
+another".** 5 and 6 answer "if it does break, recover". The plan's Phase 0a and Phase 1 carry
+1, 4, 5 and 6; the per-panel workflow (2) lands with Phase 5 as each department gets its own
+deploy step.
 
 ---
 
@@ -634,30 +737,38 @@ than being mistaken for a missing deployment.
 
 **[Q] Why this is now first:** if the layering is still dirty when the router is split, the
 backward dependencies get carried into the new route files and have to be unpicked twice.
-Clean foundation first, then the clean split.
+Clean foundation first, then the clean split. **Do these in the order in §5b.2.**
 
-1. **Promote `missile_3d_button`** out of BUS into `lib/shared/widgets/buttons/` — this fixes
-   B5 *and* is the single highest-value step toward the owner's "same design everywhere".
-   **Grep-verified importers:** BUS `fleet_dashboard_page.dart:12` + `owner_dashboard_page.dart:14`,
-   CRICKET `manager_dashboard_page.dart:33`, SUPER `bus_fleet_dashboard_screen.dart:26` +
-   `sub_admin_dashboard.dart:16`, and `shared/widgets/navigation/admin_sidebar.dart:4`.
+1. **Promote `missile_3d_button`** out of BUS into `lib/shared/widgets/` — unblocks 4 panels;
+   only 5 import paths need updating. This is B5 *and* the highest-value step toward D4
+   ("same design everywhere"). Grep-verified importers: BUS `fleet_dashboard_page.dart:12` +
+   `owner_dashboard_page.dart:14`, CRICKET `manager_dashboard_page.dart:33`, SUPER
+   `bus_fleet_dashboard_screen.dart:26` + `sub_admin_dashboard.dart:16`, and
+   `shared/widgets/navigation/admin_sidebar.dart:4`.
 
-   > **Note for whoever reads this next — a review got this wrong.** An independent review
-   > claimed "no CRICKET file imports it" and that the CRICKET mention was a factual error.
-   > That claim is **false**: `manager_dashboard_page.dart:33` imports it, under the comment
-   > *"Manager Dashboard — 3D Pencil Sidebar layout"*. The likely cause of the confusion is
-   > **B5b** — the widget is shared but every call site passes raw hex colours, so CRICKET's
-   > button *renders* in different colours and looks like a different component. **The widget
-   > is shared; only its colour source is not.** Do not remove CRICKET from the importer list.
+   > **Note for whoever reads this next — a review got this wrong.** A review claimed "no
+   > CRICKET file imports it" and that the CRICKET mention was a factual error. That claim is
+   > **false**: `manager_dashboard_page.dart:33` imports it, under the comment *"Manager
+   > Dashboard — 3D Pencil Sidebar layout"*. The likely cause of the confusion is **B5b** — the
+   > widget is shared but every call site passes raw hex colours, so CRICKET's button *renders*
+   > in different colours and looks like a different component. **Do not remove CRICKET from the
+   > importer list.**
 
    **[Q] Colour tokenisation is part of this phase, not optional.** Promoting the widget while
    call sites keep hardcoding `Color(0xFF…)` leaves the same component looking different in
-   every panel — which is the exact outcome the owner wants to eliminate. See B5b, D4 and
-   Phase 3.
-2. Break the other three `shared → features` edges (B4).
-3. **Rule enforced from here on:** `lib/shared/**` must import **zero** `lib/features/**`.
+   every panel — the exact outcome the owner wants to eliminate. See B5b, D4 and Phase 3.
+2. **Move `bus_tracking_models.dart`** to `shared/` (or the telemetry bloc to BUS).
+3. **Break the SUPER ↔ BUS cycle** — extract the 4 fleet screens out of SUPER into a neutral
+   `shared/fleet/`. Needs coordination with Phase 5's Super Admin work (B6).
+4. **Replace the global auth globals** in `core/utils/auth_state.dart` with per-panel scoped
+   auth — this is the Factory/Sub-Admin bug itself (§7c).
+5. **Rule enforced from here on:** `lib/shared/**` must import **zero** `lib/features/**`.
+6. **[Q] Enforce it in CI, not by convention** (§5c mechanism 1) — a rule that only lives in a
+   document gets broken again. A `custom_lint`/`import_lint` rule plus a dependency-cruiser
+   script that fails the build on a forbidden edge.
 
-**Exit:** a grep proves no `shared → features` import remains; `dart analyze` clean.
+**Exit:** a grep proves no `shared → features` import remains; the CI check is live;
+`dart analyze` clean.
 
 ### Phase 2 — Router extraction (behaviour-preserving)
 Split `app_router.dart` per §7. `AppRouter` keeps composing the parts, so `main.dart` is
@@ -786,6 +897,34 @@ it is the single change that stops this problem recurring.
 8. **The spec contradicts this plan** on fleet unification (it mandates `main_fleet_*.dart`
    and marks `main_driver.dart`/`main_reseller.dart` as deleted — none of which matches the
    code or the owner's requirement). Follow the owner; the spec needs a correction pass.
+
+---
+
+## 9b. Quick-win checklist **[from the second review — do these first, many take under an hour]**
+
+Lowest-risk, highest-value actions:
+
+- [ ] **Rotate the compromised passwords** (`awan1972`, `NexaAppPassword123!`) — they are in git
+      history permanently.
+- [ ] **Delete the plaintext DB credentials** from `lib/core/config/database_config.dart` — the
+      frontend must never carry a direct DB connection string.
+- [ ] **Fix `tests.yml:6`** — change `master` to `[main, mainnew]`; backend tests start running
+      immediately (one-line fix).
+- [ ] **Register `consumer`** in the `PanelRouteServiceProvider` panels array — or delete
+      `consumer.php`. Either way, remove the dead code (§7b.1).
+- [ ] **Add admin middleware to `super_admin.php`** — mirror the `BusFleetGate` pattern (§7b.2).
+- [ ] **Replace the hardcoded `root@135.181.46.27`** in `frontend-deploy.yml` with the same
+      `vars.VPS_HOST` variable `deploy.yml` already uses.
+- [ ] **Add `dart analyze` to CI** — one step, catches type/lint errors before deploy.
+- [ ] **Add `gitleaks` (or `trufflehog`) secret scanning to CI** — prevents the next credential
+      commit.
+- [ ] **Move `missile_3d_button.dart`** into `lib/shared/widgets/` — unblocks 4 panels
+      (5 import paths).
+- [ ] **Add `.github/CODEOWNERS`** — per-panel ownership requiring review.
+- [ ] **Add per-panel `paths:` filters** to the deploy workflow — stops the all-or-nothing
+      rebuild of all 8 panels.
+- [ ] **Write ONE real Flutter test** to replace the 17-line placeholder — proves the test
+      infrastructure works and sets the pattern.
 
 ---
 
