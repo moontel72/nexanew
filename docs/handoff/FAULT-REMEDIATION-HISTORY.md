@@ -1006,3 +1006,131 @@ can break the depayloader. **Worth checking `router.audio_tracks()` output** —
 6. **Verify the entry point, not just the code.** The `consumer` bug, the stale route cache and
    the composer drift were all invisible in the source and obvious the moment the actual route
    list / actual lock file was inspected.
+
+---
+
+## 10.9 UPDATE — 2026-09-20 21:31 UTC: the codec fix is deployed and firing, yet the error persists
+
+**The operator ran the requested commands. They prove the filter works AND that a third,
+separate cause remains.** This is the raw evidence, quoted because it is decisive.
+
+### (a) `docker logs --since 3h todd-studio | tail -200`
+
+The failing cycle, repeating every 5 s with a new pipeline number each time:
+
+```
+21:29:49.234077 INFO  todd_sfu::engine: re-armed stale forwarder after publisher returned
+21:29:49.234118 INFO  todd_sfu::engine: forwarder watchdog re-armed outputs count=1
+21:29:49.251333 INFO  todd_transcode::hw: hardware encoder available element="x264enc"
+21:29:49.257173 INFO  todd_transcode::forwarder: forwarder started kind=Rtmp url=rtmp://135.181.46.27:1935/live/cricket_match_a2c0880f-..._cam1
+21:29:49.257240 INFO  todd_sfu::engine: forwarder running key=.../Cam-01/rtmp://...
+21:29:49.257673 ERROR todd_transcode::forwarder: forwarder pipeline error label=camera/Cam-01
+    error=Internal data stream error. debug=".../GstPipeline:pipeline446/GstAppSrc:audio_commentary:\n
+    streaming stopped, reason not-negotiated (-4)"
+21:29:49.257698 ERROR todd_sfu::engine: forwarder failed; clearing it so a watchdog can rebuild
+```
+
+**The timing is the whole point.** `forwarder running` at `.257240`, the error at `.257673` —
+**0.4 ms later**, and note the pipeline number increments every attempt (`pipeline446`,
+`447`, `448`, … `464`).
+
+**So the failure happens at pipeline construction / state-change, before ANY buffer is pushed.**
+
+The codec filter cannot help with that: it runs per chunk, and no chunk is ever pushed because
+the pipeline is already dead. This is why the console errors the operator saw earlier disappeared
+(the filter did remove wrong-codec pushes) while the bridge kept failing.
+
+### (b) `docker logs todd-studio 2>&1 | grep -a "dropping chunk whose codec"`
+
+```
+2026-09-20T20:49:29.262901Z WARN todd_transcode::forwarder: dropping chunk whose codec this branch cannot carry;
+2026-09-20T20:49:34.261778Z WARN (same)
+... 20:49 → 21:08, dozens of occurrences ...
+2026-09-20T21:08:29.267443Z WARN (same)
+```
+
+**Two conclusions, both important:**
+
+1. **`e951903b` IS deployed and IS working.** The warning only exists in the new code.
+2. **It proves the router delivers a wrong media type on an audio subscription** — a chunk whose
+   codec an audio branch cannot carry arrived there repeatedly. That confirms the §10.3
+   mechanism was real, and it means there is a **genuine bug at the source** (the SFU router's
+   rid-scoped fan-out), not only in the forwarder's handling of it.
+
+**Note the windows do not overlap.** The filter fires 20:49–21:08; the `not-negotiated` errors are
+21:29–21:31. In the later window the filter never gets a chance to fire, which is consistent with
+(a): the pipeline dies at startup before any chunk is pushed.
+
+### (c) SRS — the publish never arrived
+
+```sh
+ls -la /var/www/traceodd/cricket-hls/live/
+# total 8 ; drwxr-xr-x 2 root root 4096 Sep 17 23:41 .   ← EMPTY
+
+curl -s http://127.0.0.1:1985/api/v1/streams/
+# {"code":0,"server":"vid-41x0383","streams":[]}
+```
+
+**SRS has no stream and the HLS directory is empty**, which matches the public page's 404. The
+fault is upstream of HLS — the RTMP publish never completes. Correct and expected given (a).
+
+`todd-broadcaster` itself is healthy: `todd-broadcaster (todd-sfu) listening addr=127.0.0.1:8081`,
+`gstreamer initialized`, ICE interfaces resolved.
+
+### (d) The revised picture — three faults, one code path
+
+| # | Fault | Status | Evidence |
+|---|---|---|---|
+| 1 | declared vs fed **count** | fixed `f0fc72e5` | error text changed |
+| 2 | wrong **codec** pushed to an audio branch | fixed `e951903b`, **deployed, firing** | §10.9(b) |
+| 3 | **audio branch fails caps negotiation at pipeline start** | **OPEN** | §10.9(a): error 0.4 ms after `forwarder running`, before any push |
+
+Fault 3 is not a data problem, so it cannot be fixed by filtering data.
+
+### (e) The decisive next test — reproduce the branch in isolation
+
+Stop reading code. Reproduce the exact audio branch by hand inside the running container. This is
+one command, changes nothing, and converts the remaining guesswork into a fact:
+
+```sh
+docker exec todd-studio gst-launch-1.0 -v \
+  appsrc name=audio_commentary format=time do-timestamp=true is-live=false \
+  caps="application/x-rtp,media=audio,encoding-name=OPUS,clock-rate=48000" \
+  ! queue max-size-time=200000000 leaky=downstream \
+  ! rtpopusdepay ! opusdec ! audioconvert ! audioresample \
+  ! audiomixer name=mix \
+  ! audioconvert ! audioresample ! voaacenc bitrate=128000 ! aacparse \
+  ! fakesink
+```
+
+- **If this also fails to reach PLAYING with `not-negotiated`** → the fault is in the branch shape
+  itself (an element/property that the *runtime* image does not provide, or a caps mismatch), it
+  is reproducible locally, and it can be fixed and tested without another deploy cycle.
+- **If it reaches PLAYING** → the fault is in how the full description is assembled around it, and
+  the next step is to log the generated pipeline string at build time so it can be read directly.
+
+Either way the answer is one command away, which is why no further code change is proposed yet.
+
+### (f) Browser console (second capture) — mostly noise, one real bug
+
+```
+WebSocket connection to 'wss://cricket-manager.traceodd.com/app/nxbrv_app_key_nexa_2026?...' failed:
+  Page entered Back-Forward Cache.      ← benign; Chrome BF-cache, not an app fault
+
+main.dart.20260920130554.js:36255 Null check operator used on a null value
+  at i1.gak ... aQT.$1 ...              ← REAL, but a separate Flutter bug
+```
+
+The operator asked whether the console errors appear because of the added test runs. **No** — the
+WebSocket messages are Chrome's Back-Forward Cache reporting a socket it suspended on navigation,
+and the PHP/reverb line in the logs is the engine reconnecting after a `Connection reset by peer`,
+which is normal on a page navigation. Neither is caused by the added runs.
+
+**The `Null check operator` is a genuine client-side bug and the operator is right to ask about
+it.** It is in the Cricket Manager panel, not the engine. `live_video_page.dart` was inspected:
+its new error-banner code is null-safe (`_health?['forwarder_error']?.toString()` with an
+`if (forwarderError != null)` guard), but the same file mixes styles — line 171 uses
+`_health?['rtmp_url']` while line 174 uses `_health!['rtmp_url']`. The guard on 171 makes 174
+unreachable-when-null today, so it is a smell rather than a proven cause, and the minified
+`main.dart.js` stack cannot be resolved to a source line. **It needs a source-map build or a
+local repro to pin down.** Recorded as open; not guessed at.
