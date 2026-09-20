@@ -172,6 +172,13 @@ the scan shows the **concept and data model exist, but isolation is not enforced
 
 **This is a security/isolation defect, not just a layout issue — it belongs in Phase 6.**
 
+**[NEW] The concrete mechanism is now identified** — see §7c. The `main.dart` bundle warms up
+Super Admin **and** Factory auth, and `core/utils/auth_state.dart` holds **mutable globals**
+that the router redirect reads. So a Factory login sets state the Super Admin guard then reads.
+That is why the two panels "open the same thing". The panels that never had this bug
+(Cricket, B2B) create their **own** `BlocProvider`s inline and never touch the global
+`AppProviders` — that is the reference model, and it is what separation must reproduce.
+
 #### Owner's requirement: make the Sub-Admin roles DYNAMIC, not hardcoded
 
 The 5 verticals in the table above are **hardcoded in Flutter**
@@ -351,23 +358,121 @@ and `features/auth` — rename one.
 
 ---
 
-## 7. Phase 1 reference — the router split
+## 7. Phase 2 reference — the router split **[CORRECTED]**
 
-`lib/routes/app_router.dart` (1141 lines) splits by these line ranges:
+`lib/routes/app_router.dart` (1142 lines) splits by these ranges.
 
-| New file | Lines | Serves |
+> **A review found real errors in the first version of this table, and they are confirmed.**
+> The table below separates the three kinds of content, because they do not move the same way.
+> **Do not treat it as one list of line ranges** — that was the mistake.
+
+**Three content kinds:**
+
+1. **`GoRoute` definitions** — the actual routes. Move to the department that owns them.
+2. **Redirect logic inside `_safeRedirect` (lines 184–317)** — per-department rules. Move beside
+   that department's routes and get composed back into the redirect chain.
+3. **Public bypasses (`return null`)** — *stay in the base router.* They are guard decisions,
+   not routes.
+
+### 7.1 `GoRoute` definitions — corrected map
+
+| New file | GoRoute definitions | Department |
 |---|---|---|
-| `lib/routes/app_router.dart` (kept) | 1–202, 320–321, 1078, 1140 | shell + guard chain |
-| `super_routes.dart` | 322–326, 342–351, 653–792, 287–317 | SUPER |
-| `factory_routes.dart` | 327–331, 793–935, 936–1075, 203–234, 244–246 | FACTORY |
-| `cricket_routes.dart` | 352–369, 370–486, 259–262 | CRICKET |
-| `bus_routes.dart` | 332–336, 487–527, 600–631, 250–253, 263–281 | BUS |
-| `goods_routes.dart` | 337–341, 528–568, 569–599, 282–283, 263–281 | GOODS |
-| `customer_routes.dart` | 632–652, 284–285 | CUSTOMER |
-| `b2b_routes.dart` | 247–249, 153–163 | B2B |
+| `lib/routes/app_router.dart` *(kept)* | 320–321 (the `_routes` list), 1078, 1140 | shell |
+| `super_routes.dart` | 321–326, 342–351, 653–792 | SUPER |
+| `factory_routes.dart` | 327–331, 793–1075 | FACTORY |
+| `cricket_routes.dart` | 352–369, 370–486 | CRICKET |
+| `bus_routes.dart` | 332–336, 487–527, 600–631 | BUS |
+| `goods_routes.dart` | 337–341, 528–568, 569–599 | GOODS |
+| `customer_routes.dart` | 632–652 | CUSTOMER |
+| `b2b_routes.dart` | **759–772 (`/resellers`, `/resellers/add`)** | B2B — see 7.3 |
 
-Also move the `goTo*()` helpers (1081–1138) beside their department's routes.
-**No route path, widget or redirect logic changes — location only.**
+### 7.2 Redirect logic — move with its department, not into the route files
+
+| Lines | Rule | Belongs to |
+|---|---|---|
+| 203–234 | factory-route redirect rules | FACTORY |
+| 236–242 | root-path redirect (see the leak in §3 below) | global |
+| 287–317 | protected-route redirects (incl. dashboards) | SUPER + BUS/GOODS dashboards |
+
+### 7.3 Three errors in the first version, confirmed
+
+| Error | What was wrong | Correction |
+|---|---|---|
+| **Duplicate range** | `263–281` was assigned to **both** `bus_routes.dart` and `goods_routes.dart`. The same range cannot belong to two files. | `263–281` is a mixed block: it holds the bus-owner/driver/conductor **and** truck-owner/driver/conductor bypasses. It is *redirect bypass logic*, not routes — it **stays in the base router**. |
+| **B2B had no real routes** | `b2b_routes.dart` was given only `247–249` (a `return null` bypass) and `153–163` (error-builder text). Neither is a route. | The real B2B-domain routes are **759–772** (`/resellers`, `/resellers/add`), which sit **inside the SUPER shell range (653–792)**. Decide explicitly: move them to `b2b_routes.dart`, or keep them with SUPER as platform-admin CRUD. Do not leave this implicit. |
+| **Redirect logic mislabelled** | Ranges like `203–234` and `244–246` were listed as if they were route definitions. | They are redirect logic and a bypass. Moved to 7.2 / the base router as above. |
+| **Public bypasses** | `247–249`, `250–253`, `255–258`, `282–285` were scattered into department files. | All bypasses **stay in the base router**, because they are guard decisions that run *before* routing. |
+
+---
+
+## 7b. P0 backend authorisation gaps **[NEW — from the second review, verified]**
+
+These were not in the first draft of this plan. All three were verified directly against the
+files.
+
+### 7b.1 `consumer.php` is never loaded — the whole Customer API is dead code
+
+`backend/app/Providers/PanelRouteServiceProvider.php:43-54` defines the `$panels` array:
+
+```
+super_admin, factory, marketplace, truck_fleet, bus_fleet,
+bus_owner, goods_fleet, passenger, cricket, studio
+```
+
+**`consumer` is absent.** So `backend/routes/panels/consumer.php` (5 endpoints) is never
+registered — the Customer Super-App's backend is unreachable. Group 1's customer app cannot
+work until this is fixed.
+
+### 7b.2 Panel middleware is weak almost everywhere
+
+| Route file | Middleware | Verdict |
+|---|---|---|
+| `bus_fleet.php` | `auth:sanctum` + `bus.fleet` (`BusFleetGate`) | ✅ **the model to copy** |
+| `cricket.php` group 2 | `cricket.manager` (`CricketManagerAuth`) | ✅ good |
+| `cricket.php` group 3 | `auth:sanctum` + `sub.admin` | ⚠️ partial — `exists()` only |
+| `super_admin.php` | `auth:sanctum` **only** | ❌ **no admin middleware at all** |
+| `goods_fleet.php` | `auth:admin` | ❌ any admin, of *any* vertical |
+| `truck_fleet.php` | `auth:sanctum` **only** | ❌ *any* authenticated user |
+| `bus_owner.php`, `factory.php`, `passenger.php` | `auth:sanctum` only | ⚠️ weak |
+| `consumer.php` | `auth:sanctum` | ❌ never loaded (7b.1) |
+
+**`super_admin.php` having no admin guard is the most serious:** a plain authenticated account
+can reach platform-admin endpoints.
+
+### 7b.3 Redirect logic leaves routes reachable
+
+| Lines | Behaviour | Risk |
+|---|---|---|
+| 255–258 | every `/sub-admin/*` path returns `null` — **no guard** | any user can reach sub-admin routes |
+| 250–253 | every `/bus-fleet/*` path returns `null` — **no guard** | any user can reach bus-fleet routes |
+| 240 | root on non-web redirects to `/factory/store-keeper/login` | leaks Factory into any mobile context |
+
+This is the same class of defect as §8's "known bug" and is the concrete reason the
+**LOCK** step exists.
+
+---
+
+## 7c. The state-isolation mechanism behind the Factory/Sub-Admin bug **[NEW, verified]**
+
+This is now the best explanation we have, and it is a **code** cause, not a guess:
+
+- `lib/core/providers/app_providers.dart` (284 lines, **59 imports**) is global.
+  `main.dart` → `AppInitializer` calls `getRepositoryProviders` (SUPER + FACTORY + B2B),
+  `getDriverBlocProviders` (FACTORY driver), `getNexaAdminBlocProviders` (SUPER) and
+  `getFactoryAdminBlocProviders` (all of FACTORY). So the `main.dart` bundle carries **Super
+  Admin + Factory Admin + Factory Driver + Store Keeper + B2B state at startup**, regardless of
+  which panel the visitor asked for.
+- `lib/core/utils/auth_state.dart` exposes **mutable globals** (`isAuthenticatedCache`,
+  `isFactoryAuthenticatedCache`, `isAuthCheckCompleted`) which the router redirect reads.
+  **A Factory login sets state that the Super Admin guard then reads** — so a factory user can
+  land in an admin-authenticated state, and vice versa. That is the mixing the owner saw.
+- Storage keys are panel-scoped **by convention only** (`busFleet_fleet_role`,
+  `cricket_manager_token`, `factory_auth_token`); nothing prevents a cross-read.
+
+**Contrast with the panels that work:** `main_cricket_manager.dart`, `main_cricket_public.dart`
+and `reseller_app_initializer.dart` create their **own** `BlocProvider`s inline and never touch
+`AppProviders`. That is the reference model, and it is why Cricket and B2B never had this bug.
 
 ---
 
@@ -475,6 +580,35 @@ The concern is that these are **real credential strings sitting in the repositor
 
 If PostgreSQL is genuinely no longer used at all (everything moved to the app), then the
 passwords no longer matter — **but step 1 is how you confirm that**, rather than assuming it.
+
+#### Also in 0a — the backend authorisation gaps **[NEW — verified]**
+
+See §7b. These are as urgent as the DB password:
+
+- **`super_admin.php` has no admin middleware** (`auth:sanctum` only) — a plain authenticated
+  account can reach platform-admin endpoints.
+- **`consumer.php` is never loaded** (absent from `PanelRouteServiceProvider::$panels`,
+  lines 43-54) — the Customer Super-App API is dead code, so Group 1's customer app cannot work.
+- **`goods_fleet.php` uses `auth:admin`** — any admin of *any* vertical; **`truck_fleet.php`
+  uses only `auth:sanctum`** — any authenticated user.
+
+`bus_fleet.php` (`auth:sanctum` + `bus.fleet` / `BusFleetGate`) is the pattern to copy.
+
+#### Also in 0a — CI cannot detect any of this **[NEW]**
+
+| Gap | Current state |
+|---|---|
+| Backend tests | `tests.yml:6` triggers on branch **`master`**; the repo deploys from `main`/`mainnew`, so push-triggered tests never run (only the nightly cron and `pull_request` fire) |
+| Flutter tests | **None in CI** — `test/widget_test.dart` is a 17-line placeholder |
+| `dart analyze` | **Not in CI** |
+| Secret scanning | **None** — which is how the DB credentials in this section survived |
+| Build blast radius | `frontend-deploy.yml` triggers on `lib/**` — **any change rebuilds and redeploys all 8 panels** |
+| Staging / rollback | None. `rsync --delete`, no versioned artifacts; push to `mainnew` **is** production |
+| Server IP | Hardcoded `root@135.181.46.27` in `frontend-deploy.yml`, while `deploy.yml` uses `${{ vars.VPS_HOST }}` |
+
+**Fix `tests.yml` to the deploy branches, and add `dart analyze` + secret scanning to CI in
+this phase.** The path-filtered build (blast-radius control) belongs with Phase 5, when each
+department gets its own deploy step.
 
 ### Phase 0b — Baseline **[Q — split from the emergency]**
 
@@ -642,9 +776,14 @@ Add a load balancer + stateless app servers when the API is the bottleneck.
 2. **Never change a route path and a folder in the same commit.**
 3. **`lib/shared/` must never import `lib/features/`.**
 4. **A widget used by 2+ departments belongs in `shared/`, not in either department.**
-5. **Verify against the Phase-0 baseline after every phase.**
-6. **Do not create `lib/features/fleet/{owner,driver,conductor}/`** — rejected in D1.
-7. **The spec contradicts this plan** on fleet unification (it mandates `main_fleet_*.dart`
+5. **Enforce the layering rule in CI, not by convention. [NEW]** A rule that lives only in a
+document gets broken again — that is how this repo reached its current state. Add a check
+(script or lint) that fails the build when `lib/shared/**` imports `lib/features/**`, or when
+one department's folder imports another's. This is the concrete implementation of rule 3, and
+it is the single change that stops this problem recurring.
+6. **Verify against the Phase-0b baseline after every phase.**
+7. **Do not create `lib/features/fleet/{owner,driver,conductor}/`** — rejected in D1.
+8. **The spec contradicts this plan** on fleet unification (it mandates `main_fleet_*.dart`
    and marks `main_driver.dart`/`main_reseller.dart` as deleted — none of which matches the
    code or the owner's requirement). Follow the owner; the spec needs a correction pass.
 
