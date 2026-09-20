@@ -319,17 +319,29 @@ DB_USERNAME=nexa_app
 DB_PASSWORD=ChangeThisPassword123!
 ```
 
-#### 8.3 Update Flutter Configuration
-Create `lib/core/config/database_config.dart`:
-```dart
-class DatabaseConfig {
-  static const String host = 'localhost';
-  static const int port = 5432;
-  static const String database = 'nexasystem_db';
-  static const String username = 'nexa_app';
-  static const String password = 'ChangeThisPassword123!';
-}
+#### 8.3 Flutter Configuration
+
+**The Flutter client must never hold database credentials.** The app talks to the Laravel
+API (`/api/v1/...`); only the API talks to PostgreSQL. A credential in client code is compiled
+into the web bundle and shipped to the browser, where anyone can read it.
+
+This section previously instructed creating `lib/core/config/database_config.dart` with a
+plaintext host, port, database, username and password. That file was created, was never
+imported by anything, and leaked a `postgres` superuser string into the repository. It has been
+deleted, and this instruction was the reason it existed — so it is removed as well.
+
+Configure the Flutter side with the **API base URL only**, and inject it at build time:
+
+```sh
+flutter build web --release --dart-define=API_BASE_URL=https://your-domain.example
 ```
+
+Resolution order is implemented in `lib/core/config/environment.dart`: an explicit
+`--dart-define=API_BASE_URL` wins, otherwise on web it uses the page's own origin, and
+otherwise it falls back to a development default. No secrets are involved at any step.
+
+If a future feature genuinely needs a database connection, it belongs in a backend endpoint —
+never in the client.
 
 ### Step 9: Backup and Recovery Setup
 
