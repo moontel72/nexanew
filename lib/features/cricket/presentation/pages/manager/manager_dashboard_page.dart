@@ -30,7 +30,7 @@ import 'players_list_page.dart';
 import 'fixture_scheduler_page.dart';
 import 'tournament_setup_page.dart';
 import 'dls_calculator_page.dart';
-import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
+import 'package:trace_odd/shared/widgets/buttons/missile_3d_button.dart';
 
 /// Manager Dashboard — 3D Pencil Sidebar layout.
 
