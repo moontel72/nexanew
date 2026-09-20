@@ -3,10 +3,10 @@
 **Status:** planning document. No code changed yet.
 **Read with:** `docs/handoff/FAULT-REMEDIATION-HISTORY.md` (separate scope: GStreamer faults).
 
-**Process:** this plan is finalised first, then shared with the Qoder expert agent, who
-will independently scan the project and record their own advice in a separate `.md`
-(the request is in `docs/handoff/REVIEW-REQUEST-FOR-QODER.md`).
-Coding starts only after both are compared.
+**Process:** this plan was reviewed by an independent agent (Qoder expert). Their findings
+were folded into this file and **both review documents were then deleted**
+(`REVIEW-REQUEST-FOR-QODER.md`, `QODER-REVIEW-2026-09-20.md`) — this file is now the single
+source of truth. Changes accepted from that review are marked **[Q]** below, with the reason.
 
 **Working method per department:** separate → fix login/dashboard → own subdomain →
 **LOCK** → then continue that department's feature work. See §8.
@@ -39,6 +39,82 @@ Coding starts only after both are compared.
 ---
 
 ## 2. Decisions resolved by the owner
+
+### D4 — The design language: Cricket's pencil + colour style, tokenised, everywhere
+
+Owner's ruling: *"I like the Cricket Manager pencil style and its colour style. Instead of
+hardcoding it, make it dynamic, put it in the shared folder, and apply this same pencil style
+and colour style to every panel and app."*
+
+**This settles the open question in Phase 3** — previously "converge the 4 theme roots" did not
+say which style wins. **Cricket's wins**, and it becomes the project's design language.
+
+#### Why this is mostly consolidation, not a redesign
+
+The dark base is **already agreed in four places** — the same `#0A0E21` appears in
+`CricketColors.background`, `LandingPalette`, and `TraceOddBrandTokens.dark`. The accent
+`#00C49F` is already `AppColors.secondary`. So the work is **de-duplication of an agreed
+palette**, not invention.
+
+#### Canonical palette — take it from `CricketColors`
+
+That file is the only one with its contrast ratios **documented and WCAG-verified**
+(comment block at `cricket_colors.dart:1-8`: textPrimary 16.9:1 AAA, textSecondary 6.8:1 AA,
+placeholder 5.1:1 AA, accent 5.0:1 AA). Use it as the source of truth:
+
+| Role | Token | Value |
+|---|---|---|
+| Background | `background` | `#0A0E21` |
+| Cards / app bars | `surface` | `#141829` |
+| Hover / active | `surfaceElevated` | `#1E2238` |
+| Input fill | `inputFill` | `#1A1E31` |
+| Borders | `border` | `#2A2E41` |
+| Text primary | `textPrimary` | `#F5F5F5` |
+| Text secondary | `textSecondary` | `#A0AAB8` |
+| Text tertiary | `textTertiary` | `#6B7280` |
+| Accent / links | `textAccent` | `#00C49F` |
+
+#### The pencil button needs its own accent-role tokens
+
+The colours the owner likes on the Cricket pencil buttons are **hardcoded at the call site**, not
+in `CricketColors` (`manager_dashboard_page.dart:363,537,579,586,605`). They must become **named
+semantic roles**, not one flat colour — a design system needs a "danger" and a "success",
+otherwise the next panel invents its own again:
+
+| Role | Token | Current literal |
+|---|---|---|
+| Primary action | `accentPrimary` | `#10B981` |
+| Informational | `accentInfo` | `#2563EB` |
+| Warning / voice | `accentWarning` | `#F59E0B` |
+| Feature / sponsor | `accentFeature` | `#8B5CF6` |
+| Muted / inactive | `accentMuted` | `#1A3A4A` |
+| Live / danger / wicket | `accentDanger` | `#F44336` *(already `CricketColors.live`)* |
+
+**[Q] "Dynamic" is the important word.** The goal is not "one hardcoded colour everywhere" —
+that would just move the hardcoding into `shared/`. It is **one token set** so that every panel
+looks the same *and* colours mean the same thing everywhere.
+
+#### ⚠️ This changes panels that already work
+
+Five panels currently use a **light** theme or their own root (`shared/app_scaffold.dart:116`
+seeds `#1F5E6B`; Super Admin and Factory mount `AppTheme`; Landing and both Cricket builds have
+their own). Making everything dark will visibly change the look of Super Admin, Factory and the
+seven fleet apps — panels the owner has already approved.
+
+**That is accepted** (it is what was asked for), **but it is exactly why the Phase-0b screenshot
+baseline is mandatory.** Without before/after screenshots a visual regression is undetectable.
+
+#### Order of work
+
+1. Create the canonical token file in `shared/theme/` (surfaces, text, accent roles, spacing,
+   radius, icon sizes).
+2. Repoint `CricketColors`, `LandingPalette`, `TraceOddBrandTokens` and `AppColors` at it
+   (thin aliases first, so nothing breaks).
+3. Promote `missile_3d_button` and have it read the accent roles **by default**, with an
+   optional override so a control can still be semantic (e.g. a destructive action is red).
+4. Migrate panels one department at a time — **same phase as that department's separation**, so
+   a panel is only restyled when it is already being touched.
+5. Retire the raw literals as files are touched (85 files with inline `Color(0x…)`).
 
 ### D1 — Bus and Goods: **separate apps, shared driver identity**
 
@@ -149,7 +225,8 @@ rsync → /var/www/traceodd/<panel>/     nginx → <panel>.traceodd.com
 | **B2** | **Mega-initializer.** `lib/core/widgets/app_initializer.dart` (280 lines) composes SUPER + FACTORY + **BUS**. | `:14`, `:23-24`, `:56-62`, `:163-166`, `:188-202`, `:218-224` |
 | **B3** | `lib/core/providers/app_providers.dart` wires SUPER + FACTORY + B2B (40+ imports). | |
 | **B4** | **`lib/shared/` imports features backwards** (layering violation). Only 4 such edges exist, but they block every department move. | `shared/widgets/navigation/admin_sidebar.dart:4` (BUS), `shared/bloc/telemetry_tracking/telemetry_models.dart:6` (BUS), `shared/utils/fleet_bloc_setup.dart:10-11` (auth), `shared/widgets/fleet_bloc_login_screen.dart:20-23` (auth) |
-| **B5** | **`missile_3d_button` is the de-facto design identity but lives in BUS.** Used by BUS, CRICKET, SUPER ×2, **and `shared/`'s admin sidebar**. BUS cannot move until it is promoted. | `bus_operations/presentation/widgets/missile_3d_button.dart` |
+| **B5** | **`missile_3d_button` is the de-facto design identity but lives in BUS.** Importers (verified by grep): BUS `fleet_dashboard_page.dart:12` + `owner_dashboard_page.dart:14`, **CRICKET `manager_dashboard_page.dart:33`** (comment: "Manager Dashboard — 3D Pencil Sidebar layout"), SUPER `bus_fleet_dashboard_screen.dart:26` + `sub_admin_dashboard.dart:16`, and **`shared/`'s `admin_sidebar.dart:4`**. BUS cannot move until it is promoted. | `bus_operations/presentation/widgets/missile_3d_button.dart` |
+| **B5b** | **The button is shared; its COLOURS are not.** Every panel passes raw hex at the call site, so the same component renders differently per panel — e.g. CRICKET `manager_dashboard_page.dart:363,537,579,586,605` passes `0xFF10B981 / 0xFF1A3A4A / 0xFF2563EB / 0xFFF59E0B / 0xFF8B5CF6` instead of `AppColors`. **Promoting the widget alone will not unify the look — the colours must be tokenised too.** | `manager_dashboard_page.dart:359-606`; contrast with the panel-specific `CricketColors` palette |
 | **B6** | **Circular dependency SUPER ↔ BUS.** BUS `fleet_dashboard_page` imports 4 SUPER screens; SUPER `bus_fleet_dashboard_screen` imports 2 BUS widgets. | |
 | **B7** | **`nexa_admin/` is not SUPER-only** — holds CRICKET, BUS, GOODS and B2B admin panels. | §6 tables |
 | **B8** | **GOODS has no driver/conductor UI** — `main_truck_driver.dart:6` / `main_truck_conductor.dart:6` open **BUS** pages verbatim. | |
@@ -232,10 +309,10 @@ Deletion is irreversible — each row states what was verified.
 | `lib/features/broadcaster/data/services/whip_client.dart` | 0 importers, no route. WHIP ingest is done by the Rust engine, not this class | DELETE |
 | `lib/features/universal/customer/**` (8 files) | 0 external importers, no route. **Duplicate of the LIVE customer app** | **MERGE → then delete** (see below) |
 | `core/navigation/router_integration.dart`, `core/di/panel_bloc_providers.dart`, `core/providers/panel_provider_binder.dart`, `core/bootstrap/app_bootstrapper.dart` | 0 importers | DELETE |
-| `core/services/{payment_service,subscription_validator,supabase_chat_service,multi_tenant_service,code_generator_service}.dart`, `core/constants/{fleet_constants,plan_limits}.dart` | class defined, never constructed | DELETE |
+| `core/services/{payment_service,subscription_validator,supabase_chat_service,multi_tenant_service,code_generator_service}.dart`, `core/constants/{fleet_constants,plan_limits}.dart` | class defined, never constructed. **[Q] Caveat:** confirm no backend migration references `payment_service` / `subscription_validator` as a *planned* dependency before deleting — if billing is "coming soon", keep the interface and drop only the stub | DELETE (after that check) |
 | 7 `nexa_admin` billing screens + `dunning_alert_widget` + 3 billing usecases | unrouted, 4 are literal placeholder stubs | DELETE |
 | 6 `bus_operations` pages (`route_list/editor/detail`, `ticket_vault`, `driver_trip`, `live_bus_tracking`) + `qr_code_painter`, `driver_gps_beacon` | never routed or referenced | DELETE |
-| ~24 UNUSED widgets under `lib/shared/` (incl. `app_decorations.dart`, `main_app_bar.dart`, `search_app_bar.dart`, `icon_button.dart`, 4 card types, dialogs) | 0 importers | DELETE (or adopt — see B11) |
+| ~24 UNUSED widgets under `lib/shared/` (incl. `main_app_bar.dart`, `search_app_bar.dart`, `icon_button.dart`, 4 card types, dialogs) | 0 importers | DELETE — **[Q] except `app_decorations.dart`**, which Phase 3 may adopt as the container/shape token set instead |
 
 **My earlier draft of this plan was wrong about the customer app. Corrected:** the *live*
 Customer Super-App is `lib/features/bus_operations/presentation/pages/customer_super_app_screen.dart`
@@ -298,6 +375,15 @@ Also move the `goTo*()` helpers (1081–1138) beside their department's routes.
 
 ### Working method: separate → verify → LOCK, one department at a time
 
+**[Q] Rollback rule — a bad push goes live immediately.** CI deploys on push to
+`main`/`mainnew`, so there is no staging step. Therefore:
+
+- **Every phase on its own feature branch.** Merge to `mainnew` only after the deploy has been
+  verified against the Phase-0 baseline.
+- **No phase may be merged while a previous phase's verification is outstanding.**
+- If a phase fails verification, revert the merge (or the deploy) — do not "fix forward" on the
+  live branch.
+
 The owner's method, applied to every department (not only the pilot):
 
 1. **Separate** that department's entry point + router out of the shared bundle.
@@ -314,8 +400,9 @@ The owner's method, applied to every department (not only the pilot):
   that could swallow another panel's paths.
 - A **CI check** asserting the isolation, e.g. the department's route prefix appears in
   exactly one entry point, and its build target is the only one importing its feature folder.
+- **[Q] `dart analyze` clean** — a phase does not exit while analysis reports problems.
 
-Without step 4 the same class of bug returns: the owner has already lost tested work twice
+Without "lock" the same class of bug returns: the owner has already lost tested work twice
 because two panels ended up sharing one bundle and one auth state.
 
 ### Known bug to verify while working the Factory department
@@ -335,7 +422,21 @@ in the code:
 **Reproduce it before fixing it,** and fix it by separation (Phase 5), not by adding another
 redirect. This is the concrete case that justifies the whole plan.
 
-### Phase 0 — Safety net + emergency security
+### Phase S — Verify the streaming fix (do this FIRST) **[Q]**
+
+The forwarder declare/feed fix is committed (`f0fc72e5`) and its unit tests pass (34/34,
+including the three new ones). What is **not** verified is the live path: the pipeline has
+never been run against SRS with the fix in place.
+
+1. Run the A/B experiment from `FAULT-REMEDIATION-HISTORY.md` §9.9 on the live server.
+2. Confirm `https://cricket.traceodd.com/hls/live/{key}.m3u8` returns **200** with a valid
+   playlist.
+3. Only then start Phase 0a.
+
+**Why first:** a working public stream is the owner's original complaint. Refactoring the whole
+repository before confirming the fix leaves the real problem unproven.
+
+### Phase 0a — EMERGENCY: credentials **[Q — split out, security is hours not days]**
 
 #### The `database_config.dart` issue, explained plainly
 
@@ -345,7 +446,7 @@ redirect. This is the concrete case that justifies the whole plan.
 ```
 host 135.181.46.27 · port 5444 · db nexasystem_db
 user nexa_app · password NexaAppPassword123!
-and a second string: postgresql://postgres:awan1972@135.181.46.27:5444/...
+line 54: postgresql://postgres:awan1972@135.181.46.27:5444/nexasystem_db
 ```
 
 The concern is not that the app *uses* it — the file has **zero importers**, it is dead code.
@@ -358,51 +459,102 @@ The concern is that these are **real credential strings sitting in the repositor
 - The repository has a remote (`github.com/moontel72/nexanew`), so **anyone with repo access
   has already seen these strings**. "I never shared it with anyone" and "it is in the repo"
   are not compatible statements — committing *is* sharing.
-- The second string is a **`postgres` superuser** credential — the most privileged account on
-  the database — and it also reveals a **non-standard port (5444)**, which is exactly the kind
-  of thing an attacker uses to find an exposed database.
+- Line 54 is a **`postgres` SUPERUSER** credential — the most privileged account on the
+  database — and it also reveals a **non-standard port (5444)**, which is exactly the kind of
+  thing an attacker uses to find an exposed database.
 
-**What to do:**
+**Do, in this order:**
 
-1. **Delete the file** (it is dead code; nothing breaks).
-2. On the Hetzner server, check whether those two roles still exist and whether PostgreSQL
-   accepts **external** connections on 5444. If yes:
-   - **rotate both passwords**, and
-   - restrict `pg_hba.conf` / the firewall so the database is not reachable from the internet.
-3. If PostgreSQL is genuinely no longer used at all (everything moved to the app), then the
-   passwords no longer matter — **but step 2 is how you confirm that**, rather than assuming.
+1. **Check `pg_hba.conf` on the Hetzner server now.** If it allows connections from
+   `0.0.0.0/0` on port **5444**, the database is **exposed to the internet right now** — that
+   is the actual emergency, not the file.
+2. **Restrict** it (firewall + `pg_hba.conf` to localhost or the app host only).
+3. **Rotate** both passwords (`postgres` and `nexa_app`).
+4. **Delete the file** (dead code; nothing breaks).
+5. Add a secret-scanning check to CI so a credential string cannot be committed again.
 
-This is cheap to check and expensive to get wrong. It is listed first because it is the only
-item in this plan with a security consequence.
+If PostgreSQL is genuinely no longer used at all (everything moved to the app), then the
+passwords no longer matter — **but step 1 is how you confirm that**, rather than assuming it.
 
-#### Baseline
-1. **Rotate the database password** and delete `core/config/database_config.dart`.
-2. Record the current working state **per panel** (URL, login works?, screens verified) as
-   `docs/handoff/PANEL-BASELINE-STATE.md`, plus the current `nginx -T` and server listings.
-3. Verify each existing panel's build before touching anything.
+### Phase 0b — Baseline **[Q — split from the emergency]**
+
+Record the current working state **per panel** (URL, login works?, screens verified) as
+`docs/handoff/PANEL-BASELINE-STATE.md`, plus the current `nginx -T` and server listings, and
+verify each existing panel's build before touching anything.
+
+**[Q] Screenshot every panel as part of this baseline.** Phase 3 merges 4 theme roots, which can
+subtly change colours and shadows in panels the owner has already approved. Without before/after
+screenshots that regression is invisible.
+
+**[Q] Also record which entry points are CI-deployed vs. file-only.** Today CI builds 8 of
+the 13 `main_*.dart` files (see §6). This is **expected, not a defect**: the owner has
+confirmed the five undeployed apps (`main_bus_driver`, `main_bus_conductor`,
+`main_truck_owner`, `main_truck_driver`, `main_truck_conductor`) currently contain **only a
+login page** — their remaining feature coding has not been done yet. They are listed here so
+that Phase 5 adds each one to `frontend-deploy.yml` as that department is separated, rather
+than being mistaken for a missing deployment.
 
 **Exit:** a written baseline to diff every later phase against.
 
-### Phase 1 — Router extraction (behaviour-preserving)
-Split `app_router.dart` per §7. `AppRouter` keeps composing the parts, so `main.dart` is
-untouched. **One commit.** **Exit:** every working panel still works; file under ~250 lines.
+### Phase 1 — Fix the layering (behaviour-preserving) **[Q — moved ahead of the router split]**
 
-### Phase 2 — Fix the layering (behaviour-preserving)
+**[Q] Why this is now first:** if the layering is still dirty when the router is split, the
+backward dependencies get carried into the new route files and have to be unpicked twice.
+Clean foundation first, then the clean split.
+
 1. **Promote `missile_3d_button`** out of BUS into `lib/shared/widgets/buttons/` — this fixes
    B5 *and* is the single highest-value step toward the owner's "same design everywhere".
+   **Grep-verified importers:** BUS `fleet_dashboard_page.dart:12` + `owner_dashboard_page.dart:14`,
+   CRICKET `manager_dashboard_page.dart:33`, SUPER `bus_fleet_dashboard_screen.dart:26` +
+   `sub_admin_dashboard.dart:16`, and `shared/widgets/navigation/admin_sidebar.dart:4`.
+
+   > **Note for whoever reads this next — a review got this wrong.** An independent review
+   > claimed "no CRICKET file imports it" and that the CRICKET mention was a factual error.
+   > That claim is **false**: `manager_dashboard_page.dart:33` imports it, under the comment
+   > *"Manager Dashboard — 3D Pencil Sidebar layout"*. The likely cause of the confusion is
+   > **B5b** — the widget is shared but every call site passes raw hex colours, so CRICKET's
+   > button *renders* in different colours and looks like a different component. **The widget
+   > is shared; only its colour source is not.** Do not remove CRICKET from the importer list.
+
+   **[Q] Colour tokenisation is part of this phase, not optional.** Promoting the widget while
+   call sites keep hardcoding `Color(0xFF…)` leaves the same component looking different in
+   every panel — which is the exact outcome the owner wants to eliminate. See B5b, D4 and
+   Phase 3.
 2. Break the other three `shared → features` edges (B4).
 3. **Rule enforced from here on:** `lib/shared/**` must import **zero** `lib/features/**`.
 
-**Exit:** a grep proves no `shared → features` import remains.
+**Exit:** a grep proves no `shared → features` import remains; `dart analyze` clean.
+
+### Phase 2 — Router extraction (behaviour-preserving)
+Split `app_router.dart` per §7. `AppRouter` keeps composing the parts, so `main.dart` is
+untouched. **One commit.** **Exit:** every working panel still works; file under ~250 lines.
 
 ### Phase 3 — Design system consolidation
+
+**Canonical style: D4 — Cricket's pencil + colour style, tokenised, applied everywhere.**
+
 1. Promote the shared primitives that are trapped in features (B11, incl. the 3 parallel KPI
    cards and the BUS `_pencil()` dashboard style).
-2. Converge the 4 theme roots onto one; adopt or delete `app_decorations.dart`.
-3. Introduce **spacing / radius / icon tokens** — they do not exist today.
-4. Retire inline literals as files are touched (not as one big commit).
+2. **[Q] Merge the 4 competing theme roots** onto the D4 canonical palette: `AppTheme`,
+   `shared/app_scaffold.dart`'s inline `ThemeData`, `LandingPalette`, `CricketColors`
+   (+ `core/theme/branding_config.dart`). Adopt or delete `app_decorations.dart`.
+   **[Q — sequencing note]** this lands *before* the departments are split, while the panels are
+   still bundled — that is when the duplication is cheapest to reconcile, and it means each
+   department inherits one theme instead of dragging its own root into its new build.
+3. **[Q] Tokenise the colours and geometry, not just the widgets.** The hardcoded values are
+   the actual source of the drift: 85 files with inline `Color(0x…)` (B5b is one instance),
+   182 with inline `TextStyle(`, 191 with inline `BorderRadius.circular(`. Introduce spacing /
+   radius / colour / icon tokens and retire the literals as files are touched.
+4. **Introduce the pencil accent-role tokens from D4** (`accentPrimary` / `accentInfo` /
+   `accentWarning` / `accentFeature` / `accentMuted` / `accentDanger`) so a panel picks a
+   *meaning*, not a hex value.
 
-**Exit:** every panel renders from one theme + one token set.
+**⚠️ This restyles panels the owner has already approved** (Super Admin, Factory, the 7 fleet
+apps go from light to dark). Accepted deliberately — but it makes the Phase-0b screenshots
+mandatory, and each panel should be restyled in the same phase that separates it, not all at once.
+
+**Exit:** every panel renders from one theme + one token set; a grep for `Color(0xFF` outside
+`lib/shared/theme/` trends to zero in the touched departments; `dart analyze` clean.
 
 ### Phase 4 — Pilot: B2B (Group 2) end-to-end
 1. Rename `features/reseller/` → `features/b2b/`; add the Shopkeeper sub-app alongside.
@@ -443,21 +595,23 @@ Plus:
    catalogue from `feature_registry`; render it as checkboxes in the Super Admin's
    "create/edit sub-admin" screen; persist the result to `sub_admin_feature_grants`.
    Remove the 5-entry hardcoded list in `add_sub_admin_screen.dart:15-48`.
-2. **Enforce the grants at request time.** Today `SubAdminMiddleware.php:57-69` checks only
-   that an assignment *exists* — it never checks *which* features were granted, and
-   `sub_admin_feature_grants` is never consulted on a request. This is the step that
-   actually makes isolation real.
-3. **Give every sub-admin its own dashboard.** Today only `cricket_ops` gets a distinct
-   view; the other verticals all fall through to the **bus** console
-   (`sub_admin_dashboard.dart:167-176`). The dashboard must be assembled from the granted
-   features, not from a vertical switch.
-4. Fix the 4 Flutter↔backend endpoint mismatches (`toggle-status`, `change-vertical`,
+2. **Enforce the grants at request time — middleware + a route-to-feature map** (see §10/Q2).
+   Today `SubAdminMiddleware.php:57-69` checks only that an assignment *exists*; it never
+   checks which features were granted, and `sub_admin_feature_grants` is never consulted.
+   **[Q] Do not scatter per-controller policies** — one middleware check against one map.
+3. **[Q] Apply the middleware to every panel route group.** It is currently used in exactly
+   one place (`routes/panels/cricket.php:246-250`), so most routes are unenforced regardless of
+   how correct the middleware is.
+4. **Give every sub-admin its own dashboard**, assembled from the granted features rather than
+   a vertical switch — today only `cricket_ops` differs and the rest fall through to the bus
+   console (`sub_admin_dashboard.dart:167-176`).
+5. Fix the 4 Flutter↔backend endpoint mismatches (`toggle-status`, `change-vertical`,
    `reset-password`, `restore`).
-5. One API prefix + guard per department (`/api/v1/bus/…`, `/api/v1/goods/…`, …).
-6. **Design the free-agent driver identity** (D1): a driver belongs to Trace Odd, not to a
-   company; company association is a time-bounded `link`. Bus↔truck continuity lives in the
-   **backend identity service**, never in shared Flutter code.
-7. Unify the 5 auth stacks (B9) behind one interface.
+6. One API prefix + guard per department (`/api/v1/bus/…`, `/api/v1/goods/…`, …).
+7. **Free-agent driver identity** (D1) — use the `driver_identities` + `driver_company_links`
+   schema in §10/Q5. One identity, many time-bounded links, `fleet_type` distinguishes bus
+   from truck, and a factory driver is a separate identity.
+8. Unify the 5 auth stacks (B9) behind one interface.
 
 **Exit:** a sub-admin created with only "goods" toggles enabled can reach goods surfaces and
 **nothing else** — verified by attempting a bus route with that account and getting a denial.
@@ -468,6 +622,15 @@ one owner and deleting the wrong one is detectable.
 
 ### Phase 8 — Server separation
 Only possible because Phase 6 made coupling API-only.
+
+**[Q] Move the media engine first — it is nearly free.** It already has its own CI path
+(`media-engine-build.yml` + `media-engine-deploy.yml`) and ships as a self-contained Docker
+image (`traceodd/media-engine`), so this is a DNS + dedicated-host step, not a rewrite. It is
+also the layer that *must* be separate, because it is stateful: a live call cannot migrate
+between servers and needs room→server affinity.
+
+Then split the API (stateless app servers + shared DB + Redis behind a load balancer), and
+last the frontend, which is static files and therefore trivial.
 Move the **stateful media engine first**; then API; then frontend (which is trivial).
 Add a load balancer + stateless app servers when the API is the bottleneck.
 
@@ -487,13 +650,114 @@ Add a load balancer + stateless app servers when the API is the bottleneck.
 
 ---
 
-## 10. Open questions for the Qoder expert
+## 10. Answers from the independent review **[Q]**
 
-1. Is staged server separation (§5) right, or should the media engine and API split sooner?
-2. Sub-Admin enforcement (§6.1) — is middleware the right layer, or should grants be checked
-   per-controller?
-3. Any objection to the deletion list in §6?
-4. Is one theme + token set (Phase 3) achievable without breaking the working panels?
-5. The **free-agent driver identity** (D1) — best backend shape for a bus↔truck↔company
-   link that preserves history?
-6. Does the Cricket group need its own module record in the spec (it has none)?
+The six questions in the first draft of this plan were put to an independent reviewer
+(Qoder expert). Their answers are folded in here; the review documents were then deleted so
+this file is the single source of truth.
+
+### Q1 — Server strategy: staged separation is approved
+
+Agreed as planned: frontend = static files, API = make stateless (sessions in Redis), media
+engine = stateful and needs its own host. Nothing should split sooner; the single-server model
+is correct until load demands otherwise, and API-only coupling is the right gate.
+
+**[Q] Addition — Phase 8 is nearly free for the media engine.** It is *already* on its own CI
+path (`media-engine-build.yml` + `media-engine-deploy.yml` are separate workflows) and ships as
+a self-contained Docker image (`traceodd/media-engine`). Moving it is a DNS + dedicated-host
+step, not a re-architecture. Do it first, as planned.
+
+### Q2 — Sub-Admin enforcement: middleware **plus a route-to-feature map**
+
+Middleware is the right layer, but it needs a mapping:
+
+1. After `SubAdminMiddleware.php` confirms the identity is a sub-admin (Tier 3, lines 60-63),
+   query `sub_admin_feature_grants` for that `global_identity_id`.
+2. Compare the requested route's prefix against the grant set.
+3. Return **403** when the grant does not cover the endpoint.
+
+**[Q] The map:** a lightweight `feature_route_map` (a config array, or a column on
+`feature_registry`) associating each grant code with an API prefix — e.g.
+`bus_fleet_management → /api/v1/bus/*`, `goods_logistics → /api/v1/goods/*`,
+`cricket_ops → /api/v1/cricket/manager/*`. One check in one place.
+
+**[Q] Why not per-controller policies:** 40+ enforcement points must each be correct, which is
+exactly where a gap hides for months. Middleware + map is simpler and auditable.
+
+**[Q] The prerequisite everyone forgets:** the middleware must actually be *applied*. Today it
+is used in exactly one place (`routes/panels/cricket.php:246-250`). Phase 6 has to attach it to
+every panel route group, or the enforcement never runs.
+
+### Q3 — Deletion list: no objections
+
+Every entry was independently verified as dead. **[Q] One caveat:** before deleting
+`core/services/payment_service.dart` and `subscription_validator.dart`, confirm no backend
+migration references them as a *planned* dependency. If billing is "coming soon" rather than
+"abandoned", keep the interface contract and delete only the empty stub.
+
+### Q4 — Design unification: order approved, with a real risk
+
+Approved as: promote the button → converge theme roots → introduce tokens → retire literals
+incrementally (never as one big-bang commit).
+
+**[Q] Risk:** the 4 theme roots produce subtly different visual output, so merging them can
+change colours/shadows in panels the owner has already approved. **Mitigation: screenshot every
+panel before Phase 3 and diff after.** This belongs in the Phase-0 baseline.
+
+**[Q] Suggestion:** `shared/theme/app_decorations.dart` is currently unused and on the delete
+list. Since Phase 3's goal is a token system, consider **adopting** it as the container/shape
+token set instead of deleting it.
+
+### Q5 — Free-agent driver identity: concrete schema
+
+The link-table model in D1 is correct. **[Q] Recommended shape:**
+
+```
+driver_identities
+  id (PK), global_identity_id (FK -> global_identities),
+  license_number, license_class, created_at
+
+driver_company_links
+  id (PK), driver_identity_id (FK), company_id (FK),
+  fleet_type ENUM('bus','truck'), role ENUM('driver','conductor'),
+  started_at, ended_at (NULL = current),
+  status ENUM('active','terminated','suspended'),
+  UNIQUE(driver_identity_id, company_id, fleet_type, ended_at IS NULL)
+```
+
+Properties that matter:
+
+- **One identity, many links** — history accumulates across companies.
+- **Time-bounded** — `ended_at` is set when a contract ends and the history remains.
+- **Fleet-typed** — bus and truck live under the *same* identity, distinguished by
+  `fleet_type`, not by separate identities.
+- **Factory stays separate** — a factory driver is a different `global_identity`.
+
+This is exactly the link the owner already tested when moving buses between fleet companies.
+
+### Q6 — Cricket needs a module record: yes
+
+It is a whole department with its own media engine, 2 Flutter entry points, 2 CI workflows, a
+subdomain, and a Sub-Admin feature set — and it is the most technically complex part of the
+system (GStreamer / WebRTC / SRS / HLS). Its absence from the spec means future agents have no
+canonical reference. **[Q] The record should carry the stream pipeline, the roles, the
+infrastructure, and the declare/feed contract that caused the outage.**
+
+### Q7 — The streaming problem: diagnosis agreed
+
+The reviewer independently agreed with the declare/feed root cause in
+`FAULT-REMEDIATION-HISTORY.md` §9, and added:
+
+1. **The test rewrite is as important as the code fix** — the old test asserted the wrong
+   invariant, so the new tests must be the acceptance gate. *(Since folded into the fix:
+   `only_live_buses_get_an_audio_branch`, `description_declares_exactly_the_live_buses`,
+   `no_live_buses_means_no_audio_stage` — all three now **execute and pass locally**, 34/34.)*
+2. The `rearm_stale_forwarders` target-fidelity fix prevents the watchdog silently downgrading
+   a re-armed forwarder. Real bug, correctly fixed.
+3. `live_video_page.dart` rendering `forwarder_error` is essential — without it the next failure
+   is just as blind.
+4. **The fix has been compiled and its tests pass, but it has never run against SRS.** The §9.9
+   A/B experiment on the live server is the definitive verification.
+
+**[Q] Recommendation, adopted as Phase S below:** verify the stream **before** starting panel
+separation. A working public stream is the owner's original complaint.
