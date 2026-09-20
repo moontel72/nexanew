@@ -29,14 +29,28 @@ one-paragraph summary.
    ```
    This needs `libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev`
    (GStreamer >= 1.24). See §6 for how to set it up on Windows.
-3. **The original reported problem is still unsolved — but its root cause is
-   now identified.** See §7 and, for the full evidence trail, **§9
-   (2026-09-19)**. One line: `build_description` declares an audio `appsrc`
-   branch for *every enabled bus* while only the *primed* buses get a push
-   task, so `flvmux` waits for streams that never deliver and the video never
-   reaches SRS. It is **not fixed yet** — §9.10 describes the change.
+3. **The original reported problem is STILL OPEN, but three distinct causes have
+   now been found, and two are fixed.** Read §9 (2026-09-19) and then **§10
+   (2026-09-20)**, which is the current state:
+   - `f0fc72e5` — the *count* of declared vs fed audio branches was wrong
+     (`build_description` declared a branch for every *enabled* bus while only
+     *primed* buses were fed, so `flvmux` waited for streams that never came).
+     Fixed and deployed; the error text changed but the outage continued.
+   - `e951903b` — the audio path never checked the **codec** of what it pushed,
+     so a *video* chunk on an audio subscription reached an `appsrc` whose caps
+     say OPUS and failed with `not-negotiated (-4)`. Fixed and deployed; the
+     **console errors are gone**, but the bridge still fails.
+   - **A third cause is still unknown.** The engine→SRS bridge keeps failing and
+     `https://cricket.traceodd.com/hls/live/*.m3u8` still 404s. §10.7 lists what
+     to collect next — starting with the **current** error text from the panel
+     banner, which may no longer be the same message.
+   **Do not treat the stream as working. Do not assume "the same error" means
+   the same text.**
 4. `pubsub`-style live debugging: the engine's own comments are unusually
    detailed. Trust them over any external report — including this one.
+5. **The failing UI is instrumentation.** The decisive evidence for §10 came from
+   a photograph of the operator's browser, not from a log — the engine's failure
+   text was already rendered on the page and nobody had read it.
 
 ---
 
@@ -700,6 +714,12 @@ runtime test has been run against SRS. That is the operator's step.
 
 ### 9.12 What this section does *not* prove
 
+> **SUPERSEDED by §10 (2026-09-20).** The change described in §9.10 has since been
+> implemented (`f0fc72e5`), compiled, tested (34/34) and deployed — and it did **not**
+> end the outage, because a second independent fault sat on the same code path
+> (`e951903b`). Items 1, 3 and 4 below were accurate *at the time of writing* and are
+> kept only as a record of what was known then. **Read §10 for the current state.**
+
 1. The §9.9 A/B experiment has **not** been run here. The exact runtime mode
    (hang vs `not-negotiated (-4)`) is inferred from §3.5/§3.6, not re-measured.
 2. How many Opus tracks the current broadcaster registers and feeds has not been
@@ -711,3 +731,278 @@ runtime test has been run against SRS. That is the operator's step.
 **Next step:** run §9.9 A on the server. If it returns `exit=124` with nothing in
 SRS, the diagnosis is confirmed and §9.10 can be implemented — remembering §0.2:
 an un-compiled `gst` push is not a fix.
+
+---
+
+# 10. UPDATE — 2026-09-20: second root cause found and fixed (wrong codec on an audio branch)
+
+**Status: fixed, compiled, tested, deployed. Partially confirmed by the operator — the
+GStreamer error is gone from the browser console, but the bridge still fails and HLS still
+404s. See §10.7 — the diagnosis is NOT complete.**
+
+This section is the record the owner asked for: every command run, every bug found, and every
+change made in this pass.
+
+## 10.1 How the real error was obtained
+
+The §9 diagnosis (declare/feed mismatch) was correct but **incomplete**. The decisive evidence
+came from **a photograph of the operator's browser screen** on the Cricket Manager *Live Video*
+page, which renders the engine's own failure text:
+
+```
+/GstPipeline:pipeline1/GstAppSrc:audio_commentary: Internal data stream error
+(debug: ../libs/gst/base/gstbasesrc.c(3177): gst_base_src_loop ():
+ /GstPipeline:pipeline1/GstAppSrc:audio_commentary:
+ streaming stopped, reason not-negotiated (-4))
+```
+
+Alongside it the page showed `BROKEN — the bridge failed`, step 2 `Engine → SRS bridge: Not
+running (failed)`, and a Flutter JS error `Null check operator used on a null value`.
+
+**Lesson worth keeping:** the engine had no way to surface this to a log we could read
+remotely, but the UI already rendered it. **A screenshot of the failing panel was worth more
+than any amount of source reading.** When the operator says "the page says X", that text is
+primary evidence.
+
+## 10.2 First hypothesis — and why it was WRONG
+
+The container timestamps looked decisive:
+
+| Event | Time (UTC) |
+|---|---|
+| Fix `f0fc72e5` committed (commit says `+0200`, i.e. 00:41 Italy) | **2026-09-19 22:41** |
+| Containers created (`docker ps`) | **2026-09-19 23:02** |
+| Difference | **+21 minutes** |
+
+`media-engine-build.yml` runs `cargo test --features gst` and `build-and-push` has
+`needs: check-gst`. A new test step was added in `f0fc72e5`, and those tests took **142 s**
+locally — so 21 minutes looked too tight for "test + Rust build + Docker build". The hypothesis
+was: **the new test step is failing in CI, so the image is never built, so the fix is never
+deployed.**
+
+**The operator checked and refuted it:** `media-engine-build.yml` run **#128** and
+`Media Engine — Deploy to VPS` run **#150** were both **green**.
+
+The fix WAS deployed. So the fault had to be elsewhere. **This is the second time in this cycle
+that a plausible timing-based hypothesis was wrong** (§0 lesson: read the code, or read the
+error the system is already printing).
+
+## 10.3 The actual root cause
+
+`forwarder.rs` contains a comment on the **video** side that states the whole problem:
+
+```rust
+// The router fans every media type of a layer out on one subscription,
+// so the first chunk seen here can be the camera's Opus audio even
+// though this is the video feed. Taking its codec produced
+// "no video forwarder pipeline for codec Opus" (501) and killed the
+// camera forwarder, so wait for the first *video* chunk instead.
+let first = loop {
+    let chunk = video_rx.recv().await?;
+    if matches!(chunk.codec, H264 | Vp8 | Vp9) { break chunk; }   // ← filters
+};
+```
+
+**The video side was hardened against exactly this. The audio side never was.**
+
+```rust
+// BEFORE - audio priming took the first chunk, whatever codec it was
+let primed = loop {
+    match timeout_at(deadline, rx.recv()).await {
+        Ok(Some(chunk)) => break Some(chunk),      // ← no codec check
+        ...
+    }
+};
+```
+
+And `spawn_push_task` pushed every chunk it received:
+
+```rust
+let Some(chunk) = chunk else { break };
+... appsrc.push_buffer(buffer)                     // ← no codec check
+```
+
+**Consequence.** A *video* chunk arriving on an audio receiver was accepted as the prime, the
+bus was declared live, and the **H264 payload was pushed into an `appsrc` whose caps declare
+`encoding-name=OPUS`**. `rtpopusdepay` rejected it with `not-negotiated (-4)`, the branch died,
+and the engine→SRS bridge failed with it — leaving the public page dark.
+
+That is precisely the error from the screenshot.
+
+**Why §9's fix did not resolve it.** `f0fc72e5` made the *number* of declared audio branches
+equal the number fed. It never checked *what* was fed. Two independent faults on the same code
+path; fixing the first exposed the second.
+
+## 10.4 The fix — commit `e951903b`
+
+| Change | Detail |
+|---|---|
+| New constants | `VIDEO_CODECS = [H264, Vp8, Vp9]` and `AUDIO_CODECS = [Opus]` — the sets each branch's caps can actually carry |
+| Audio priming loop | Accepts **only** `MediaCodec::Opus`. Anything else is dropped with a `debug!` and the loop **keeps waiting** until the deadline, so a stray video chunk can no longer mark a silent bus live |
+| `spawn_push_task` | Takes the accepted set and **drops mismatched chunks**, warning once per task. Covers the post-prime case too, where a stray chunk would otherwise break an already-working branch |
+| Call sites | All four updated: camera video (`VIDEO_CODECS`), camera audio bus (`AUDIO_CODECS`), program video, program audio |
+
+**Why filtering at the source is the only reliable place:** pushing a wrong-codec buffer into a
+caps-constrained `appsrc` is **unrecoverable** — negotiation has already failed by the time the
+bus error surfaces.
+
+## 10.5 Commands run in this pass, and what they showed
+
+### Server (operator ran these)
+
+```sh
+docker ps --format '{{.Image}} {{.CreatedAt}} {{.Names}}'
+```
+```
+traceodd/media-engine-broadcaster:latest 2026-09-19 23:02:38 +0000 UTC tod-broadcaster
+traceodd/media-engine:latest             2026-09-19 23:02:38 +0000 UTC todd-studio
+redis:7-alpine                           2026-09-19 23:01:31 +0000 UTC todd-redis
+```
+Also present: `traceodd/media-engine:backup-old` — evidence of a manual deploy/backup, i.e. the
+pipeline is not the only thing that has moved images around.
+
+```sh
+docker images | grep -i media-engine
+```
+→ `ghcr.io/montel72/media-engine:latest` and `traceodd/media-engine:latest` share image ID
+`e132d54313f4` — so the local tag matches what CI pushed.
+
+```sh
+docker logs --since 30m todd-studio 2>&1 | grep -aE "audio bus|not-negotiated|forwarder|prime"
+```
+→ **empty.** No matching line in 30 minutes. Two readings: the failure predates that window, or
+the engine is not logging it. The window should have been widened (`--since 3h`) — see §10.7.
+
+```sh
+curl -s -H "Authorization: Bearer TOKEN" http://127.0.0.1:8082/api/v1/room/list
+```
+→ `{"error":"unauthorized: token verification failed: InvalidToken"}` — `TOKEN` was a literal
+placeholder. The engine needs a real JWT (minted via `MediaEngineTokenService`, role=admin,
+perms=[`studio_director`]). **This command has still not produced its intended output.**
+
+### Local (this machine)
+
+```sh
+cargo check -p todd-signaling -p todd-sfu --features gst      # CI's command → clean
+cargo check --workspace --all-targets                          # → clean
+cargo test -p todd-transcode --features gst --lib              # → 34 passed, 0 failed
+```
+
+The `gst` test run needed the **runtime** MSI for the DLLs (the devel MSI ships none) — see §6.
+Second run took 16.7 s instead of 142 s once the plugin registry was cached.
+
+### Operator's post-deploy retest
+
+> "cricket manager ke woh console wale error khatam ho gae hain" — the GStreamer/console
+errors in the Cricket Manager are **gone**.
+
+That is **direct confirmation that `e951903b` fixed the mechanism it targeted**: no more
+wrong-codec chunk reaching an Opus `appsrc`.
+
+## 10.6 Other bugs found in this pass (unrelated to the stream)
+
+These were found while working the quick-win list from
+`PANEL-SEPARATION-PLAN.md` §9b. They are recorded here because the same investigation produced
+them, and because two of them were **invisible until the first one was fixed**.
+
+| # | Bug | Evidence | Fix |
+|---|---|---|---|
+| 1 | **CI tests never ran on the deploy branches.** `tests.yml` triggered on `master` and `*.x` — neither exists in this repo | `.github/workflows/tests.yml:6` | `e1e181b2` — `main`, `mainnew` |
+| 2 | **`composer.json` and `composer.lock` permanently out of sync.** `deploy.yml` ran `composer require laravel/reverb` **inside the runner**, which patched both files, rsynced them to the server, and **never committed them back**. Production worked; the repository could not be installed from a fresh checkout | `deploy.yml:40-44`; lock missing `laravel/reverb`; `composer install` exit code 4 | lock synced (`535ba3c1`, operator ran composer), then `17e4393d` changed the step to `composer install` |
+| 3 | **`consumer.php` never loaded — the entire Customer Super-App API was 404.** 11 files in `routes/panels/`, 10 registered; `consumer` was the only omission. Its 4 endpoints are implemented by a real controller and the Flutter app already calls them | `PanelRouteServiceProvider.php:43-54`; `lib/core/navigation/panel_routes.dart:301-305` | `11dbaf8f` — registered. Verified: 0 routes → 4 |
+| 4 | **Plaintext PostgreSQL credentials in client-side Flutter code**, including a `postgres` superuser string on port 5444 | `lib/core/config/database_config.dart:6-10, 54` | `bdb3001d` — file deleted (233 lines, 0 importers) **and the doc that instructed creating it** (`backend/database/DEPLOYMENT.md` §8.3), which was the actual root cause |
+| 5 | **A stale local route cache made every panel route look absent.** `bootstrap/cache/routes-v7.php` was from April and predated the whole panel system, so `artisan route:list` showed **149 routes and none of the panels** | local file; gitignored; `deploy.yml:244-245` runs `optimize:clear` + `optimize` so production is fine | cache deleted locally; trap documented |
+| 6 | **`super_admin.php` has no admin middleware** — 19 live routes behind `auth:sanctum` only, so any authenticated account can reach platform-admin endpoints | `super_admin.php:6`; `panel_routes.dart:210-216` | **NOT fixed — see `PANEL-SEPARATION-PLAN.md` §7b.4.** `AdminMiddleware` tiers 1–2 cannot pass for a super admin (`account_type` is `global_identity`, and `identity_type` is not a `TenantAccount` column), so applying it blind would 403 the owner out of the most critical panel. A shadow gate is specified instead |
+| 7 | **37 dependency security advisories** across 11 packages | `composer audit`, surfaced during the lock sync | not triaged — pre-existing, needs its own change |
+
+## 10.7 ⚠️ WHAT IS STILL OPEN — the bridge still fails
+
+**Read this before assuming §10.4 finished the job.**
+
+The operator's retest after deploying `e951903b`:
+
+- ✅ **The GStreamer / console errors in the Cricket Manager are gone.** The wrong-codec
+  mechanism is fixed.
+- ❌ **The page-top banner still shows the failure**, and the engine→SRS bridge step still reads
+  `Not running (failed)`.
+- ❌ **The public page still 404s:**
+  `https://cricket.traceodd.com/hls/live/cricket_match_a2c0880f-cc5b-40d9-8d5c-6ffa3916e021_cam1.m3u8`
+  → `Failed to load resource: the status 404`.
+
+**So a THIRD distinct cause is preventing publication.** The two fixed so far were on the same
+code path, which is why each fix advanced the symptom without clearing it:
+
+| Fix | What it corrected | Result |
+|---|---|---|
+| `f0fc72e5` | the **count** of declared vs fed audio branches | error text changed, still broken |
+| `e951903b` | the **codec** of what is fed to an audio branch | console error gone, still broken |
+| **?** | **unknown — the bridge itself still fails** | — |
+
+### What is needed to continue (in order of value)
+
+1. **The CURRENT error text from the panel banner.** The operator says "wohi error" (the same
+error) reappeared at the top of the page — but with the console errors gone, that banner may now
+be showing **different** text. A screenshot of the banner alone would settle whether this is the
+same failure or a new one. **This is the single highest-value input.**
+2. **Widened engine logs:**
+   ```sh
+   docker logs --since 3h todd-studio 2>&1 | tail -200
+   docker logs --since 3h todd-broadcaster 2>&1 | tail -100
+   ```
+3. **The new filter's own evidence.** If the codec filter is firing, this line appears:
+   ```sh
+   docker logs todd-studio 2>&1 | grep -a "dropping chunk whose codec"
+   ```
+   Its presence **proves** the router delivered a wrong media type on an audio subscription
+   — which would also mean the router's rid-scoped fan-out is worth fixing at the source
+   (`AudioBus::from_rid` / the SFU `subscribe`, not the forwarder).
+4. **A real token**, so `--path`-scoped checks stop being guesses:
+   ```sh
+   curl -s -H "Authorization: Bearer <real-jwt>" http://127.0.0.1:8082/api/v1/forward/list
+   curl -s -H "Authorization: Bearer <real-jwt>" http://127.0.0.1:8082/api/v1/room/list
+   ```
+   `forward/list` carries `state` and `error` per forwarder — the same text the panel renders.
+5. **SRS side:** `ls -la /var/www/traceodd/cricket-hls/live/` and
+   `curl -s http://127.0.0.1:1985/api/v1/streams/` — if SRS has no stream, the RTMP publish
+   never arrived, and the fault is upstream of HLS.
+
+### Hypothesis to test first (cheap, and fits the evidence)
+
+The `audio_commentary` name in the error means **commentary primed** — a chunk arrived. With the
+codec filter it must now be a **real Opus** chunk. So the branch should be valid.
+
+But `AudioBus::from_rid` maps an **unknown or empty rid to `Commentary`**:
+
+```rust
+pub fn from_rid(rid: Option<&str>) -> Self {
+    match rid.map(str::to_ascii_lowercase).as_deref() {
+        Some("ambient") => Ambient,
+        Some("sfx") => Sfx,
+        Some("music") => Music,
+        _ => Commentary,          // ← anything else, including ""
+    }
+}
+```
+
+So a publisher that registers Opus under a **different or empty rid** silently lands on the
+commentary bus. If two different rids collide there, both feeds push into **one** `appsrc`
+(`apply_audio_feeds` allows several feeds per bus) and the RTP sequence/timestamp interleaving
+can break the depayloader. **Worth checking `router.audio_tracks()` output** — item 4 above.
+
+## 10.8 Process lessons from this pass (§8, extended)
+
+1. **A deployed fix is not a finished fix.** `f0fc72e5` was correct, deployed, green in CI — and
+   the outage continued, because a second independent fault shared the same code path.
+2. **The failing UI is instrumentation.** The error was in a photograph of a browser. Nobody had
+   read it because it was never in a log anyone pulled.
+3. **Two timing-based hypotheses in a row were wrong.** Container timestamps and a tight 21-minute
+   window were suggestive and misleading. The operator's one-line CI confirmation overturned it.
+   **Ask for the fact; do not infer it.**
+4. **Screenshots of a message that repeats the same words are not enough.** "The same error came
+   back" is ambiguous once the console text changes — always ask for the *current* text.
+5. **An added test step can block a pipeline.** `needs: check-gst` means a new failing test blocks
+   the image build and therefore the deploy. That is desirable — but it means a red `check-gst`
+   presents as "the fix did nothing", which is a confusing failure mode worth remembering.
+6. **Verify the entry point, not just the code.** The `consumer` bug, the stale route cache and
+   the composer drift were all invisible in the source and obvious the moment the actual route
+   list / actual lock file was inspected.
