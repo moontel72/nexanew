@@ -902,29 +902,47 @@ it is the single change that stops this problem recurring.
 
 ## 9b. Quick-win checklist **[from the second review — do these first, many take under an hour]**
 
-Lowest-risk, highest-value actions:
+**Progress log — update this list as items land.** `[x]` shipped, with the commit hash.
 
 - [ ] **Rotate the compromised passwords** (`awan1972`, `NexaAppPassword123!`) — they are in git
-      history permanently.
-- [ ] **Delete the plaintext DB credentials** from `lib/core/config/database_config.dart` — the
-      frontend must never carry a direct DB connection string.
-- [ ] **Fix `tests.yml:6`** — change `master` to `[main, mainnew]`; backend tests start running
-      immediately (one-line fix).
+      history permanently. **Owner's task (server-side).** The file holding them has been
+      deleted (`bdb3001d`), but deletion does not undo the exposure.
+- [x] **Delete the plaintext DB credentials** from `lib/core/config/database_config.dart` —
+      **`bdb3001d`**. Also fixed `backend/database/DEPLOYMENT.md` §8.3, which *instructed
+      creating that file* — the root cause. Verified 0 imports and `dart analyze` still clean.
+- [x] **Fix `tests.yml`** — **`e1e181b2`**. `master`/`*.x` → `main`/`mainnew`. Verified with a
+      YAML parse.
 - [ ] **Register `consumer`** in the `PanelRouteServiceProvider` panels array — or delete
-      `consumer.php`. Either way, remove the dead code (§7b.1).
-- [ ] **Add admin middleware to `super_admin.php`** — mirror the `BusFleetGate` pattern (§7b.2).
+      `consumer.php`. Either way, remove the dead code (§7b.1). **Needs a decision: register or
+      delete?**
+- [ ] **Add admin middleware to `super_admin.php`** — mirror the `BusFleetGate` pattern
+      (§7b.2). **Needs care: must not lock out the existing super-admin accounts.**
 - [ ] **Replace the hardcoded `root@135.181.46.27`** in `frontend-deploy.yml` with the same
-      `vars.VPS_HOST` variable `deploy.yml` already uses.
-- [ ] **Add `dart analyze` to CI** — one step, catches type/lint errors before deploy.
+      `vars.VPS_HOST` variable `deploy.yml` already uses. **Needs the repo variable to exist
+      first, or the deploy breaks.**
+- [x] **Add `dart analyze` to CI** — **`ce560194`**. Runs after `flutter pub get`, before the
+      builds. Uses `--no-fatal-warnings` because the tree carries a 57-warning backlog (0
+      errors); verified the gate is *not* vacuous by confirming a deliberate type error makes
+      it exit non-zero.
 - [ ] **Add `gitleaks` (or `trufflehog`) secret scanning to CI** — prevents the next credential
-      commit.
-- [ ] **Move `missile_3d_button.dart`** into `lib/shared/widgets/` — unblocks 4 panels
-      (5 import paths).
-- [ ] **Add `.github/CODEOWNERS`** — per-panel ownership requiring review.
+      commit. **Note:** it scans history, so it will flag the already-removed credential. Add
+      it with an allowlist for that historical finding, once the passwords are rotated.
+- [x] **Move `missile_3d_button.dart`** into `lib/shared/widgets/buttons/` — **`3fbbeb90`**.
+      6 import sites across 4 domains; git recorded it as a 100% rename. `shared → features`
+      backward imports dropped **4 edges → 3**.
+- [ ] **Add `.github/CODEOWNERS`** — per-panel ownership requiring review. *(Low value on a
+      single-owner repo; CODEOWNERS only has effect with org teams.)*
 - [ ] **Add per-panel `paths:` filters** to the deploy workflow — stops the all-or-nothing
-      rebuild of all 8 panels.
+      rebuild of all 8 panels. **Do this with Phase 5**, per the phase plan.
 - [ ] **Write ONE real Flutter test** to replace the 17-line placeholder — proves the test
       infrastructure works and sets the pattern.
+
+### Still-open structural work this checklist does not cover
+
+The remaining three `shared → features` backward edges (telemetry models → BUS, and two files
+→ `features/auth`) are Phase 1 items 2–4 in §5b.2 — they need the same treatment as
+`missile_3d_button`, and the CI boundary check (containment mechanism 1) should land with them
+so they cannot come back.
 
 ---
 
