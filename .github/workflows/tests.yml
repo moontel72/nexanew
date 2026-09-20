@@ -3,8 +3,13 @@ name: Tests
 on:
   push:
     branches:
-      - master
-      - "*.x"
+      # This repo deploys from `main` and `mainnew` (see AGENTS.md and
+      # .github/workflows/deploy.yml). The previous values were `master` and
+      # `*.x`, neither of which exists here, so push-triggered tests never ran
+      # on the branches that actually deploy — only the nightly cron and
+      # `pull_request` fired.
+      - main
+      - mainnew
   pull_request:
   schedule:
     - cron: "0 0 * * *"
