@@ -70,6 +70,21 @@ jobs:
       - name: Dart analyze
         run: dart analyze --no-fatal-warnings
 
+      # ──────────────────────────────────────────────────────────────
+      # Runs the widget and bloc tests — 35 of them at the time of writing,
+      # including test/features/cricket/presentation/blocs/team/team_bloc_test.dart.
+      #
+      # Correcting an earlier claim: the gap was never "there are no Flutter
+      # tests", it was that **no workflow ran `flutter test` at all**, so the
+      # tests that exist had never executed in CI. A predecessor report said the
+      # only test was a 17-line placeholder; that was wrong, and it mattered — it
+      # made the fix look like "write a test" instead of "run the suite".
+      #
+      # These run without a network, a database or GStreamer, so they are safe
+      # here and fast.
+      - name: Flutter test
+        run: flutter test
+
       # 🔥 SSH Setup
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
