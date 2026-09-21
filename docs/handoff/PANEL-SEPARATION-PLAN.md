@@ -993,9 +993,11 @@ it is the single change that stops this problem recurring.
       All four are implemented by `ConsumerSuperAppController`, which exists, and the Flutter app
       already calls them (`lib/core/navigation/panel_routes.dart:301-305`). Deleting would have
       destroyed intended functionality. Verified: 0 routes before, 4 after; all 11 panels load.
-- [ ] **Add admin middleware to `super_admin.php`** — mirror the `BusFleetGate` pattern
-      (§7b.2). **NOT DONE, deliberately — see the decision note in §7b.4. Applying it blind
-      would lock the owner out of the Super Admin panel.**
+- [x] **Add admin middleware to `super_admin.php`** — **`6a400138`**, as a **shadow gate**: the
+      same three-tier check, logged, passing requests through unless
+      `SUPER_ADMIN_GATE_ENFORCE` is truthy. See §7b.4 for why `admin` could not be applied
+      directly. **Owner's next step: read the `super_admin_gate.shadow` log lines, confirm the
+      intended admin accounts appear as authorised, then set the variable to `true`.**
 - [x] **Add `dart analyze` to CI** — **`ce560194`**. Runs after `flutter pub get`, before the
       builds. Uses `--no-fatal-warnings` because the tree carries a 57-warning backlog (0
       errors); verified the gate is *not* vacuous by confirming a deliberate type error makes
@@ -1014,8 +1016,18 @@ it is the single change that stops this problem recurring.
       single-owner repo; CODEOWNERS only has effect with org teams.)*
 - [ ] **Add per-panel `paths:` filters** to the deploy workflow — stops the all-or-nothing
       rebuild of all 8 panels. **Do this with Phase 5**, per the phase plan.
-- [ ] **Write ONE real Flutter test** to replace the 17-line placeholder — proves the test
-      infrastructure works and sets the pattern.
+- [x] **Write ONE real Flutter test** — **`d95ac9f1`**, and it corrected the premise. There
+      were never "zero Flutter tests": `flutter test` reports **35**, including real bloc tests
+      such as `test/features/cricket/presentation/blocs/team/team_bloc_test.dart`. **The actual
+      gap was that no workflow ran `flutter test` at all**, so none of them had ever executed in
+      CI. Adding the step was the fix; a new widget test for the shared `Missile3DButton` was
+      added alongside it.
+      **Writing that test found a defect:** `Missile3DButton.height` is **ignored** — its
+      `CustomPaint` is built with a child, and `CustomPaint.size` is only consulted when the
+      child is null, so the body takes its height from the content (52 px) instead of the
+      parameter. `manager_dashboard_page.dart` passes `height: 72` and does not get it. The test
+      pins the current behaviour as a characterisation test so the fix is noticed; fixing it
+      changes four panels, so it belongs with D4. Details in the test file's comments.
 
 ### Still-open structural work this checklist does not cover
 
