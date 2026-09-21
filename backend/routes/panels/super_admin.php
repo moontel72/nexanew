@@ -2,8 +2,22 @@
 
 use Illuminate\Support\Facades\Route;
 
+// NOTE ON THE GUARD
+// =================
+// `auth:sanctum` alone left all of these routes reachable by ANY authenticated
+// account — a customer, a driver, a shopkeeper — which is a privilege
+// escalation onto platform-admin endpoints (/financial/vouchers/pending,
+// /security/audit-ledger, ...).
+//
+// `super.admin.shadow` runs the full three-tier super-admin check and LOGS the
+// decision, but only denies when SUPER_ADMIN_GATE_ENFORCE is truthy. That is
+// deliberate: for a super admin, AdminMiddleware's tiers 1 and 2 cannot pass
+// (see the middleware's docblock), so applying `admin` directly risked 403ing
+// every call from the owner's own account. Observation first, then flip the
+// variable. The two queries that settle it are in
+// docs/handoff/PANEL-SEPARATION-PLAN.md §7b.4.
 Route::prefix('api/v1/super-admin')
-    ->middleware(['auth:sanctum'])
+    ->middleware(['auth:sanctum', 'super.admin.shadow'])
     ->group(function (): void {
 
         // ─── Absolute Layout Presets (Sub-Admin Template Management) ──

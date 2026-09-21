@@ -59,6 +59,20 @@ return Application::configure(basePath: dirname(__DIR__))
 
             // Cricket Module — Cricket Manager Auth (isolated Bearer token guard)
             'cricket.manager' => \App\Http\Middleware\Cricket\CricketManagerAuth::class,
+
+            // Super-Admin authorisation, OBSERVATION MODE BY DEFAULT.
+            //
+            // Runs the same three-tier check as `admin` and logs the decision,
+            // but only denies when SUPER_ADMIN_GATE_ENFORCE is truthy. It is
+            // applied to super-admin routes because those sit behind
+            // `auth:sanctum` alone, so any authenticated account can reach
+            // them. `admin` itself could not be applied blind: for a super
+            // admin, tiers 1 and 2 cannot pass (account_type is
+            // 'global_identity', and identity_type is not a TenantAccount
+            // column), leaving only the master_admin_assignments row to allow
+            // it. Enabling enforcement is therefore a config change, not a
+            // code change. See docs/handoff/PANEL-SEPARATION-PLAN.md §7b.4.
+            'super.admin.shadow' => \App\Http\Middleware\SuperAdminShadowGate::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
