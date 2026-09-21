@@ -1134,3 +1134,108 @@ its new error-banner code is null-safe (`_health?['forwarder_error']?.toString()
 unreachable-when-null today, so it is a smell rather than a proven cause, and the minified
 `main.dart.js` stack cannot be resolved to a source line. **It needs a source-map build or a
 local repro to pin down.** Recorded as open; not guessed at.
+
+---
+
+## 10.10 UPDATE — 2026-09-21 21:09 UTC: THE PIPELINE STRING (the artifact this needed)
+
+The operator ran the new diagnostic. The engine now prints the description it built, and the
+exact failing pipeline is captured. Reproduced identically across `pipeline269` → `pipeline388`,
+every 5 s, for over ten minutes:
+
+```
+appsrc name=video_src format=time is-live=true do-timestamp=true
+  caps="application/x-rtp,media=video,encoding-name=H264,clock-rate=90000"
+  ! rtph264depay ! h264parse ! queue name=vq max-size-time=1000000000 ! mux.
+
+audiomixer name=mix ! audioconvert ! audioresample ! voaacenc bitrate=128000 ! aacparse
+  ! queue name=aq max-size-time=1000000000 ! mux.
+
+appsrc name=audio_commentary format=time do-timestamp=true is-live=false
+  caps="application/x-rtp,media=audio,encoding-name=OPUS,clock-rate=48000"
+  ! queue max-size-time=200000000 leaky=downstream
+  ! rtpopusdepay ! opusdec ! audioconvert ! audioresample
+  ! volume name=vol_commentary volume=1.000000 ! mix.
+
+flvmux streamable=true name=mux
+  ! rtmpsink location="rtmp://135.181.46.27:1935/live/cricket_match_a2c0880f-..._cam1" sync=false
+```
+
+### What this rules out
+
+| Hypothesis | Verdict |
+|---|---|
+| Wrong caps string | **RULED OUT** — the isolated `gst-launch` test negotiated `application/x-rtp, media=audio, encoding-name=OPUS, clock-rate=48000` successfully, and the string here is the same |
+| Missing element | **RULED OUT** — every element in the chain exists in the runtime image |
+| Declared-but-unfed branch (the §9 fault) | **RULED OUT** — `audio_commentary` is present, so it primed, so it is fed. `build_description` now derives its list from the same `live_buses` |
+| Wrong codec pushed (the §10.3 fault) | **RULED OUT for the audio path** — the filter is deployed and firing |
+
+### What it confirms
+
+1. **The topology is structurally valid.** Three statements: video → `mux.`; the mixer's output
+   chain → `mux.`; the commentary branch → `mix.`. `mix` and `mux` are both declared before they
+   are referenced by a delayed link. This is the same shape `mixer_gst.rs` uses successfully in
+   Studio.
+2. **The failure is at pipeline construction / state change, not on data.** 0.4 ms between
+   `forwarder running` and the error, and no chunk is ever pushed.
+3. **The router really does cross-deliver media types** — now on the *video* side as well:
+   ```
+   WARN dropping chunk whose codec this branch cannot carry;
+        appsrc=video_src codec=Opus expected=[H264, Vp8, Vp9]
+   ```
+   The video appsrc received an **Opus** chunk. So the SFU's rid-scoped fan-out delivers both
+   media types on both subscriptions. The forwarder's filters contain it, but **the router is the
+   place to fix it** — and that is a separate change from this outage.
+
+### The one thing in the string that is genuinely suspicious
+
+The **only** structural difference between this failing audio branch and the one that
+negotiates fine in isolation is the **delayed link form**: the isolated test declared the mixer
+inline at the end (`! audiomixer name=mix ! ...`), while the real pipeline declares
+`audiomixer name=mix` in an **earlier, separate statement** and then links the commentary branch
+into it with `! mix.`.
+
+That matters because the mixer's **output** chain is declared and linked *before* its **first
+sink pad** exists. If `voaacenc` fixates the mixer's output caps (rate/channels/format) during
+the state change while the mixer has zero sink pads, adding the commentary sink pad afterwards
+has to renegotiate, and a failure there propagates back as `NOT_NEGOTIATED` on the element that
+tried to push — which is exactly `GstAppSrc:audio_commentary`.
+
+**This is a hypothesis, and it is stated as one — three inferences in this cycle have already
+been wrong.** It is cheap to settle and it is the reason the next step is a bisect, not a fix.
+
+### The bisect (run inside the container, changes nothing)
+
+Run the captured string unchanged, then reorder it. Whichever variant reproduces the
+`not-negotiated` names the cause:
+
+```sh
+# A - the failing form: mixer's output chain declared BEFORE the branch that feeds it
+docker exec todd-studio gst-launch-1.0 -v \
+  appsrc name=video_src format=time is-live=true do-timestamp=true \
+    caps="application/x-rtp,media=video,encoding-name=H264,clock-rate=90000" \
+    ! rtph264depay ! h264parse ! queue name=vq max-size-time=1000000000 ! mux. \
+  audiomixer name=mix ! audioconvert ! audioresample ! voaacenc bitrate=128000 ! aacparse \
+    ! queue name=aq max-size-time=1000000000 ! mux. \
+  appsrc name=audio_commentary format=time do-timestamp=true is-live=false \
+    caps="application/x-rtp,media=audio,encoding-name=OPUS,clock-rate=48000" \
+    ! queue max-size-time=200000000 leaky=downstream \
+    ! rtpopusdepay ! opusdec ! audioconvert ! audioresample \
+    ! volume name=vol_commentary volume=1.000000 ! mix. \
+  flvmux streamable=true name=mux ! fakesink sync=false
+```
+
+`fakesink` replaces only the RTMP sink, so this needs no network. If **A** fails with
+`not-negotiated` while the inline-mixer form (the §10.9(e) test) does not, the ordering is the
+cause and the fix is in `build_description`. If **A** reaches PLAYING, the fault is not in the
+string at all and the next suspect is the state in which `apply_audio_config` writes to
+`vol_commentary` / the mixer before/while it negotiates.
+
+### Client-side finding (reproducible)
+
+The operator isolated the `Null check operator` precisely: it fires **only** when navigating
+**back to the dashboard** from a sub-screen, and it reproduced at the same point **twice, in two
+different browsers**. That is a reliable reproduction — far better than the minified stack. It is
+a Cricket Manager panel bug, **separate from the stream outage**, and it is recorded here so the
+deep scan (see `CRICKET-DEEP-SCAN-FOR-QODER.md`) treats it as a first-class item rather than a
+console curiosity.
