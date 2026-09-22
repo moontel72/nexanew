@@ -142,13 +142,14 @@ cargo check -p todd-signaling -p todd-sfu --features gst
 
 Iske liye `libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev`
 (GStreamer >= 1.24) chahiye. Windows par setup ka tareeqa
-`docs/handoff/FAULT-REMEDIATION-HISTORY.md` (§6) me likha hai.
+`docs/handoff/STREAMING-HISTORY-AND-FIX.md` (§7) me likha hai.
 
 ### Fault history — pehle ye parhein
 
-`docs/handoff/FAULT-REMEDIATION-HISTORY.md` me ek poori remediation cycle ki
-history hai: 11 reported faults, unmein se kaunse waqai faults the, kaunse
-fix verify hue, aur wo 5 compile errors jo pehle push ne CI par tor diye.
+`docs/handoff/STREAMING-HISTORY-AND-FIX.md` me poori history hai: pipeline ka
+map, commits ki timeline, us hop ke **teen root causes** (aur wo galat theories
+jin par waqt zaya na karein), aur verification evidence.
 
-Us file me ye bhi likha hai ke **reported streaming problem abhi bhi open
-hai** — in fixes se solve nahi hui. Naya kaam shuru karne se pehle usay parhein.
+**Public-screen stream ab kaam kar raha hai** (fix `ead72810`, 2026-09-22).
+Us file ke §6 mein baaki open items hain — HLS latency/keyframe, router
+fan-out, panel ka null-check crash — naya kaam shuru karne se pehle wo parhein.
