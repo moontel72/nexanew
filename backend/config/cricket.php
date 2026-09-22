@@ -35,6 +35,18 @@ return [
         // Bitrate (kbps) used by the engine's →SRS RTMP forwarder.
         'forwarder_bitrate_kbps' => (int) env('CRICKET_FORWARDER_BITRATE_KBPS', 4000),
 
+        // SRS HTTP API, used to confirm that a forwarder is *actually*
+        // publishing. The engine reports `running` as soon as it has built a
+        // pipeline, so a forwarder whose publisher went away can keep claiming
+        // to be healthy while SRS receives nothing — and because every recovery
+        // path (the stream watchdog, the manager panel's "Reconnect" button and
+        // the engine's own watchdogs) skips a forwarder that claims to be
+        // running, that stale state blocks self-healing indefinitely and the
+        // public page 404s with nothing in the logs. Health is therefore
+        // confirmed at the far end. Set to an empty string to fall back to the
+        // engine's own state.
+        'srs_api_url' => env('CRICKET_SRS_API_URL', 'http://127.0.0.1:1985'),
+
     ],
 
     /*

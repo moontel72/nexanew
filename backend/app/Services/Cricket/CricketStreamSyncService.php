@@ -171,11 +171,77 @@ class CricketStreamSyncService
             break;
         }
 
+        // `running` is the engine's *intent*, not evidence: it is published as
+        // soon as a pipeline object exists. Confirm it at the far end before
+        // anybody acts on it, otherwise a stale `running` is self-locking —
+        // `resyncMatch()` returns early, the watchdog prints `ok`, and the
+        // engine's own watchdogs skip "already running", so nothing recovers.
+        if ($state === 'running'
+            && $this->srsIsPublishing($this->streamNameFor($matchId, $cameraNumber)) === false
+        ) {
+            $state = 'stale';
+            $error ??= 'engine reports the forwarder running, but SRS has no active publish for this feed';
+        }
+
         return [
             'forwarder_state' => $state,
             'forwarder_error' => $error,
             'hls_url' => $this->hlsUrlFor($matchId, $cameraNumber),
         ];
+    }
+
+    /**
+     * Whether SRS is currently publishing `streamName`.
+     *
+     * Health has to be measured at the *far end*. The engine reports `running`
+     * as soon as it has built a pipeline, and a forwarder whose publisher
+     * disconnected leaves that pipeline alive but idle — no buffers reach
+     * flvmux, SRS drops the feed, and the engine still says `running`. Every
+     * recovery path skips such a forwarder, so the stale state self-locks and
+     * the public page 404s with nothing in the logs to explain it.
+     *
+     * SRS's `publish.active` is the same signal the engine is trying to
+     * produce, read from where the bytes actually arrive.
+     *
+     * @return bool|null `null` when the check cannot be made (SRS not
+     *                   configured or unreachable), so callers fall back to the
+     *                   engine's own state instead of guessing.
+     */
+    private function srsIsPublishing(string $streamName): ?bool
+    {
+        $base = rtrim((string) config('cricket.streaming.srs_api_url', ''), '/');
+        if ($base === '') {
+            return null;
+        }
+
+        try {
+            $res = Http::timeout(3)->get("{$base}/api/v1/streams/");
+            if (!$res->successful()) {
+                return null;
+            }
+
+            $streams = $res->json('streams');
+            if (!is_array($streams)) {
+                return null;
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Cricket: SRS probe failed', [
+                'url' => $base,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        foreach ($streams as $stream) {
+            if (!is_array($stream) || ($stream['name'] ?? null) !== $streamName) {
+                continue;
+            }
+
+            return ($stream['publish']['active'] ?? false) === true;
+        }
+
+        return false;
     }
 
     /** Stops the forwarder for a match's feed, if one exists. */
