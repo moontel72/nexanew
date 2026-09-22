@@ -47,6 +47,14 @@ return [
         // engine's own state.
         'srs_api_url' => env('CRICKET_SRS_API_URL', 'http://127.0.0.1:1985'),
 
+        // SRS HLS output directory, used to confirm the playlist is still
+        // *advancing*. A publish can stay `active` while the media stops — the
+        // RTMP connection is up, nothing reaches flvmux, SRS has nothing left to
+        // segment and deletes the playlist — so `publish.active` alone reports a
+        // dead feed as healthy. Only meaningful when the app runs on the SRS
+        // host; set to an empty string to skip the check.
+        'hls_dir' => env('CRICKET_HLS_DIR', '/var/www/traceodd/cricket-hls'),
+
     ],
 
     /*

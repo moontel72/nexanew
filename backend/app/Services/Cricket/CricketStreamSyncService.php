@@ -37,6 +37,16 @@ class CricketStreamSyncService
     /** SRS/HLS stream-name prefix for cricket match feeds. */
     private const STREAM_PREFIX = 'cricket_match_';
 
+    /**
+     * How long the HLS playlist may go without advancing before the feed counts
+     * as stalled.
+     *
+     * `hls_fragment` is 3s with a 30s window (see `.nginx/srs-cricket.conf`), so
+     * a live playlist is rewritten every few seconds. Half a window of silence
+     * means nothing is reaching the muxer any more.
+     */
+    private const HLS_STALE_AFTER_SECONDS = 30;
+
     public function __construct(
         private readonly MediaEngineTokenService $tokens,
     ) {
@@ -176,11 +186,12 @@ class CricketStreamSyncService
         // anybody acts on it, otherwise a stale `running` is self-locking —
         // `resyncMatch()` returns early, the watchdog prints `ok`, and the
         // engine's own watchdogs skip "already running", so nothing recovers.
-        if ($state === 'running'
-            && $this->srsIsPublishing($this->streamNameFor($matchId, $cameraNumber)) === false
-        ) {
-            $state = 'stale';
-            $error ??= 'engine reports the forwarder running, but SRS has no active publish for this feed';
+        if ($state === 'running') {
+            $reason = $this->farEndProblem($this->streamNameFor($matchId, $cameraNumber));
+            if ($reason !== null) {
+                $state = 'stale';
+                $error ??= $reason;
+            }
         }
 
         return [
@@ -242,6 +253,63 @@ class CricketStreamSyncService
         }
 
         return false;
+    }
+
+    /**
+     * Why the far end does not look healthy, or `null` when it does.
+     *
+     * Two different failures have to be caught, because they look identical to
+     * the public page and different to SRS:
+     *
+     *   1. the publish is gone (`publish.active` false, or the stream is not in
+     *      SRS at all), and
+     *   2. the publish is up but **stalled** — the connection is alive while no
+     *      media flows, so SRS stops segmenting, the window empties and the
+     *      playlist is deleted. `publish.active` alone reports that feed as
+     *      healthy while the public page 404s.
+     *
+     * Either way no recovery path would fire, which is what made the outage so
+     * hard to clear. Each check returns `null` when it cannot be made, and a
+     * reason string only when the far end is definitively broken.
+     */
+    private function farEndProblem(string $streamName): ?string
+    {
+        if ($this->srsIsPublishing($streamName) === false) {
+            return 'engine reports the forwarder running, but SRS has no active publish for this feed';
+        }
+
+        return $this->hlsStallReason($streamName);
+    }
+
+    /**
+     * Whether SRS's playlist for `streamName` has stopped advancing.
+     *
+     * The playlist is the artefact the public page actually plays, so its
+     * freshness is the most direct statement of "is video reaching viewers".
+     * `null` when the path is not configured or not readable from here.
+     */
+    private function hlsStallReason(string $streamName): ?string
+    {
+        $dir = rtrim((string) config('cricket.streaming.hls_dir', ''), '/');
+        if ($dir === '') {
+            return null;
+        }
+
+        $playlist = $dir . '/live/' . $streamName . '.m3u8';
+        $modified = @filemtime($playlist);
+        if ($modified === false) {
+            return 'engine reports the forwarder running, but no HLS playlist has been written';
+        }
+
+        $age = time() - $modified;
+        if ($age > self::HLS_STALE_AFTER_SECONDS) {
+            return sprintf(
+                'engine reports the forwarder running, but the HLS playlist has not advanced for %ds',
+                $age
+            );
+        }
+
+        return null;
     }
 
     /** Stops the forwarder for a match's feed, if one exists. */
