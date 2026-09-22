@@ -53,7 +53,7 @@ use tokio::sync::{broadcast, mpsc};
 use tokio::task::JoinHandle;
 
 use crate::hw::{h264_encode_plan, resolve_encoder};
-use crate::media::{MediaCodec, RtpChunk};
+use crate::media::{MediaCodec, RtpChunk, FALLBACK_OPUS_PAYLOAD_TYPE};
 use crate::mixer::{
     compute_levels, ease_progress, format_poll_text, plan_scene, MixerOutputConfig, PixelRect,
     ScenePlan, SlotPlan, MAX_SLOTS,
@@ -62,6 +62,15 @@ use crate::mixer::{
 /// Called with `(bus, peak_db, rms_db)` whenever a metering tap samples
 /// PCM. `bus` is `commentary`/`ambient`/`sfx`/`music` or `master`.
 pub type MeteringCallback = Arc<dyn Fn(String, f32, f32) + Send + Sync>;
+
+/// Payload type the mixer's Opus output is paid with.
+///
+/// The program forwarder re-depayloads this stream, and `rtpopusdepay` only
+/// accepts caps that fix `payload` to a concrete value in `[96, 127]`. Sharing
+/// one constant keeps the payer (`rtpopuspay` below) and the depayloader
+/// (`forwarder::build_program_description`) in agreement instead of relying on
+/// two hard-coded numbers staying equal.
+pub const PROGRAM_OPUS_PAYLOAD_TYPE: u8 = 111;
 
 /// Runtime state of one compositor slot.
 struct SlotRuntime {
@@ -1204,10 +1213,16 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
     // Each bus also has to reach the mixer through `audioconvert`: linking a
     // `tee` src pad straight into `audiomixer` fails at parse time with
     // `could not link btee_{bus} to amix`.
+    //
+    // A bus appsrc carries the camera's own RTP, and `rtpopusdepay` rejects caps
+    // that leave `payload` open, so a concrete type is mandatory. The bus feeds
+    // only arrive at runtime, when the caps string is already built, so the
+    // module's fallback type stands in — the depayloader matches the caps field
+    // rather than each packet's header, so an unused value here is harmless.
     for bus in AudioBus::ALL {
         branches.push(format!(
             "appsrc name=abus_{bus} format=time is-live=true do-timestamp=true \
-             caps=\"application/x-rtp,media=audio,encoding-name=OPUS,clock-rate=48000\" \
+             caps=\"application/x-rtp,media=audio,encoding-name=OPUS,clock-rate=48000,payload={pt}\" \
              ! rtpopusdepay ! opusdec ! audioconvert ! audioresample \
              ! volume name=avol_{bus} \
              ! audioamplify name=again_{bus} amplification=1.0 \
@@ -1218,6 +1233,7 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
              ! appsink name=meter_{bus} sync=false \
              btee_{bus}. ! audioconvert ! amix.",
             bus = bus.as_str(),
+            pt = FALLBACK_OPUS_PAYLOAD_TYPE,
         ));
     }
     // A silence pad keeps the audiomixer live when every bus is idle.
@@ -1251,16 +1267,17 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
          ! appsink name=out_sink sync=false",
         fps = config.fps,
     );
-    let audio_tail = "audiomixer name=amix \
+    let audio_tail = format!(
+        "audiomixer name=amix \
          ! tee name=audio_tee \
          audio_tee. ! queue ! audioconvert ! audioresample \
          ! audio/x-raw,format=S16LE,rate=48000,channels=2 \
          ! appsink name=meter_master sync=false \
          audio_tee. ! audioconvert ! audioresample \
-         ! opusenc ! rtpopuspay pt=111 \
+         ! opusenc ! rtpopuspay pt={PROGRAM_OPUS_PAYLOAD_TYPE} \
          ! queue max-size-time=1000000000 \
          ! appsink name=audio_out sync=false"
-        .to_string();
+    );
 
     Ok(format!(
         "{} {} {}",

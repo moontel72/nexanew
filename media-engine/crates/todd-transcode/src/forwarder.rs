@@ -33,7 +33,7 @@ use tokio::sync::{broadcast, mpsc};
 use tokio::task::JoinHandle;
 
 use crate::hw::{h264_encode_plan, resolve_encoder, EncodePlan};
-use crate::media::{MediaCodec, RtpChunk};
+use crate::media::{MediaCodec, RtpChunk, FALLBACK_OPUS_PAYLOAD_TYPE};
 
 /// How long to wait for an audio bus to prove it is carrying frames.
 ///
@@ -491,7 +491,17 @@ impl GstForwarder {
         // branch for: `build_description` builds exactly this list, and the push
         // tasks below are attached to exactly this list. A declared-but-unfed
         // branch stalls the mux and takes the video down with it.
-        let live_buses: Vec<AudioBus> = live_audio.iter().map(|(bus, _, _)| *bus).collect();
+        let live_buses: Vec<(AudioBus, u8)> = live_audio
+            .iter()
+            .map(|(bus, _, primed)| {
+                (
+                    *bus,
+                    primed
+                        .rtp_payload_type()
+                        .unwrap_or(FALLBACK_OPUS_PAYLOAD_TYPE),
+                )
+            })
+            .collect();
 
         let detected = crate::hw::detect_encoders();
         let description = build_description(
@@ -918,7 +928,8 @@ fn spawn_push_task(
 /// `live_buses` is authoritative: the description declares exactly one audio
 /// branch per entry and nothing else. The caller must attach a push task to that
 /// same set — a branch that is declared but never fed stalls the mux and takes
-/// the video down with it (see the audio-stage comment below).
+/// the video down with it (see the audio-stage comment below). Each entry also
+/// carries the RTP payload type of its stream, which the branch's caps must fix.
 #[allow(clippy::too_many_arguments)]
 fn build_description(
     target: &ForwardTarget,
@@ -927,7 +938,7 @@ fn build_description(
     spec: &EncoderSpec,
     audio_cfg: &AudioMixerConfig,
     detected: &[EncoderKind],
-    live_buses: &[AudioBus],
+    live_buses: &[(AudioBus, u8)],
 ) -> Result<String, AppError> {
     // ---- video stage -------------------------------------------------
     let rtp_caps = match codec {
@@ -1004,7 +1015,7 @@ fn build_description(
              ! queue name=aq max-size-time=1000000000 ! mux."
                 .to_string(),
         );
-        for bus in live_buses {
+        for (bus, payload_type) in live_buses {
             let bus_cfg = audio_cfg.bus(*bus);
             let db = if bus_cfg.muted {
                 -60.0f32
@@ -1025,12 +1036,23 @@ fn build_description(
                 // `not-negotiated (-4)` and took the video egress down with it.
                 // A queue absorbs that silence instead: the branch simply
                 // carries no audio until its publisher sends some.
+                //
+                // `payload` is not optional. `rtpopusdepay`'s sink template
+                // fixes it to `[96, 127]` and a caps event must carry *fixed*
+                // caps, so caps that leave it open fail `set_caps`: the
+                // depayloader never negotiates and its first buffer returns
+                // `not-negotiated (-4)`, which the appsrc reports as
+                // "streaming stopped, reason not-negotiated (-4)".
+                // `rtph264depay`'s template lists no `payload`, which is why
+                // only audio branches need one. It has to be this bus's own
+                // type, so it is carried in from the primed chunk.
                 "appsrc name=audio_{} format=time do-timestamp=true is-live=false \
-                 caps=\"application/x-rtp,media=audio,encoding-name=OPUS,clock-rate=48000\" \
+                 caps=\"application/x-rtp,media=audio,encoding-name=OPUS,clock-rate=48000,payload={}\" \
                  ! queue max-size-time=200000000 leaky=downstream \
                  ! rtpopusdepay ! opusdec ! audioconvert ! audioresample \
                  ! volume name=vol_{} volume={factor:.6} ! mix.",
                 bus.as_str(),
+                payload_type,
                 bus.as_str(),
             ));
         }
@@ -1119,12 +1141,18 @@ fn build_program_description(
         }
     };
 
+    // The program audio *is* the mixer's Opus output, which its `rtpopuspay`
+    // pays with a fixed payload type. The branch caps have to declare that same
+    // value: `rtpopusdepay` requires a fixed `payload` and rejects caps without
+    // one (see `media::FALLBACK_OPUS_PAYLOAD_TYPE`).
+    let payload_type = crate::mixer_gst::PROGRAM_OPUS_PAYLOAD_TYPE;
+
     Ok(format!(
         "appsrc name=video_src format=time is-live=true do-timestamp=true \
          caps=\"application/x-rtp,media=video,encoding-name=H264,clock-rate=90000\" \
          ! rtph264depay ! h264parse ! queue name=vq max-size-time=1000000000 ! mux. \
          appsrc name=audio_src format=time is-live=true do-timestamp=true \
-         caps=\"application/x-rtp,media=audio,encoding-name=OPUS,clock-rate=48000\" \
+         caps=\"application/x-rtp,media=audio,encoding-name=OPUS,clock-rate=48000,payload={payload_type}\" \
          ! rtpopusdepay ! opusdec ! audioconvert ! audioresample \
          ! voaacenc bitrate=128000 ! aacparse \
          ! queue name=aq max-size-time=1000000000 ! mux. \
@@ -1160,7 +1188,7 @@ mod tests {
             rid: None,
             audio: AudioMixerConfig::default(),
         };
-        let live = [AudioBus::Commentary];
+        let live = [(AudioBus::Commentary, 111)];
         let description = build_description(
             &target,
             MediaCodec::H264,
@@ -1259,7 +1287,7 @@ mod tests {
             &EncoderSpec::default(),
             &AudioMixerConfig::default(),
             &[EncoderKind::X264],
-            &[AudioBus::Commentary],
+            &[(AudioBus::Commentary, 111)],
         )
         .expect("description builds");
 
@@ -1329,7 +1357,7 @@ mod tests {
             rid: None,
             audio: AudioMixerConfig::default(),
         };
-        let live = [AudioBus::Ambient, AudioBus::Music];
+        let live = [(AudioBus::Ambient, 111), (AudioBus::Music, 111)];
         let description = build_description(
             &target,
             MediaCodec::H264,
@@ -1342,7 +1370,7 @@ mod tests {
         .expect("description builds");
 
         // Declared...
-        for bus in live {
+        for (bus, _) in live {
             assert!(
                 description.contains(&format!("name=audio_{}", bus.as_str())),
                 "{} missing: {description}",
@@ -1387,5 +1415,161 @@ mod tests {
         assert!(description.contains("voaacenc"));
         assert!(description.contains("flvmux"));
         assert!(description.contains("rtmpsink"));
+        // The program audio branch feeds `rtpopusdepay`, so its caps must fix
+        // the payload type the mixer's `rtpopuspay` uses.
+        assert!(
+            description.contains(&format!(
+                ",payload={}",
+                crate::mixer_gst::PROGRAM_OPUS_PAYLOAD_TYPE
+            )),
+            "{description}"
+        );
+    }
+
+    /// Regression: the audio branch caps must fix an RTP payload type.
+    ///
+    /// This is the shape assertion for the outage that kept the public screen
+    /// dark; [`audio_branch_negotiates_when_fed_a_packet`] proves the same
+    /// invariant against a real pipeline, which a string check alone cannot do.
+    #[test]
+    fn audio_branch_caps_fix_an_rtp_payload_type() {
+        let target = ForwardTarget {
+            camera_id: "cam-1".to_string(),
+            source: Default::default(),
+            kind: ForwardKind::Rtmp,
+            url: "rtmp://example.test/live/key".to_string(),
+            encoder: EncoderKind::Auto,
+            bitrate_kbps: 4000,
+            keyframe_interval: 60,
+            rid: None,
+            audio: AudioMixerConfig::default(),
+        };
+        let description = build_description(
+            &target,
+            MediaCodec::H264,
+            EncoderKind::Auto,
+            &EncoderSpec::default(),
+            &AudioMixerConfig::default(),
+            &[EncoderKind::X264],
+            &[(AudioBus::Commentary, 111)],
+        )
+        .expect("description builds");
+
+        assert!(
+            description.contains(
+                "application/x-rtp,media=audio,encoding-name=OPUS,clock-rate=48000,payload=111"
+            ),
+            "{description}"
+        );
+    }
+
+    /// Regression for the outage that kept the public screen dark.
+    ///
+    /// `rtpopusdepay`'s sink pad template fixes `payload` to `[96, 127]` while
+    /// `rtph264depay`'s lists none, so only the audio branch needs one. Without
+    /// it `set_caps` failed, the depayloader never negotiated, and the first
+    /// buffer pushed into its appsrc came back as `not-negotiated (-4)`:
+    ///
+    /// ```text
+    /// GstAppSrc:audio_commentary: streaming stopped, reason not-negotiated (-4)
+    /// ```
+    ///
+    /// A string assertion cannot catch that — the old string was well-formed and
+    /// GStreamer only rejects it at negotiation time — so the branch is built,
+    /// put in `PLAYING` and fed one packet.
+    #[test]
+    fn audio_branch_negotiates_when_fed_a_packet() {
+        let target = ForwardTarget {
+            camera_id: "cam-1".to_string(),
+            source: Default::default(),
+            kind: ForwardKind::Rtmp,
+            url: "rtmp://example.test/live/key".to_string(),
+            encoder: EncoderKind::Auto,
+            bitrate_kbps: 4000,
+            keyframe_interval: 60,
+            rid: None,
+            audio: AudioMixerConfig::default(),
+        };
+        let description = build_description(
+            &target,
+            MediaCodec::H264,
+            EncoderKind::Auto,
+            &EncoderSpec::default(),
+            &AudioMixerConfig::default(),
+            &[EncoderKind::X264],
+            &[(AudioBus::Commentary, 111)],
+        )
+        .expect("description builds");
+
+        crate::ensure_gst_initialized();
+
+        // The CI `check-gst` job installs only GStreamer's *base* plugins, so the
+        // elements this branch needs are not necessarily present there. A missing
+        // plugin is an environment fact, not a defect — and that job gates the
+        // image build — so skip with a reason instead of failing it. The
+        // string-level test above always runs and is the regression guard that
+        // needs no plugins.
+        let required = [
+            "rtph264depay",
+            "h264parse",
+            "flvmux",
+            "audiomixer",
+            "voaacenc",
+            "aacparse",
+            "rtpopusdepay",
+            "opusdec",
+        ];
+        if let Some(missing) = required
+            .iter()
+            .find(|name| gst::ElementFactory::find(name).is_none())
+        {
+            eprintln!("skipping audio-branch negotiation check: {missing} is not installed");
+            return;
+        }
+
+        let pipeline = gst::parse::launch(&description)
+            .expect("pipeline parses")
+            .downcast::<gst::Pipeline>()
+            .expect("is a pipeline");
+        pipeline
+            .set_state(gst::State::Playing)
+            .expect("PLAYING accepted");
+        let bus = pipeline.bus().expect("has a bus");
+
+        std::thread::sleep(std::time::Duration::from_millis(200));
+
+        let appsrc = pipeline
+            .by_name("audio_commentary")
+            .expect("audio appsrc present")
+            .downcast::<AppSrc>()
+            .expect("is an appsrc");
+
+        // A 12-byte RTP header (V2, PT 111) plus a minimal Opus payload.
+        let mut packet = vec![
+            0x80, 0x6f, 0x00, 0x01, 0x00, 0x00, 0x03, 0xc0, 0x00, 0x00, 0x12, 0x34,
+        ];
+        packet.extend_from_slice(&[0x78, 0x01, 0x02, 0x03]);
+        appsrc
+            .push_buffer(gst::Buffer::from_slice(packet))
+            .expect("appsrc accepts the buffer");
+
+        std::thread::sleep(std::time::Duration::from_millis(300));
+
+        let mut errors = Vec::new();
+        while let Some(message) = bus.pop() {
+            if let gst::MessageView::Error(error) = message.view() {
+                errors.push(format!(
+                    "{}: {}",
+                    error
+                        .src()
+                        .map(|s| s.path_string().to_string())
+                        .unwrap_or_default(),
+                    error.error()
+                ));
+            }
+        }
+        let _ = pipeline.set_state(gst::State::Null);
+
+        assert!(errors.is_empty(), "audio branch failed: {errors:?}");
     }
 }

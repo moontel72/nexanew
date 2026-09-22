@@ -48,6 +48,21 @@ impl MediaCodec {
     }
 }
 
+/// RTP payload type an Opus branch advertises when its own packets are not
+/// readable yet.
+///
+/// `rtpopusdepay`'s sink pad template fixes `payload` to `[96, 127]`, and a caps
+/// event must carry *fixed* caps, so every `appsrc` that feeds a depayloader has
+/// to declare a concrete payload type. Declaring none fails `set_caps`, which
+/// leaves the depayloader unnegotiated: the first pushed buffer then comes back
+/// as `not-negotiated (-4)`, which the appsrc reports as
+/// `streaming stopped, reason not-negotiated (-4)`.
+///
+/// `rtph264depay`'s template lists no `payload`, so only Opus branches are
+/// affected. 96 is the first dynamic payload type, and therefore always inside
+/// the range the template accepts.
+pub const FALLBACK_OPUS_PAYLOAD_TYPE: u8 = 96;
+
 /// A raw RTP packet plus the codec of its stream and its simulcast RID
 /// (empty/`None` for single-layer streams). The RID also carries the
 /// audio-bus routing tag (see `audio::AudioBus::from_rid`).
@@ -69,6 +84,13 @@ impl RtpChunk {
             header[0], header[1], header[2], header[3],
         ]))
     }
+
+    /// Parses the RTP payload type from the packet header — the low 7 bits of
+    /// byte 1 (the high bit is the marker). Returns `None` for buffers too short
+    /// to carry a header.
+    pub fn rtp_payload_type(&self) -> Option<u8> {
+        self.packet.get(1).map(|byte| byte & 0x7f)
+    }
 }
 
 #[cfg(test)]
@@ -85,6 +107,27 @@ mod tests {
             packet: Bytes::from(packet),
         };
         assert_eq!(chunk.rtp_timestamp(), Some(123_456));
+    }
+
+    #[test]
+    fn rtp_payload_type_masks_the_marker_bit() {
+        // byte 1 = 0xEF: marker set, payload type 111.
+        let chunk = RtpChunk {
+            codec: MediaCodec::Opus,
+            rid: None,
+            packet: Bytes::from(vec![0x80, 0xef, 0x00, 0x01, 0, 0, 0, 0, 0, 0, 0, 0]),
+        };
+        assert_eq!(chunk.rtp_payload_type(), Some(111));
+    }
+
+    #[test]
+    fn rtp_payload_type_none_for_empty_buffer() {
+        let chunk = RtpChunk {
+            codec: MediaCodec::Opus,
+            rid: None,
+            packet: Bytes::from_static(&[0x80]),
+        };
+        assert_eq!(chunk.rtp_payload_type(), None);
     }
 
     #[test]
