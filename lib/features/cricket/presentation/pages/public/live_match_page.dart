@@ -64,6 +64,15 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
 
   @override
   Widget build(BuildContext context) {
+    // The published cameras are portrait (the engine reports 480x800) and the
+    // web player letterboxes with `object-fit: contain`, so the visible frame
+    // is limited by height. A fixed 220 px stage therefore rendered a ~130 px
+    // wide strip in the middle of a wide screen; give the stage a share of the
+    // viewport instead, floored for small phones and capped so the scorecard
+    // below keeps its room.
+    final viewportHeight = MediaQuery.sizeOf(context).height;
+    final stageHeight = (viewportHeight * 0.42).clamp(200.0, 620.0);
+
     return Scaffold(
       backgroundColor: CricketColors.background,
       appBar: AppBar(
@@ -86,7 +95,7 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
           // Video player (HLS) with the boundary/wicket celebration
           // overlay driven by the realtime score stream.
           SizedBox(
-            height: 220,
+            height: stageHeight,
             child: Stack(
               children: [
                 Positioned.fill(

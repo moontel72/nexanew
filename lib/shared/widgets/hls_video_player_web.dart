@@ -60,8 +60,20 @@ void _attachHls(String elementId, String url) {
   var video = document.getElementById(${jsonEncode(elementId)});
   if (!video) return;
   if (window.Hls && Hls.isSupported()) {
-    var hls = new Hls();
+    // Live defaults start three segments behind the live edge and stay there,
+    // which is most of the gap between this page and the WHEP feed inside
+    // Todd Studio. Start one segment back, let hls.js catch up by playing
+    // slightly fast, and jump forward once the delay passes three segments.
+    var hls = new Hls({
+      liveSyncDurationCount: 1,
+      liveMaxLatencyDurationCount: 3,
+      maxLiveSyncPlaybackRate: 1.5
+    });
     hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, function () {
+      var started = video.play();
+      if (started && started.catch) started.catch(function () {});
+    });
     hls.loadSource(${jsonEncode(url)});
   } else {
     video.src = ${jsonEncode(url)};
