@@ -38,14 +38,19 @@ class CricketStreamSyncService
     private const STREAM_PREFIX = 'cricket_match_';
 
     /**
-     * How long the HLS playlist may go without advancing before the feed counts
-     * as stalled.
+     * Last-resort check: how long the HLS playlist may go without advancing
+     * before the feed counts as broken.
      *
-     * `hls_fragment` is 3s with a 30s window (see `.nginx/srs-cricket.conf`), so
-     * a live playlist is rewritten every few seconds. Half a window of silence
-     * means nothing is reaching the muxer any more.
+     * Deliberately generous. `hls_fragment` is 3s, but SRS runs in **pure
+     * remux** mode, so a segment only ends on a source keyframe — a feed with a
+     * long or irregular GOP regularly produces segments of 30–70s (observed:
+     * 7.3 MB for one segment), and a tight window here would declare a working
+     * feed dead and have the watchdog re-create the forwarder, which is worse
+     * than the stall it was trying to fix. Media flow is checked properly via
+     * SRS's `recv_30s`; this only catches an SRS that is accepting bytes but
+     * writing nothing at all.
      */
-    private const HLS_STALE_AFTER_SECONDS = 30;
+    private const HLS_STALE_AFTER_SECONDS = 180;
 
     public function __construct(
         private readonly MediaEngineTokenService $tokens,
@@ -202,23 +207,28 @@ class CricketStreamSyncService
     }
 
     /**
-     * Whether SRS is currently publishing `streamName`.
+     * What SRS reports for `streamName`, or `null` when it cannot be asked.
      *
      * Health has to be measured at the *far end*. The engine reports `running`
      * as soon as it has built a pipeline, and a forwarder whose publisher
      * disconnected leaves that pipeline alive but idle — no buffers reach
      * flvmux, SRS drops the feed, and the engine still says `running`. Every
-     * recovery path skips such a forwarder, so the stale state self-locks and
+     * recovery path skips such a forwarder, so that stale state self-locks and
      * the public page 404s with nothing in the logs to explain it.
      *
-     * SRS's `publish.active` is the same signal the engine is trying to
-     * produce, read from where the bytes actually arrive.
+     * `receiving` is the field that answers "is media actually flowing": SRS
+     * counts the bytes it received in the last 30s, so a live feed reads
+     * non-zero *whatever* its segment length happens to be. A segment-length
+     * signal (the playlist's mtime) must never be used for this: in pure remux
+     * mode a segment only ends on a keyframe, so a perfectly healthy feed with
+     * a long GOP can leave the playlist untouched for a minute or more, and
+     * treating that as a stall tears down a publish that was working.
      *
-     * @return bool|null `null` when the check cannot be made (SRS not
-     *                   configured or unreachable), so callers fall back to the
-     *                   engine's own state instead of guessing.
+     * @return array{active: bool, receiving: bool}|null `null` when SRS is not
+     *         configured or unreachable, so callers fall back to the engine's
+     *         own state instead of guessing.
      */
-    private function srsIsPublishing(string $streamName): ?bool
+    private function srsPublishState(string $streamName): ?array
     {
         $base = rtrim((string) config('cricket.streaming.srs_api_url', ''), '/');
         if ($base === '') {
@@ -249,10 +259,14 @@ class CricketStreamSyncService
                 continue;
             }
 
-            return ($stream['publish']['active'] ?? false) === true;
+            return [
+                'active' => ($stream['publish']['active'] ?? false) === true,
+                'receiving' => ((int) ($stream['kbps']['recv_30s'] ?? 0)) > 0,
+            ];
         }
 
-        return false;
+        // Not in SRS's list at all: no publish, nothing flowing.
+        return ['active' => false, 'receiving' => false];
     }
 
     /**
@@ -274,8 +288,14 @@ class CricketStreamSyncService
      */
     private function farEndProblem(string $streamName): ?string
     {
-        if ($this->srsIsPublishing($streamName) === false) {
-            return 'engine reports the forwarder running, but SRS has no active publish for this feed';
+        $srs = $this->srsPublishState($streamName);
+        if ($srs !== null) {
+            if (!$srs['active']) {
+                return 'engine reports the forwarder running, but SRS has no active publish for this feed';
+            }
+            if (!$srs['receiving']) {
+                return 'engine reports the forwarder running, but SRS is receiving no media for this feed';
+            }
         }
 
         return $this->hlsStallReason($streamName);
