@@ -60,14 +60,18 @@ void _attachHls(String elementId, String url) {
   var video = document.getElementById(${jsonEncode(elementId)});
   if (!video) return;
   if (window.Hls && Hls.isSupported()) {
-    // Live defaults start three segments behind the live edge and stay there,
-    // which is most of the gap between this page and the WHEP feed inside
-    // Todd Studio. Start one segment back, let hls.js catch up by playing
-    // slightly fast, and jump forward once the delay passes three segments.
+    // Stability first. This feed is **remuxed, not re-encoded**: SRS can only
+    // cut a segment on a source keyframe, so segment length tracks the
+    // publisher's GOP and is long and irregular (observed 0.5–7.3 MB, i.e.
+    // seconds to over a minute). Hugging the live edge starves the player
+    // between keyframes — it runs out of fetched content and returns to its
+    // loading state. Keep hls.js's default headroom and let it drift back
+    // rather than stall. Sub-second latency is a WebRTC (WHEP) problem, not
+    // something HLS can be tuned into.
     var hls = new Hls({
-      liveSyncDurationCount: 1,
-      liveMaxLatencyDurationCount: 3,
-      maxLiveSyncPlaybackRate: 1.5
+      liveSyncDurationCount: 3,
+      liveMaxLatencyDurationCount: 6,
+      maxLiveSyncPlaybackRate: 1.2
     });
     hls.attachMedia(video);
     hls.on(Hls.Events.MANIFEST_PARSED, function () {
