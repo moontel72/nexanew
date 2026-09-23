@@ -29,6 +29,14 @@ use Illuminate\Support\Facades\Log;
  */
 class CricketStreamWatchdog extends Command
 {
+    /**
+     * How long to wait before checking whether a re-armed feed really publishes.
+     *
+     * Long enough for the pipeline to build, connect to SRS and write a first
+     * segment; short enough that a per-minute watchdog stays cheap.
+     */
+    private const VERIFY_SECONDS = 5;
+
     protected $signature = 'cricket:stream-watchdog
                             {--match= : Only check one match id}
                             {--dry-run : Report what would be re-armed without changing anything}';
@@ -81,7 +89,24 @@ class CricketStreamWatchdog extends Command
             // re-arm that actually changed something.
             if ($sync->resyncMatch((string) $match->id)) {
                 $repaired++;
-                $this->info(sprintf('  RE-ARMED %s — live video restored', $match->id));
+
+                // `resyncMatch()` returning true only means the engine accepted
+                // the forwarder (or already claimed to be running), and the
+                // engine reports `running` from the moment a pipeline object
+                // exists — not from bytes reaching SRS. So say what was actually
+                // achieved instead of promising a restored feed: an optimistic
+                // "live video restored" is how a dark public page stayed
+                // unexplained for days.
+                sleep(self::VERIFY_SECONDS);
+                $after = $sync->healthForMatch((string) $match->id);
+
+                $this->info($after['forwarder_state'] === 'running'
+                    ? sprintf('  RE-ARMED %s — live video restored', $match->id)
+                    : sprintf(
+                        '  RE-ARMED %s — forwarder re-created, but nothing is publishing yet (%s). Is the broadcaster on air?',
+                        $match->id,
+                        $after['forwarder_error'] ?? $after['forwarder_state']
+                    ));
             }
         }
 

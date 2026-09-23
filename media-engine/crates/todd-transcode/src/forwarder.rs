@@ -292,7 +292,27 @@ fn spawn_input_pump(fanouts: Fanout, key: String, track_index: usize) {
 
         loop {
             let Some(chunk) = receiver.recv().await else {
-                // The router receiver closed; there is nothing left to pump.
+                // The router receiver closed: the camera was torn down. The
+                // router's contract is that this close "signals forwarders to end
+                // their pipelines cleanly" (see `TrackRouter::remove_camera`),
+                // and dropping the whole subscription is what actually delivers
+                // that signal — every consumer's sender goes with it, so their
+                // push tasks end, the appsrcs reach `end_of_stream()`, `flvmux`
+                // finalises and `watch_bus` reports it.
+                //
+                // Returning early instead left those channels open: the push
+                // tasks blocked forever, no EOS ever arrived, and the pipeline
+                // idled while the engine kept reporting `running` — a state no
+                // recovery path touches (the backend watchdog prints `ok`,
+                // `resyncMatch` returns early, and `rearm_stale_forwarders`
+                // skips "already running"), so the feed stayed dark with nothing
+                // in the logs to explain it.
+                //
+                // Dropping the entry also lets the next rebuild start clean:
+                // `register_inputs` is idempotent per track *name*, so a dead
+                // track left registered would make every re-arm skip its new
+                // router receiver and build a forwarder that carries no data.
+                lock_fanouts(&fanouts).remove(&key);
                 return;
             };
 
