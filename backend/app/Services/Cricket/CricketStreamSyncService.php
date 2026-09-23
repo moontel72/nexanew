@@ -94,6 +94,103 @@ class CricketStreamSyncService
     }
 
     /**
+     * Everything a browser needs to watch a match's on-air camera over WHEP.
+     *
+     * Null when there is nothing to watch: no engine configured, no Studio
+     * room, or no *live* broadcaster camera (the same `active`-aware selection
+     * the forwarder uses — a ghost `whip` camera would only make the engine
+     * answer 409 forever).
+     *
+     * The URL is deliberately **relative to this site**: the page must reach
+     * the engine through its own nginx proxy, so the SDP POST stays same-origin
+     * (no CORS preflight, no engine port exposed to the browser).
+     *
+     * @return array{
+     *     url: string,
+     *     token: string,
+     *     ice_servers: array<int, array<string, mixed>>,
+     *     room_id: string,
+     *     camera_id: string
+     * }|null
+     */
+    public function whepViewerFor(string $matchId, int $cameraNumber = 1): ?array
+    {
+        $engineUrl = $this->engineUrl();
+        if ($engineUrl === null) {
+            return null;
+        }
+
+        $director = $this->directorToken();
+
+        $rooms = $this->fetchJson("{$engineUrl}/api/v1/room/list", $director);
+        if (!is_array($rooms) || $rooms === []) {
+            return null;
+        }
+
+        $source = $this->broadcasterCamera($engineUrl, $director, $rooms);
+        if ($source === null) {
+            return null;
+        }
+
+        $base = rtrim((string) config('cricket.streaming.whep_base_path', '/whep'), '/');
+
+        return [
+            'url' => sprintf(
+                '%s/watch/%s/%s',
+                $base,
+                rawurlencode($source['room_id']),
+                rawurlencode($source['camera_id'])
+            ),
+            'token' => $this->tokens->mint(
+                role: 'viewer',
+                roomId: $source['room_id'],
+                cameraId: $source['camera_id'],
+                subject: 'cricket-public',
+                ttlSeconds: (int) config('cricket.streaming.whep_token_ttl_seconds', 21600),
+            ),
+            'ice_servers' => $this->viewerIceServers(),
+            'room_id' => $source['room_id'],
+            'camera_id' => $source['camera_id'],
+        ];
+    }
+
+    /**
+     * ICE servers for the viewer's browser.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function viewerIceServers(): array
+    {
+        $servers = [];
+
+        $stun = trim((string) config('cricket.streaming.stun_url', ''));
+        if ($stun !== '') {
+            $servers[] = ['urls' => $stun];
+        }
+
+        $turn = trim((string) config('cricket.streaming.turn_url', ''));
+        if ($turn === '') {
+            return $servers;
+        }
+
+        // Offer both transports: browsers prefer UDP and fall back to the TCP
+        // relay when a network blocks UDP outright.
+        $variants = str_contains($turn, '?transport=')
+            ? [$turn]
+            : [$turn . '?transport=udp', $turn . '?transport=tcp'];
+
+        foreach ($variants as $url) {
+            $servers[] = [
+                'urls' => $url,
+                'username' => (string) config('cricket.streaming.turn_username', ''),
+                'credential' => (string) config('cricket.streaming.turn_password', ''),
+            ];
+        }
+
+        return $servers;
+    }
+
+    /**
      * Ensures the engine is forwarding a match's on-air camera to SRS.
      *
      * Idempotent: a forwarder already running for this match's URL is left

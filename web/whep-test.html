@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cricket live video — WHEP test</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        background: #0d1117;
+        color: #e6edf3;
+        font:
+          14px/1.5 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+      }
+      h1 {
+        font-size: 15px;
+        margin: 0 0 4px;
+      }
+      p.hint {
+        margin: 0 0 14px;
+        color: #8b949e;
+      }
+      video {
+        width: 100%;
+        max-width: 420px;
+        background: #000;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+      }
+      .status {
+        margin: 12px 0;
+        padding: 10px 12px;
+        border-radius: 6px;
+        border: 1px solid #30363d;
+        background: #161b22;
+      }
+      .status.ok {
+        border-color: #2ea043;
+        color: #7ee787;
+      }
+      .status.warn {
+        border-color: #d29922;
+        color: #e3b341;
+      }
+      .status.bad {
+        border-color: #f85149;
+        color: #ff7b72;
+      }
+      .grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: flex-start;
+      }
+      .panel {
+        flex: 1 1 260px;
+        min-width: 240px;
+      }
+      dl {
+        margin: 0;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 2px 10px;
+      }
+      dt {
+        color: #8b949e;
+      }
+      dd {
+        margin: 0;
+      }
+      #clock {
+        font-size: 26px;
+        color: #7ee787;
+      }
+      pre {
+        margin: 8px 0 0;
+        padding: 10px;
+        max-height: 220px;
+        overflow: auto;
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        color: #8b949e;
+      }
+      button {
+        margin-top: 12px;
+        padding: 8px 14px;
+        background: #21262d;
+        color: #e6edf3;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #30363d;
+      }
+      code {
+        color: #79c0ff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Cricket live video — WHEP (WebRTC) test</h1>
+    <p class="hint">
+      Add <code>?match=&lt;matchId&gt;</code> to test another match. This page uses
+      the same client the public screen will use, so a green result here means the
+      player wiring is only plumbing.
+    </p>
+
+    <div class="grid">
+      <div class="panel">
+        <video id="video" controls playsinline autoplay muted></video>
+        <button id="restart" type="button">Restart watch</button>
+      </div>
+
+      <div class="panel">
+        <div id="status" class="status">starting…</div>
+
+        <dl>
+          <dt>page clock</dt>
+          <dd><span id="clock">—</span></dd>
+          <dt>video</dt>
+          <dd><span id="frames">—</span></dd>
+          <dt>target</dt>
+          <dd><span id="wire">—</span></dd>
+        </dl>
+
+        <p class="hint" style="margin-top: 14px">
+          Put a clock or stopwatch in front of the camera. The gap between it and
+          the clock above is the true end-to-end delay — no guessing. With HLS the
+          same measurement reads 10–20 s (and stalls); WHEP should read well under
+          a second.
+        </p>
+
+        <pre id="log"></pre>
+      </div>
+    </div>
+
+    <script src="/whep-test.js"></script>
+  </body>
+</html>

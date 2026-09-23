@@ -55,6 +55,33 @@ return [
         // host; set to an empty string to skip the check.
         'hls_dir' => env('CRICKET_HLS_DIR', '/var/www/traceodd/cricket-hls'),
 
+        // ── WHEP (WebRTC) viewing ──────────────────────────────────────────
+        //
+        // The public page prefers WHEP and falls back to HLS. WebRTC has no
+        // segments and no playlist, so the same camera plays sub-second rather
+        // than 10-20s behind, and it cannot be starved by a slow segment —
+        // which is exactly what makes the HLS player stall (SRS only cuts a
+        // segment on a source keyframe). The browser reaches the engine
+        // through this site's nginx proxy so the SDP POST stays same-origin.
+        'whep_base_path' => env('CRICKET_WHEP_BASE_PATH', '/whep'),
+
+        // Viewer-token lifetime. The page and the feed are public; the token
+        // only scopes the watch to one room and one camera, and a page left
+        // open for a whole match must not die, so it is long-lived on purpose.
+        'whep_token_ttl_seconds' => (int) env('CRICKET_WHEP_TOKEN_TTL', 21600),
+
+        // ICE servers handed to the viewer's browser. STUN alone is usually
+        // enough. TURN relays media when the venue blocks UDP, but the address
+        // the engine uses is internal (172.17.0.1 — the docker bridge), which a
+        // browser cannot reach, so the public one has to be supplied here. The
+        // credentials are the coturn ones from
+        // media-engine/deploy/coturn/turnserver.conf, which are already
+        // committed in this repository; override with env to rotate them.
+        'stun_url' => env('CRICKET_STUN_URL', 'stun:135.181.46.27:3478'),
+        'turn_url' => env('CRICKET_TURN_URL', 'turn:135.181.46.27:3478'),
+        'turn_username' => env('CRICKET_TURN_USERNAME', 'traceodd'),
+        'turn_password' => env('CRICKET_TURN_PASSWORD', 'traceodd-turn-2026'),
+
     ],
 
     /*

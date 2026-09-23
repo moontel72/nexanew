@@ -206,6 +206,10 @@ class PublicMatchController extends Controller
                 'is_primary' => true,
             ]],
             'available' => $health['forwarder_state'] === 'running',
+            // Preferred transport, first in the list: WebRTC/WHEP is sub-second
+            // and immune to the segment stalling that HLS cannot avoid. Null
+            // when nothing is live, in which case the page falls back to HLS.
+            'whep' => $sync->whepViewerFor($matchId),
             'source' => 'broadcaster',
         ]);
     }
