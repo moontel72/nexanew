@@ -245,20 +245,20 @@ jobs:
             php artisan optimize
             php artisan storage:link 2>/dev/null || true
 
-            # The Laravel scheduler drives `cricket:stream-watchdog`, which is
+            # The Laravel scheduler drives the cricket stream watchdog, which is
             # scheduled every minute in routes/console.php and re-arms the
-            # engine→SRS forwarder after a broadcaster reconnect or an engine
+            # engine to SRS forwarder after a broadcaster reconnect or an engine
             # restart. Nothing ever installed it, so on a server without it the
             # public page 404s with nothing in the logs to explain why: the
-            # engine keeps reporting a stale `running` state, and every
-            # recovery path skips a forwarder that claims to be running.
+            # engine keeps reporting a stale running state, and every recovery
+            # path skips a forwarder that claims to be running.
             # A dedicated /etc/cron.d file is used rather than the root user
             # crontab so any existing entries are left untouched.
             cron_file=/etc/cron.d/nexatrace-scheduler
-            if ! grep -q 'admin-panel && php artisan schedule:run' "\$cron_file" 2>/dev/null; then
-              echo '* * * * * root cd /var/www/traceodd/admin-panel && php artisan schedule:run >> /dev/null 2>&1' > "\$cron_file"
-              chmod 0644 "\$cron_file"
-              echo "Installed Laravel scheduler cron (\$cron_file)"
+            if ! grep -q 'admin-panel && php artisan schedule:run' \$cron_file 2>/dev/null; then
+              echo '* * * * * root cd /var/www/traceodd/admin-panel && php artisan schedule:run >> /dev/null 2>&1' > \$cron_file
+              chmod 0644 \$cron_file
+              echo 'Installed Laravel scheduler cron'
             else
               echo 'Laravel scheduler cron already present'
             fi
