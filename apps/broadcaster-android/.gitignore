@@ -37,3 +37,11 @@ local.properties
 
 # Google Services
 google-services.json
+
+# A stale copy of a Flutter `android/` project sits under this native app
+# (`apps/broadcaster-android/android/`: same package, plus old `.iml`/`java`
+# leftovers). It is not part of the repository, and leaving it untracked made
+# `git status` noisy enough to hide a real change once. Ignore it here rather
+# than deleting it — untracked content is unrecoverable, so removal stays a
+# deliberate, manual step.
+/android/
