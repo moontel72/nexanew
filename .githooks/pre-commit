@@ -20,6 +20,37 @@ if ! command -v node >/dev/null 2>&1; then
   exit 0
 fi
 
+# ----------------------------------------------------------------------------
+# Visibility: tracked files that are missing, and files this commit removes.
+#
+# Deliberately NOT a block. Deleting files is ordinary work (the streaming-doc
+# consolidation removed three at once on purpose), and a hook that blocks would
+# only teach people to reach for `--no-verify` — which also disables the JSON
+# gate below, making things less safe overall. The purpose here is to make a
+# *silent* disappearance loud: the root `android/` directory (17 tracked files)
+# once vanished from the worktree and nobody noticed for days.
+#
+# Read-only git calls only, and `--no-optional-locks` so a status refresh can
+# never fight the commit that is currently holding the index.
+# ----------------------------------------------------------------------------
+staged_deletions=$(git --no-optional-locks diff --cached --name-only --diff-filter=D 2>/dev/null)
+missing_tracked=$(git --no-optional-locks status --porcelain 2>/dev/null | grep '^ D' | sed 's/^ D //')
+
+if [ -n "$staged_deletions" ] || [ -n "$missing_tracked" ]; then
+  echo "" >&2
+  echo "pre-commit note — deleted files:" >&2
+  if [ -n "$staged_deletions" ]; then
+    echo "  this commit REMOVES:" >&2
+    printf '%s\n' "$staged_deletions" | sed 's/^/    /' >&2
+  fi
+  if [ -n "$missing_tracked" ]; then
+    echo "  missing from the working tree (not staged):" >&2
+    printf '%s\n' "$missing_tracked" | sed 's/^/    /' >&2
+  fi
+  echo "  Jaan-boojh kar? Theek hai. Warna: git restore <path>" >&2
+  echo "  Poori tasveer: node .scripts/worktree-tripwire.mjs" >&2
+fi
+
 if node .githooks/validate-json-config.mjs; then
   exit 0
 fi
