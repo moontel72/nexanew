@@ -11,6 +11,7 @@ import '../../../data/repositories/cricket_repository.dart';
 import '../../widgets/boundary_celebration.dart';
 import '../../widgets/match_three_column_layout.dart';
 import '../../widgets/video_player_widget.dart';
+import '../../widgets/whep_video_player.dart';
 import '../../widgets/sponsor_banner.dart';
 import 'scorecard_page.dart';
 
@@ -30,6 +31,13 @@ class LiveMatchPage extends StatefulWidget {
 }
 
 class _LiveMatchPageState extends State<LiveMatchPage> {
+  /// WHEP target for this match, when the engine has a live camera.
+  ///
+  /// Fetched independently of the HLS stream list on purpose: WHEP watches the
+  /// engine's own SFU egress, so it delivers video even while the engine→SRS
+  /// bridge (which the HLS playlist depends on) is down.
+  Map<String, dynamic>? _whep;
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +48,48 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
     scoreBloc.add(ConnectToMatch(widget.match.id));
     streamBloc.add(LoadStreams(widget.match.id));
     sponsorBloc.add(LoadSponsors(widget.match.id));
+
+    _loadWhepTarget();
+  }
+
+  Future<void> _loadWhepTarget() async {
+    final whep = await context.read<CricketRepository>().getWhepTarget(
+      widget.match.id,
+    );
+    if (!mounted || whep == null) return;
+    setState(() => _whep = whep);
+  }
+
+  /// The player to show: WHEP first (sub-second, and independent of the HLS
+  /// bridge), then the HLS playlist, then a waiting message.
+  Widget _livePlayer(String? hlsUrl) {
+    final whep = _whep;
+    final whepUrl = whep?['url']?.toString();
+    final whepToken = whep?['token']?.toString();
+
+    if (whepUrl != null &&
+        whepUrl.isNotEmpty &&
+        whepToken != null &&
+        whepToken.isNotEmpty) {
+      final ice = whep?['ice_servers'];
+      return WhepVideoPlayer(
+        url: whepUrl,
+        token: whepToken,
+        iceServers: ice is List ? ice : const [],
+        autoPlay: true,
+      );
+    }
+
+    if (hlsUrl != null && hlsUrl.isNotEmpty) {
+      return CricketVideoPlayer(hlsUrl: hlsUrl, autoPlay: true);
+    }
+
+    return const Center(
+      child: Text(
+        'Stream starting soon...',
+        style: TextStyle(color: CricketColors.textSecondary),
+      ),
+    );
   }
 
   @override
@@ -108,23 +158,7 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
                       ) =>
                         Column(
                           children: [
-                            Expanded(
-                              child:
-                                  activeStreamUrl != null &&
-                                      activeStreamUrl.isNotEmpty
-                                  ? CricketVideoPlayer(
-                                      hlsUrl: activeStreamUrl,
-                                      autoPlay: true,
-                                    )
-                                  : const Center(
-                                      child: Text(
-                                        'Stream starting soon...',
-                                        style: TextStyle(
-                                          color: CricketColors.textSecondary,
-                                        ),
-                                      ),
-                                    ),
-                            ),
+                            Expanded(child: _livePlayer(activeStreamUrl)),
                             // Multi-camera selector (3-mobile test)
                             if (streams.length > 1)
                               SizedBox(

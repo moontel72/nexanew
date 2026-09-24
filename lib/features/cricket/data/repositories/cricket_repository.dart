@@ -311,6 +311,43 @@ class CricketRepository {
     }
   }
 
+  /// The WHEP (WebRTC) watch target for a match, or null when nothing is live.
+  ///
+  /// Preferred over HLS on the public page: WebRTC has no segments and no
+  /// playlist, so it plays sub-second instead of 10-20s behind, and it cannot
+  /// be starved by a slow segment — which is exactly what makes the HLS player
+  /// stall when the publisher's keyframe interval stretches (SRS only cuts a
+  /// segment on a source keyframe in remux mode).
+  ///
+  /// Deliberately independent of the HLS bridge: WHEP watches the engine's own
+  /// SFU egress, so it works even while the engine→SRS forwarder is down.
+  ///
+  /// Returns the API's `whep` block: `{url, token, ice_servers, room_id,
+  /// camera_id}`. `url` is relative to the site root and must stay that way —
+  /// it is proxied same-origin by nginx.
+  Future<Map<String, dynamic>?> getWhepTarget(String matchId) async {
+    try {
+      final res = await _http.get(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/public/matches/$matchId/stream',
+        ),
+      );
+      if (res.statusCode != 200) return null;
+
+      final data = jsonDecode(res.body);
+      final whep = (data as Map<String, dynamic>)['whep'];
+      if (whep is! Map<String, dynamic>) return null;
+
+      final url = whep['url']?.toString() ?? '';
+      final token = whep['token']?.toString() ?? '';
+      if (url.isEmpty || token.isEmpty) return null;
+
+      return whep;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Sponsors assigned to a match. Uses the public endpoint so the
   /// public portal banner strip and the manager panel share one source.
   Future<List<SponsorModel>> getMatchSponsors(String matchId) async {
