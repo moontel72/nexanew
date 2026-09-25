@@ -175,8 +175,117 @@ Locking yourself out of the server is a worse outcome than the leak — hence st
 
 ### 3.6 Rotate the panel admin logins
 
-The Super Admin and Factory Admin passwords were publicly readable. Change both (via the admin
-UI, or by re-seeding a fresh environment with `NEXATRACE_BOOTSTRAP_ADMIN_PASSWORD` set).
+The Super Admin, **Master Admin** and **all sub-admins** had publicly readable passwords. Two separate
+concerns:
+
+**A. Fixing the seeders does NOT change existing accounts.** The rows already in the database keep
+their old passwords. Removing a constant from code is hygiene; the accounts still need rotating.
+
+**B. Two different tables hold the login**, and they must stay in sync:
+
+| Table | Column | How it is written |
+|---|---|---|
+| `global_identities` | `password_hash` | `Hash::make($plain)` — the model has a `setPasswordAttribute` mutator |
+| `tenant_accounts` | `password` | **stores the already-hashed string as-is** (no mutator — the seeder passes `$identity->password_hash`) |
+
+So always write **the same hash** to both.
+
+**Procedure — do not skip step 0.**
+
+```bash
+cd /var/www/traceodd/admin-panel
+
+# ── STEP 0: full database backup (this is what makes the rest reversible) ──
+sudo -u postgres pg_dump nexasystem_db > ~/nexasystem_db-backup-$(date +%F-%H%M).sql
+ls -lh ~/nexasystem_db-backup-*.sql | tail -1
+
+# ── STEP 1: see which records exist (no passwords shown) ──
+sudo -u postgres psql -d nexasystem_db -c "SELECT identity_type, display_name, id FROM global_identities WHERE identity_type IN ('admin','sub_admin') ORDER BY 1,2;"
+sudo -u postgres psql -d nexasystem_db -c "SELECT id, account_type, email, (global_identity_id IS NOT NULL) AS has_spine FROM tenant_accounts WHERE account_type IN ('master_admin','sub_admin') ORDER BY 2;"
+sudo -u postgres psql -d nexasystem_db -c "SELECT count(*) AS admin_users_rows FROM admin_users;"
+```
+
+> If `admin_users_rows` is greater than 0, tell the developer before continuing — that table is a
+> **separate** login path (`AdminAuthController`, the `admin` guard) and would need the same treatment.
+
+```bash
+# ── STEP 2: rotate, with a hash backup written first ──
+cat > /var/www/traceodd/admin-panel/rotate-pw.php <<'PHP'
+<?php
+require __DIR__.'/vendor/autoload.php';
+$app = require_once __DIR__.'/bootstrap/app.php';
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+
+// Alphabet deliberately excludes # $ " ' ` \ space and look-alike characters (0/O, 1/l/I).
+// A '#' in a secret is what broke the .env load — do not reintroduce one.
+$alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789-_!@%^*+';
+$gen = function (int $len = 24) use ($alphabet): string {
+    $s = '';
+    for ($i = 0; $i < $len; $i++) { $s .= $alphabet[random_int(0, strlen($alphabet) - 1)]; }
+    return $s;
+};
+
+$stamp = date('Ymd-His');
+$rows  = DB::table('global_identities')
+    ->select('id','identity_type','display_name','password_hash')
+    ->whereIn('identity_type', ['admin','sub_admin'])->get();
+
+file_put_contents("/tmp/pw-backup-$stamp.json", json_encode($rows, JSON_PRETTY_PRINT));
+echo "hash backup written to /tmp/pw-backup-$stamp.json\n\n";
+
+foreach ($rows as $r) {
+    $new  = $gen();
+    $hash = Hash::make($new);          // ONE hash, written to BOTH tables
+    DB::table('global_identities')->where('id', $r->id)->update(['password_hash' => $hash]);
+    $n = DB::table('tenant_accounts')->where('global_identity_id', $r->id)->update(['password' => $hash]);
+    printf("%-10s %-22s %s   (tenant rows: %d)\n", $r->identity_type, $r->display_name, $new, $n);
+}
+echo "\nStore these in the password manager, then delete this script.\n";
+PHP
+
+sudo -u www-data php rotate-pw.php
+rm -f rotate-pw.php          # never leave a password-rotating script on the server
+```
+
+```bash
+# ── STEP 3: verify by logging in via the app UI ──
+#   master admin: admin@nexatrace.com
+#   sub-admins:   bus.admin@ / goods.admin@ / market.admin@ / finance.admin@nexatrace.com
+# If a login fails, restore before investigating:
+
+# ── STEP 4: restore (only if needed) ──
+cat > /tmp/restore-pw.php <<'PHP'
+<?php
+require '/var/www/traceodd/admin-panel/vendor/autoload.php';
+$app = require_once '/var/www/traceodd/admin-panel/bootstrap/app.php';
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+use Illuminate\Support\Facades\DB;
+$rows = json_decode(file_get_contents($argv[1]), true);
+foreach ($rows as $r) {
+    DB::table('global_identities')->where('id', $r['id'])->update(['password_hash' => $r['password_hash']]);
+    DB::table('tenant_accounts')->where('global_identity_id', $r['id'])->update(['password' => $r['password_hash']]);
+    echo "restored {$r['display_name']}\n";
+}
+PHP
+# sudo -u www-data php /tmp/restore-pw.php /tmp/pw-backup-<STAMP>.json
+```
+
+**Re-running the seeders later:** they now require env vars and will **throw** without them:
+
+```env
+NEXATRACE_BOOTSTRAP_ADMIN_PASSWORD='…'   # NexaBootstrapSeeder
+NEXATRACE_MASTER_ADMIN_PASSWORD='…'      # MasterAdminSeeder
+NEXATRACE_SUBADMIN_PASSWORD='…'          # SubAdminSeeder
+```
+
+Note `deploy.yml` runs only `CricketFeatureRegistrySeeder`, so none of these run automatically — they
+are manual, one-off bootstrap seeders.
+
+**Minor inconsistency noticed:** sub-admin emails use `@nexatrace.com` while other seeders use
+`@nexatrace.local`. Two admin domains is confusing; worth unifying in a later pass.
 
 ### 3.7 Verify from outside
 
