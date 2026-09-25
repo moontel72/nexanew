@@ -1,0 +1,45 @@
+name: Panel isolation
+
+# Enforces the layering model of docs/handoff/PANEL-SEPARATION-PLAN.md §5b.1 and hard rules 3-5:
+#
+#     core  <-  shared  <-  features/<panel>
+#
+# Fails the build when a NEW cross-panel edge appears:
+#   • lib/shared/**       importing lib/features/**
+#   • lib/features/<A>/** importing lib/features/<B>/**   (A !== B)
+#   • lib/core/**         importing lib/shared/** or lib/features/**
+#
+# Why this exists (plan §5c mechanism 1 — "the single change that stops this problem
+# recurring"): a rule that lives only in a document gets broken again. This repo reached
+# its current state exactly that way.
+#
+# Rollout: the 12 edges that existed on 2026-09-25 are recorded in
+# `.scripts/panel-isolation-baseline.json` as tracked debt, so this check passes from day
+# one and only fails on NEW coupling. Delete a baseline entry once that edge is extracted
+# — never add one without an owner decision.
+
+on:
+  push:
+    branches: [main, mainnew]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolation:
+    name: Cross-panel imports
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Report the full coupling map (informational)
+        run: node .scripts/check-panel-isolation.mjs --report
+
+      - name: Fail on NEW cross-panel edges
+        run: node .scripts/check-panel-isolation.mjs
