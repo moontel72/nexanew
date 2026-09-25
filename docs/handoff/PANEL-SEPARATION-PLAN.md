@@ -693,6 +693,12 @@ The owner's method, applied to every department (not only the pilot):
   exactly one entry point, and its build target is the only one importing its feature folder.
 - **[Q] `dart analyze` clean** — a phase does not exit while analysis reports problems.
 
+> **Per-panel subdomain + LOCK checklist:** `docs/handoff/PANEL-SUBDOMAIN-LINKING-PLAYBOOK.md` — the
+> 24-surface table with proposed subdomains, the nginx vhost template and API-prefix map, the
+> Cloudflare records, the **two blockers** (five panels have no build step at all; the `main.dart`
+> mega-entry cannot be locked by a subdomain until Phase 1 fixes the shared auth state), and the
+> recommended wave order. Read it before starting any subdomain work.
+
 Without "lock" the same class of bug returns: the owner has already lost tested work twice
 because two panels ended up sharing one bundle and one auth state.
 
