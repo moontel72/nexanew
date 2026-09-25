@@ -188,6 +188,77 @@ Note the rotation date in your own records. Anything that logged into the databa
 date with those credentials cannot be distinguished from legitimate traffic — knowing the date
 is what defines the exposure window.
 
+### 3.9 ⚠️ After rotating, Laravel may keep using a DIFFERENT password
+
+This is the most likely thing to derail the rotation above — it is worth reading **before** you change
+anything, so you recognise it immediately.
+
+**Symptom:** `DB_PASSWORD` in `.env` is updated, PostgreSQL accepts the new password, but
+`php artisan db:show` (or the app) still fails with `password authentication failed`, and
+`config('database.connections.pgsql.password')` shows a value that is **neither the old nor the new**
+one.
+
+**Why:** `config/database.php` is a plain `env('DB_PASSWORD', '')` — verified in the repo, there is
+**no hardcoded fallback**. So a third value can only come from Laravel's resolution order:
+
+| # | Source | Effect |
+|---|---|---|
+| 1 | `bootstrap/cache/config.php` (**config cache**) | `config()` returns the **frozen** array and `env('DB_PASSWORD')` returns null — `.env` is ignored |
+| 2 | A real **process/OS environment variable** `DB_PASSWORD` | Dotenv does **not** overwrite variables that already exist in the process, so this wins over `.env` |
+| 3 | **`.env.production`** | Loaded instead of `.env` when `APP_ENV` is present in the process environment. Note `.env.example` ships with `APP_ENV=production`, and `.gitignore` lists `.env.production` — so this file is expected to exist on the server |
+| 4 | `.env` | The intended source |
+
+Relevant: `deploy.yml` runs `php artisan optimize`, which **caches the config**. So after every deploy
+the configuration is frozen until it is cleared.
+
+**Diagnose — no password value is ever printed:**
+
+```bash
+# 1. Is the config cached?  (do this FIRST — it is the usual answer)
+ls -la bootstrap/cache/config.php
+php artisan about                       # look for the Cache section: CACHED / NOT CACHED
+
+# 2. Which env file did Laravel actually load?
+php artisan tinker --execute="echo app()->environmentFile(), PHP_EOL;"
+ls -la .env .env.production .env.backup 2>/dev/null
+
+# 3. Is DB_PASSWORD set in the process environment (which overrides .env)?
+php -r 'foreach(["DB_PASSWORD","DB_USERNAME","DB_HOST","DB_DATABASE","APP_ENV"] as $k){$v=getenv($k);printf("%-12s %s\n",$k,($v===false?"NOT SET":(strlen($v)." chars, fingerprint ".substr(hash("sha256",$v),0,12))));}'
+
+# 4. Compare .env's value with what Laravel resolved — by fingerprint, never by value
+sed -n 's/^DB_PASSWORD=//p' .env | head -1 | tr -d '\r' | sed 's/^"//;s/"$//' | sha256sum
+php artisan tinker --execute="echo hash('sha256',(string)config('database.connections.pgsql.password')),PHP_EOL;"
+
+# 5. Which files define it?  (-l prints NAMES ONLY — never the value)
+grep -rl DB_PASSWORD /etc/environment /etc/profile /etc/profile.d/ /root/.bashrc /root/.profile 2>/dev/null
+grep -rl DB_PASSWORD /etc/systemd/system/ /lib/systemd/system/ /etc/supervisor/ 2>/dev/null
+
+# 6. Is the .env value even correct in PostgreSQL?
+PGPASSWORD="$(sed -n 's/^DB_PASSWORD=//p' .env | head -1 | tr -d '\r' | sed 's/^"//;s/"$//')" \
+  psql -w -h 127.0.0.1 -U postgres -d nexasystem_db -c 'select current_user;'
+
+# 7. Does psql actually NEED a password?  (a plain success does not prove the password is right)
+env -u PGPASSWORD psql -w -h 127.0.0.1 -U postgres -d nexasystem_db -c 'select 1'
+ls -la /root/.pgpass 2>/dev/null
+```
+
+> **`psql` succeeding proves nothing on its own.** If `pg_hba.conf` uses `trust` for that host, or a
+> `/root/.pgpass` file exists, psql connects without your new password ever being checked. Step 7 is
+> how you tell the difference.
+
+**Fix per cause:**
+
+| Cause | Fix |
+|---|---|
+| Config cache | `php artisan optimize:clear` |
+| Process env var | Remove it where it is defined, then re-login (`exec bash -l`) so the stale value leaves the shell |
+| `.env.production` | Update that file too, or stop it being loaded |
+| CRLF (a `.env` edited on Windows) | `sed -i 's/\r$//' .env` |
+| Quotes / `$` in the value | Wrap in single quotes — `$` is interpolated inside double quotes |
+
+**Rule for the future:** after **any** `.env` change, run
+`php artisan optimize:clear && php artisan optimize`.
+
 ---
 
 ## 4. After rotation — flip super-admin enforcement
