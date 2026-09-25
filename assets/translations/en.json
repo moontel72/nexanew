@@ -1,0 +1,21 @@
+{
+  "banknote": {
+    "disclaimer": {
+      "pre_scan_title": "Important Notice",
+      "pre_scan_body": "This tool is for educational and informational purposes only. This camera scanner does not guarantee 100% accuracy, and results may have a confidence level of around 50%. It does not provide official authentication. Please manually verify all security features of the currency note.",
+      "result_title": "Result Disclaimer",
+      "result_body": "This scan is intended solely to draw your attention to specific note features. Do not rely solely on this result. For final verification, please use State Bank recommended methods (e.g., watermark, raised printing, and security thread).",
+      "advisory_title": "Important Advisory",
+      "advisory_body": "This app merely highlights potential anomalies in this specific banknote to draw your attention. To avoid any financial loss, please verify this specific banknote with your nearest bank branch before accepting or proceeding with the transaction."
+    },
+    "consent": {
+      "checkbox_label": "I have read and agree to the disclaimer above.",
+      "proceed_button": "Scan note"
+    },
+    "result": {
+      "standard": "Standard Pattern Matched",
+      "suspicious": "Suspicious Pattern Detected",
+      "guide_button": "View the State Bank official guide"
+    }
+  }
+}
