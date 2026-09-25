@@ -1,9 +1,9 @@
 {
   "$comment": "Tracked cross-panel coupling (PANEL-SEPARATION-PLAN.md §5c mechanism 1). These import statements exist today and are grandfathered so the guard can run without a red build. Statement-level on purpose: a folder-pair baseline would let a brand-new file cross the same boundary unnoticed. REMOVE an entry once that import has been extracted — never add one without an owner decision.",
-  "generatedAt": "2026-09-25T20:59:38.617Z",
+  "generatedAt": "2026-09-25T21:37:38.599Z",
   "summary": {
-    "core -> features/auth": 7,
-    "core -> features/factory": 26,
+    "core -> features/auth": 1,
+    "core -> features/factory": 25,
     "core -> features/nexa_admin": 20,
     "core -> shared": 7,
     "core -> features/bus_operations": 1,
@@ -16,12 +16,7 @@
     "shared -> features/auth": 6
   },
   "imports": [
-    "lib/core/di/panel_bloc_providers.dart -> lib/features/auth/data/repositories/panel_auth_repository.dart",
-    "lib/core/di/panel_bloc_providers.dart -> lib/features/auth/presentation/bloc/panel_auth_bloc.dart",
-    "lib/core/di/panel_bloc_providers.dart -> lib/features/factory/presentation/bloc/factory_dashboard_bloc.dart",
     "lib/core/navigation/route_guard_middleware.dart -> lib/features/auth/presentation/pages/panel_access_denied_screen.dart",
-    "lib/core/navigation/router_integration.dart -> lib/features/auth/presentation/bloc/panel_auth_bloc.dart",
-    "lib/core/navigation/router_integration.dart -> lib/features/auth/presentation/bloc/panel_auth_state.dart",
     "lib/core/providers/app_providers.dart -> lib/features/factory/admin/data/datasources/codes_remote_datasource.dart",
     "lib/core/providers/app_providers.dart -> lib/features/factory/admin/data/repositories/billing_repository_impl.dart",
     "lib/core/providers/app_providers.dart -> lib/features/factory/admin/data/repositories/codes_repository_impl.dart",
@@ -65,8 +60,6 @@
     "lib/core/providers/app_providers.dart -> lib/features/nexa_admin/presentation/bloc/layout/super_admin_layout_cubit.dart",
     "lib/core/providers/app_providers.dart -> lib/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart",
     "lib/core/providers/app_providers.dart -> lib/features/nexa_admin/presentation/bloc/reseller_management/reseller_management_bloc.dart",
-    "lib/core/providers/panel_provider_binder.dart -> lib/features/auth/data/repositories/panel_auth_repository.dart",
-    "lib/core/providers/panel_provider_binder.dart -> lib/features/auth/presentation/bloc/panel_auth_bloc.dart",
     "lib/core/repositories/wallet_repository.dart -> lib/shared/models/wallet/wallet_model.dart",
     "lib/core/services/fraud_detection_service.dart -> lib/shared/models/wallet/wallet_model.dart",
     "lib/core/shared_widgets/auth_base_template.dart -> lib/shared/theme/colors.dart",
