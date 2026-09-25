@@ -1506,7 +1506,7 @@ create karenge us mein sab likhna hai"*).
 | **B — Factory anti-counterfeit scanner** | 3 Factory | **Ready** — `ConsumerScanController@verify`, `FactoryProductionController@verifySerial`, `smart_codes`, `code_verification_history`, `consumer_scans` | Camera sheet missing | **Fastest win — start here** |
 | **C — Bus fleet super-app** | 4 Bus / 1 Platform | Strong — bookings, holds, `absolute_bus_layouts` + revisions, vouchers, wallets, `passenger_safety_tokens`, family stream | Seat map excellent; telemetry/map stubbed | Real GPS + real map SDK (Pillar C plan) |
 | **D — Goods transport & freight** | 5 Goods | Freight ✅ (`freight_loads`/`freight_bids`, `FreightAuctionService`, matching job, `BiddingMeshController`); **relocation ❌**; **no `trucks` table**; **no `parcels` table** | Minimal (`goods_operations` = 5 files) | Pillar D plan |
-| **E — IoT vehicle security** | **7 Vehicle Security** | **Nothing.** No `devices`, `geofences`, or telemetry tables; **no immobilizer anywhere** | Nothing | Pillar E plan — full design required |
+| **E — IoT vehicle security** | **7 Vehicle Security** | **Nothing.** No `devices`, `geofences`, or telemetry tables; **no immobilizer anywhere** | Nothing | **Full plan drafted → `docs/handoff/PILLAR-E-IOT-VEHICLE-SECURITY.md`** |
 | **A — PKR banknote authentication** | **8 Trust & Safety** | **Nothing** | Nothing | **Full plan drafted → `docs/handoff/PILLAR-A-BANKNOTE-AUTHENTICATION.md`** |
 
 ### Pillar A — decisions already taken by the owner
@@ -1529,6 +1529,12 @@ stands alone:
    software one. This is the reason for point 2.
 
 ### Pillar E — note on scope
+
+The **full Pillar E plan now lives in `docs/handoff/PILLAR-E-IOT-VEHICLE-SECURITY.md`**. It records
+the published commitments (quoted from `assets/landing/landing_content.json`), the regulatory gates
+(PTA type approval, SIM registration, immobiliser safety), proposed device/server/app designs, the
+immobiliser fail-safe rules, and a phased plan that **starts with software + simulated devices** so
+the hardware is not on the critical path.
 
 The IoT vertical **does not exist in the legacy spec at all**. It appears only in
 `assets/landing/landing_content.json` (vertical `iot-security`, PKR 499/899 per month, roadmap
