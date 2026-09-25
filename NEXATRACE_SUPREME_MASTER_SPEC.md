@@ -18,7 +18,7 @@
 > | §3, §10.12 | 15 modules | **26 numbered surfaces** across **8 groups** — see plan §11. The owner's "18" was itself an estimate |
 > | §10.6 | Seat layout = `transport_bus_layouts` + `transport_bus_layout_revisions` with RFC-6902 `json_patch` | As-built is **`absolute_bus_layouts`** (freeform canvas JSON) + `absolute_bus_layout_revisions` — the migration states it is *"100% independent from the legacy `transport_bus_layouts` grid-based table"*. Both exist; the freeform canvas is what ships |
 > | §1.3 | The Rust table implies a working `flutter_rust_bridge` bridge | The bridge is **dead** — Cargo pins frb **1.82.4 (v1)**, `pubspec.yaml` declares **^2.11.1 (v2)**, zero generated artifacts, no `build.rs`. The operative path is `ffi_abi.rs` + `dart:ffi`. See plan §13 |
-> | — | *(absent)* | **PKR banknote authentication** is not mentioned anywhere in this document. It is now surface **#25**, in the new **Group 8 (Trust & Safety)** — see plan §11 and §15 |
+> | — | *(absent)* | **PKR banknote authentication** is not mentioned anywhere in this document. It is now surface **#25**, in the new **Group 8 (Trust & Safety)** — see plan §11, plan §15, and the dedicated spec `docs/handoff/PILLAR-A-BANKNOTE-AUTHENTICATION.md` |
 > | — | *(absent)* | **IoT vehicle security** appears only in `assets/landing/landing_content.json`, not here. It is now surface **#24** / **Group 7 (Vehicle Security)** — see plan §11 and §15 |
 >
 > ### What is still correct and valuable here

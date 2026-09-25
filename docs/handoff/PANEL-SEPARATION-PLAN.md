@@ -1507,11 +1507,14 @@ create karenge us mein sab likhna hai"*).
 | **C — Bus fleet super-app** | 4 Bus / 1 Platform | Strong — bookings, holds, `absolute_bus_layouts` + revisions, vouchers, wallets, `passenger_safety_tokens`, family stream | Seat map excellent; telemetry/map stubbed | Real GPS + real map SDK (Pillar C plan) |
 | **D — Goods transport & freight** | 5 Goods | Freight ✅ (`freight_loads`/`freight_bids`, `FreightAuctionService`, matching job, `BiddingMeshController`); **relocation ❌**; **no `trucks` table**; **no `parcels` table** | Minimal (`goods_operations` = 5 files) | Pillar D plan |
 | **E — IoT vehicle security** | **7 Vehicle Security** | **Nothing.** No `devices`, `geofences`, or telemetry tables; **no immobilizer anywhere** | Nothing | Pillar E plan — full design required |
-| **A — PKR banknote authentication** | **8 Trust & Safety** | **Nothing** | Nothing | Pillar A plan — full design required |
+| **A — PKR banknote authentication** | **8 Trust & Safety** | **Nothing** | Nothing | **Full plan drafted → `docs/handoff/PILLAR-A-BANKNOTE-AUTHENTICATION.md`** |
 
 ### Pillar A — decisions already taken by the owner
 
-Recorded now so the full plan does not re-litigate them:
+The **full Pillar A plan now lives in `docs/handoff/PILLAR-A-BANKNOTE-AUTHENTICATION.md`** — it carries
+the owner's disclaimer wording, the approved result wording, the training-dataset blueprint, the
+reference data model and the legal gate. The bindings are repeated here in short form so this plan
+stands alone:
 
 1. **No 100% verdict.** The product flags *suspicious* notes; it does not certify authenticity.
    Messaging must be built around suspicion, not judgement.
