@@ -2,6 +2,13 @@
 
 **Status:** planning document. No code changed yet.
 **Read with:** `docs/handoff/FAULT-REMEDIATION-HISTORY.md` (separate scope: GStreamer faults).
+**Updated 2026-09-24:** §11–§16 added from the ecosystem audit — the numbered panel registry,
+the per-surface architecture standard (BLoC vs native), the verified native/Rust layer state,
+the corrected risk register, the pillars tracked outside this plan, and the developer-environment
+fix. **Nothing already in this file was removed.** §11 is now the counting authority for
+app/panel numbers; it supersedes the informal "18 panels" figure and the spec's "15 modules".
+**Governance:** this file remains the master. `NEXATRACE_SUPREME_MASTER_SPEC.md` is the legacy
+base and now carries a correction notice; see §11 and plan hard rule 8.
 
 **Process:** this plan was reviewed twice by independent agents. Both reviews' findings were
 verified against the files and folded in here — accepted changes are marked **[Q]** with the
@@ -28,7 +35,7 @@ evidence. **Read this plan first; consult that file for depth, not for decisions
   across every admin panel and app.
 - Work lands in **phases**, so already-tested panels do not crash.
 
-### The 7 groups
+### The 8 groups *(Group 8 added 2026-09-24 — see §11)*
 
 | Group | Contents | Current folders |
 |---|---|---|
@@ -39,6 +46,10 @@ evidence. **Read this plan first; consult that file for depth, not for decisions
 | **5 — Goods / Truck** | Goods Company Admin + Goods Store Keeper + third-party Truck Owner + Truck Driver + Truck Conductor | `lib/features/goods_operations/`, `lib/main_truck_*.dart` |
 | **6 — Cricket** | Todd Studio + Cricket Manager + Todd Broadcaster (field cameras) + Public Viewer screen | `lib/features/cricket/`, `lib/main_cricket_*.dart`, `media-engine/` |
 | **7 — Vehicle Security** | Nothing exists yet | — |
+| **8 — Trust & Safety** | **NEW (2026-09-24, §11)** — Jaali / Asli / Naqli note panel (**#25**). Future home for trust/verification surfaces | — |
+
+> Group 8 is a **surface group**; whether it also becomes a separate server/department is decided in
+> Phase 8. §5's server strategy still says "7" because it counts current departments.
 
 ---
 
@@ -1149,3 +1160,396 @@ The reviewer independently agreed with the declare/feed root cause in
 
 **[Q] Recommendation, adopted as Phase S below:** verify the stream **before** starting panel
 separation. A working public stream is the owner's original complaint.
+
+---
+
+# 11. Ecosystem registry — every app and panel, numbered **[NEW — owner + audit, 2026-09-24]**
+
+The "18 apps and panels" figure was always **an estimate** — the owner's own words: *"18 andazan
+kaha tha, is se kam zyada ho sakte hain."* This section replaces estimates with a counted
+registry, so no future document or agent has to guess a number.
+
+**This registry is the counting authority.** The spec's "15 modules" (§3) and its "6 entry points"
+(§10.11) both describe an older shape of the system; they are corrected in §12–§16 and in the
+spec's correction notice.
+
+**Numbering is by group.** The table runs in plan group order (Group 1 → Group 8), so every group's
+surfaces hold consecutive numbers. **26 surfaces** in total.
+
+| # | Surface | Group | Entry point / folder | Backend panel | Architecture | Status |
+|---|---|---|---|---|---|---|
+| 1 | Super Admin Panel | 1 Platform | `main.dart` | `super_admin.php` | Flutter BLoC | Live |
+| 2 | **Sub-Admin Panel** | 1 Platform | `main.dart`, `sub_admin_login_screen.dart` | `super_admin.php` (`sub.admin` guard) | Flutter BLoC | Live (roles static) |
+| 3 | Universal Customer App | 1 Platform | ⚠️ **2 copies** — see §6 | `consumer.php` | Flutter BLoC + Rust kernel | Partial |
+| 4 | B2B Marketplace | 2 B2B | own entry point | `marketplace.php` | Flutter BLoC | Live |
+| 5 | Reseller App | 2 B2B | `main_reseller.dart` | `marketplace.php` | Flutter BLoC | Live |
+| 6 | Shop Keeper App | 2 B2B | — | `marketplace.php` | Flutter BLoC | **0 work** |
+| 7 | Factory Admin Panel | 3 Factory | `main.dart` | `factory.php` | Flutter BLoC | Live |
+| 8 | Factory Store Keeper App | 3 Factory | `main.dart`, `features/factory/store_keeper/` | `factory.php` | Flutter BLoC | Live |
+| 9 | Factory Driver App | 3 Factory | `main_driver.dart`, `features/factory/driver/` | `factory.php` | Flutter BLoC | Live |
+| 10 | Bus Fleet Admin Panel | 4 Bus | `main_bus_fleet.dart` | `bus_fleet.php` | Flutter BLoC | Live |
+| 11 | Bus Owner App | 4 Bus | `main_bus_owner.dart` | `bus_owner.php` | Flutter BLoC | Live |
+| 12 | Bus Driver App | 4 Bus | `main_bus_driver.dart` | `bus_fleet.php` | Flutter BLoC | Live (GPS stub) |
+| 13 | Bus Conductor App | 4 Bus | `main_bus_conductor.dart` | `bus_fleet.php` | Flutter BLoC | Live |
+| 14 | **Bus Fleet Store Keeper App** | 4 Bus | `features/storekeeper/` (18 files) — via `main_bus_fleet.dart` → `StorekeeperDashboardScreen(bus-fleet)` | `bus_fleet.php` | Flutter BLoC | Live |
+| 15 | **Goods Company Admin Panel** | 5 Goods | — (no entry point) | `goods_fleet.php` + `Admin\GoodsFleetController` | Flutter BLoC | **Missing** |
+| 16 | **Goods Store Keeper App** | 5 Goods | — | `goods_fleet.php` (planned) | Flutter BLoC | **Not built** |
+| 17 | Truck Owner App | 5 Goods | `main_truck_owner.dart` | `truck_fleet.php` | Flutter BLoC | Live |
+| 18 | Truck Driver App | 5 Goods | `main_truck_driver.dart` | `truck_fleet.php` | Flutter BLoC | Live (imports BUS pages) |
+| 19 | Truck Conductor App | 5 Goods | `main_truck_conductor.dart` | `truck_fleet.php` | Flutter BLoC | Live (imports BUS pages) |
+| 20 | Cricket Manager Panel | 6 Cricket | `main_cricket_manager.dart` | `cricket.php` | Flutter BLoC | Live |
+| 21 | **Todd Studio** | 6 Cricket | `media-engine/ui/todd-studio-gui/` | `studio.php` | **Rust + Tauri** | Live |
+| 22 | Todd Broadcaster App | 6 Cricket | `apps/broadcaster-android/` | media-engine | **Native Android + Rust engine** | Live (WHIP untested) |
+| 23 | Cricket Public Viewer | 6 Cricket | `main_cricket_public.dart` | `cricket.php` | Flutter BLoC | Live |
+| 24 | Device Security (IoT) Panel | **7 Vehicle Security** | — | — | Flutter BLoC | **0 work** |
+| 25 | Jaali / Asli / Naqli Note Panel | **8 Trust & Safety** | — | — | Flutter BLoC + Rust CV kernel | **0 work** |
+| 26 | Landing Page (company website) | — *(ungrouped)* | `main_landing.dart` | `public/content` | Flutter (web) | Live |
+
+### The contested surfaces — all settled
+
+| Surface | Owner's ruling | Number |
+|---|---|---|
+| **Bus Fleet Store Keeper** | Confirmed — belongs to **Group 4 (Bus)**. Shares its link with the Bus Fleet Admin but has its own login page | **#14** — last in the Bus group, immediately after the other bus surfaces |
+| **Goods Store Keeper** | Confirmed — belongs to **Group 5 (Goods / Truck)** | **#16** |
+| **Sub-Admin Panel** | Confirmed — belongs with Super Admin in **Group 1 (Platform)**. Numbered, because it has its own login screen and its own backend guard (`sub.admin`) | **#2** |
+
+**Group 8 — Trust & Safety** is new and was created at the owner's instruction to hold the note panel
+(#25). It is the natural home for future trust/verification surfaces.
+
+**#26 (Landing Page) is deliberately ungrouped.** It is the public company website, not an
+operational panel. The owner may assign it to Group 1 (Platform) later, or leave it outside group
+numbering.
+
+### Numbering map — first pass → group order (2026-09-24)
+
+This pass is the **one-time re-baseline** from arrival order to group order. Old numbers are kept
+here so documents written before this date remain readable.
+
+| Old | Surface | New |
+|---|---|---|
+| 20 | Super Admin Panel | **1** |
+| — | *Sub-Admin Panel (new)* | **2** |
+| 19 | Universal Customer App | **3** |
+| 12 | B2B Marketplace | **4** |
+| 13 | Reseller App | **5** |
+| 18 | Shop Keeper App | **6** |
+| 1 | Factory Admin Panel | **7** |
+| 2 | Factory Store Keeper App | **8** |
+| 3 | Factory Driver App | **9** |
+| 7 | Bus Fleet Admin Panel | **10** |
+| 4 | Bus Owner App | **11** |
+| 5 | Bus Driver App | **12** |
+| 6 | Bus Conductor App | **13** |
+| 24 | Bus Fleet Store Keeper App | **14** |
+| 11 | Goods Company Admin Panel | **15** |
+| — | *Goods Store Keeper App (new)* | **16** |
+| 8 | Truck Owner App | **17** |
+| 9 | Truck Driver App | **18** |
+| 10 | Truck Conductor App | **19** |
+| 14 | Cricket Manager Panel | **20** |
+| 15 | Todd Studio | **21** |
+| 16 | Todd Broadcaster App | **22** |
+| 17 | Cricket Public Viewer | **23** |
+| 21 | Device Security (IoT) Panel | **24** |
+| 22 | Jaali / Asli / Naqli Note Panel | **25** |
+| 23 | Landing Page | **26** |
+
+### Counting rules adopted
+
+1. **A surface counts if it has its own login and/or its own entry point or build target** —
+   even when it shares a link, a subdomain, or a bundle with another surface.
+2. **Shared code is not a surface.** `lib/shared/`, `lib/core/` and a group's `lib/features/<dept>/`
+   are code, not apps.
+3. **Numbers run in group order** — Group 1 first, then Group 2 … Group 8, ungrouped last. A group's
+   surfaces therefore hold consecutive numbers.
+4. **Numbers are stable after this re-baseline.** The 2026-09-24 pass above is the **one-time
+   exception** (numbers moved from arrival order to group order). From here on a retired surface
+   keeps its number and is marked retired, so older documents stay readable.
+
+### Group assignments — all settled
+
+- **#24 (IoT / Device Security)** → **Group 7 Vehicle Security** (the group exists for it).
+- **#25 (Jaali / Asli / Naqli note panel)** → **Group 8 Trust & Safety**, a new group created at the
+  owner's instruction in this pass and now listed in §1.
+- **#26 (Landing Page)** → deliberately ungrouped (see above).
+- **#2 / #14 / #16** → confirmed and numbered (table above).
+
+No surface is left without a group except the deliberately-ungrouped landing page.
+
+---
+
+# 12. Architecture standard — BLoC vs native, per surface **[NEW — audit 2026-09-24]**
+
+This plan separates *folders, builds and servers*. This section separates **runtimes** — which is a
+different axis, and answers the owner's question directly (*"koi koi se panel full Flutter BLoC,
+koi Flutter+Rust, koi Rust+Tauri?"*).
+
+## 12.1 The governing rule
+
+> **Dart/Flutter BLoC owns orchestration, state, UI and platform I/O. Native (Rust) owns only work
+> that is a measured hotspot, that runs per-frame, or that must reuse a native library.**
+>
+> **No surface is "a Rust app". Every surface is a Flutter app that may call a native kernel.**
+
+Practical test before adding native code to any surface: *is this a measurable hotspot, or am I
+adding FFI boundary cost for nothing?* For forms, lists, seat maps, dashboards and bidding UIs, the
+answer is the second one.
+
+## 12.2 Per-surface decision
+
+| # | Surface | Runtime | Rationale |
+|---|---|---|---|
+| 1–2, 4–20, 23–24, 26 | All platform-admin, B2B, factory, bus, goods, cricket-manager, public-viewer, shopkeeper, IoT and landing surfaces | **Flutter BLoC only** | UI-shaped work. Native adds cost, not speed |
+| 3 | Universal Customer App | **Flutter BLoC + native kernel** | 95% BLoC; only camera-frame work crosses into native |
+| 21 | Todd Studio | **Rust + Tauri (desktop)** | Heavy media pipeline; desktop-only by design |
+| 22 | Todd Broadcaster | **Native Android (Kotlin) + Rust media engine** | WHIP/WebRTC ingest — not a Flutter use case |
+| 25 | Jaali / Asli / Naqli Note Panel | **Flutter BLoC + Rust CV kernel + platform-native inference** | Heaviest compute in the ecosystem |
+
+Net: **22 surfaces are pure Flutter BLoC; 2 are Flutter BLoC + native kernel (#3, #25); 1 is
+Rust + Tauri (#21); 1 is native + Rust engine (#22).**
+
+## 12.3 The jank trap — synchronous FFI on the UI thread
+
+This is the single most important engineering rule for surfaces #3 and #25, and it is the answer
+to the owner's worry that a Flutter app will *"hang, ruk ruk kar chale"*:
+
+- Flutter's UI runs on **one main isolate**. Heavy work there = jank.
+- **Calling Rust synchronously from that isolate is equally janky.** Being written in Rust does not
+  make a call asynchronous. This is the trap: a correct, fast Rust kernel can still freeze the app
+  if it is called synchronously from the main isolate.
+- Therefore, one of:
+  - `flutter_rust_bridge` **v2**'s async API (v1 has no equivalent — see §13.2), **or**
+  - `Isolate.run(...)` / a worker isolate around the raw FFI call, **or**
+  - a native thread that posts results back (port/callback).
+- Camera frames must **not** cross into the Dart heap — pass handles, not byte lists.
+- The camera surface must be **isolated** so its processing never touches the rest of the app.
+
+## 12.4 Why the Customer App must NOT follow Todd Studio
+
+Owner's question: *"Customer app BLoC me theek rahegi ya Todd Studio ki tarah bina BLoC, taake
+halki rahe?"*
+
+**Answer: keep Flutter BLoC.**
+
+- **Todd Studio is desktop-only.** It is a Tauri shell built by `desktop-build.yml` into
+  NSIS/MSI installers for Windows/macOS. It has no mobile target, and never will under this shape.
+- **The Customer App ships to Play Store and App Store.** Rust-only or Tauri gives up mobile
+  deployment entirely.
+- **BLoC is not the cause of stutter.** Main-thread work is. The fix is §12.3, not abandoning the
+  app's architecture.
+- A Flutter Web build compiles Dart to JavaScript in the visitor's browser (§8, Phase 0a) — one
+  more reason architecture decisions here are deployment decisions.
+
+## 12.5 Which surfaces get a native kernel, and when
+
+| Surface | Kernel | When |
+|---|---|---|
+| #3 Customer App | Camera frame prep, QR/scan payload validation, later OVI/frame features | **After** Phase 6 (API-only coupling) + the §6 customer-app merge |
+| #25 Note Panel | Frame prep, ROI crop, blur/exposure gating, binarization, thread/fibre features | Pillar A, on its own track (see §15) |
+| #8 / #12 (Factory Store Keeper, Bus Driver) | Optional: reuse the existing `algorithms::*` (SHA-256, auth-code verify) | Only if a measured hotspot appears — not by default |
+| Everything else | None | Never |
+
+---
+
+# 13. Native / Rust layer — verified state and remediation **[NEW — audit 2026-09-24]**
+
+This plan has so far said nothing about the native layer, yet Group 3 (factory code generation) and
+Group 6 (cricket) both depend on it. The audit found it **half-broken**. This section records the
+verified state so the fixes can be scheduled, not re-discovered.
+
+## 13.1 `rust/` crate — facts
+
+| Fact | Value |
+|---|---|
+| Package / lib | `trace_odd_rust` v0.1.0, edition 2021 |
+| Crate type | `["cdylib", "staticlib"]` + a `trace_odd_rust` CLI binary |
+| Declared bridge | `flutter_rust_bridge = "1.82.4"` (v1) in `rust/Cargo.toml` |
+| **Declared in app** | `flutter_rust_bridge: ^2.11.1` (**v2**) in `pubspec.yaml` |
+| Real FFI surface | `rust/src/ffi_abi.rs` — 11 hand-written `#[no_mangle] extern "C"` symbols returning NUL-terminated JSON |
+| Vestigial surface | 29 `#[frb]` items in `rust/src/lib.rs` (v1 macro style) |
+| What actually does work | `algorithms/` (SHA-2, AES-GCM, ChaCha20-Poly1305, Argon2, PBKDF2, HMAC, TOTP/HOTP, Luhn/EAN/UPC checksums), `generators/` (bundle → carton → packet → unit + hierarchical) |
+| What is a stub | `international/{gs1,qr,barcode}` emit formatted **strings**, not encodings (`Cargo.toml`: *"qr-code, barcode, gs1 removed — crates not available on crates.io"*) |
+| Camera / CV / AI | **None.** No `image`, `opencv`, `onnx`, `tflite`, `candle`, `imageproc` — no matches anywhere |
+
+## 13.2 The bridge is dead — dual-version, no generated artifacts
+
+- `rust/Cargo.toml` pins **1.82.4 (v1)**; `pubspec.yaml` declares **^2.11.1 (v2)**. The two APIs are
+  incompatible, so neither side can be right.
+- **Zero generated artifacts**: no `frb_generated.rs`, no `frb_generated.dart`, no `rust_builder/`,
+  no `flutter_rust_bridge.yaml`, and **no `build.rs`** — so the declared build-dependency never runs.
+- **Zero Dart files import `package:flutter_rust_bridge`.**
+- The operative contract is therefore `ffi_abi.rs` + `dart:ffi` in `lib/rust_module/ffi_config.dart`
+  (`DynamicLibrary.open` + `lookupFunction`), whose 11 symbol names **match** `ffi_abi.rs` exactly.
+
+**Decision required (owner):** complete a **v2 migration**, or **remove `flutter_rust_bridge`** and
+make `ffi_abi.rs` the official, documented contract. The recommendation is to **remove it** —
+`ffi_abi.rs` already works, deployment stays simple, and the v1/v2 conflict disappears permanently.
+
+## 13.3 Symbol mismatch — `verify_serial_on_device`
+
+`lib/core/crypto/rust_serial_validator.dart:111` looks up **`verify_serial_on_device`**, which **no
+Rust code exports**. Its exception path catches `CryptographicBridgeException` and rethrows, so once
+the native library loads (`isNativeAvailable == true`) the intended Dart fallback is **bypassed** and
+the call throws instead of degrading.
+
+## 13.4 Memory ownership
+
+Rust allocates response strings with `CString::into_raw`; the Dart side frees only the **request**
+pointer (`calloc.free`). **Responses are never freed** — a per-call leak. A free contract is needed
+(e.g. an exported `nexatrace_free_string`) before any long-running native path ships.
+
+## 13.5 Packaging gap — the native library is never shipped to a device
+
+No `CMakeLists.txt`, no `*.podspec`, and no Gradle step invokes `cargo`. The `cdylib` is built only
+by `deploy.yml` **for the server**. Consequence: on Android/iOS/desktop `DynamicLibrary.open` fails,
+`isAvailable == false`, and the Dart fallback silently takes over. **Any plan that puts a Rust kernel
+inside the Customer or Note app is blocked on this** — it must be fixed before §12.5 work starts.
+
+## 13.6 Cricket drift check — broken, and how to fix it
+
+`backend/app/Services/Cricket/LiveScoreService.php` shells out to the configured Rust binary with
+`cricket --recompute`. But `rust/src/main.rs` handles **only** `generate` and `--version`; every other
+argument falls into the `other =>` arm and `exit(1)`. **So the drift check can never succeed**, and it
+fails silently. Cause: score recomputation moved to the `todd-cricket` crate in `media-engine/`
+(`main.rs`'s own comment says so), but PHP was never repointed, and **no workflow deploys the
+`todd-cricket` binary** — its default path `/opt/nexatrace/trace_odd_rust` is a *different* binary.
+
+| Option | What it means | Verdict |
+|---|---|---|
+| **A — restore the old contract** | Re-add a `cricket` arm to `main.rs` that calls `todd-cricket`'s `recompute()` | **Rejected.** Scoring logic would exist in two places — the exact duplication the owner ruled against |
+| **B — point PHP at the right binary** | Build + deploy `todd-cricket`, set `CRICKET_RUST_BINARY` (default is the wrong binary today) | **Do this — immediate fix** |
+| **C — ship it in the media-engine image** | Include `todd-cricket` in the media-engine Docker image (it already has CI) and have PHP call it | **Target state** |
+
+**Owner's ruling recorded:** A is rejected; **B now, C later.** Option A was previously proposed by
+another agent and declined on the grounds that duplicate scoring logic "would not matter" — the owner
+disagrees, and this plan follows the owner. **Duplicated scoring logic is treated as a defect, not a
+shortcut.**
+
+### Streaming context for Phase S (read before running the A/B test)
+
+The drift check sits in the same Group 6 (Cricket) domain as the streaming problem, so the two get
+confused. The owner's account of the sequence:
+
+1. Public viewer stream ran over **HLS** and stuttered.
+2. Further problems followed.
+3. The most recent change moved the ingest path to **WHIP — and it has not been tested yet.**
+
+**Consequence for Phase S:** confirm **which transport is now canonical (HLS or WHIP)** before running
+the §9.9 A/B experiment, because the last change moved the transport and is unverified. Verifying an
+HLS path against a server that now serves WHIP would produce a misleading result. Phase S is still
+the first phase; only its target URL/path needs to be confirmed first.
+
+## 13.7 Build / CI matrix
+
+| Workflow | Rust | What it builds |
+|---|---|---|
+| `deploy.yml` | yes | `cd rust && cargo build --release` → `trace_odd_rust`; rsync to `/opt/nexatrace`. **No features** (Linux only) |
+| `media-engine-build.yml` | yes | `cargo check -p todd-signaling -p todd-sfu --features gst`; GStreamer tests; Docker images with `FEATURES=gst` |
+| `media-engine.yml` | yes | fmt, clippy `-D warnings`, `cargo test --workspace`; **trigger branch `master`** — stale vs `main`/`mainnew` |
+| `desktop-build.yml` | yes | Tauri shell → NSIS + MSI (Windows) |
+| **any workflow** | — | **No workflow builds or deploys `todd-cricket`** |
+
+Reminder from `AGENTS.md`: `cargo check --workspace` does **not** compile `forwarder.rs`, `mixer_gst.rs`
+or `audio.rs` — they sit behind `#[cfg(feature = "gst")]`. The CI command
+`cargo check -p todd-signaling -p todd-sfu --features gst` is the one that proves anything.
+
+## 13.8 Media engine boundary — do not merge
+
+`media-engine/` is a **separate Rust workspace** (`todd-signaling`, `todd-sfu`, `todd-transcode`,
+`todd-replay`, `todd-cricket`, `todd-common`, `todd-telemetry`). It has **no path dependency** in
+either direction with `rust/`, and `media-engine/docs/01-architecture.md` explicitly says not to merge
+them (*"that one is flutter_rust_bridge FFI glue … a completely different build and deployment
+lifecycle"*). Keep them separate; §13.6 option C couples them only at the image/packaging level.
+
+---
+
+# 14. Risk register — corrected status and fix steps **[NEW — audit 2026-09-24]**
+
+An earlier draft of the audit listed items that have **since been fixed**. The corrected table follows;
+several rows are already shipped and only need an owner action.
+
+| Risk | Status now | Fix | Owner |
+|---|---|---|---|
+| **Super-admin endpoints non-enforcing** | **Mitigated** — shadow gate shipped (`6a400138`), per §7b.4 | Read the `super_admin_gate.shadow` log lines, confirm the intended admin accounts appear as authorised, then set `SUPER_ADMIN_GATE_ENFORCE=true` | **Owner** |
+| **Plaintext DB credentials** | **File deleted** (`bdb3001d`) — but the **passwords are not rotated** and are in git history permanently | Phase 0a order: (1) check `pg_hba.conf` for `0.0.0.0/0` on port **5444**, (2) restrict, (3) **rotate both `postgres` and `nexa_app`**, (4) add `gitleaks` to CI | **Owner (server-side)** |
+| **Realtime/Redis silently degraded** | Live — `BROADCAST_DRIVER` defaults to `log`, `CACHE_STORE=database`, `QUEUE_CONNECTION=database` | Set `BROADCAST_DRIVER=reverb`, `CACHE_STORE=redis`, `QUEUE_CONNECTION=redis` in production `.env`; add a startup health check that warns when they are not real | Owner + dev |
+| **Fabricated telemetry in shipped UI** | Live — driver dashboard shows hardcoded GPS strings; `shared/widgets/maps/fleet_live_map_canvas.dart` documents itself as pseudo-position by vehicle-ID hash | Either wire a real source or label it honestly as a demo. Note §6 already lists `driver_gps_beacon` and `live_bus_tracking_screen` as **never referenced** — so first decide: delete, or wire | Dev |
+| **`/customer/my-tickets` is not a route** | Live — the live customer screen pushes a path `app_router.dart` does not define | Add the route during the §6 customer-app merge, or remove the button | Dev |
+| **`verify_serial_on_device` symbol mismatch** | Live — throws once the native lib loads | Fix inside §13 rust hygiene: export it in Rust, or remove the Dart lookup | Dev |
+| **`dart analyze` backlog** | CI gate shipped (`ce560194`), `--no-fatal-warnings`, **57 warnings / 0 errors** | Burn down the 57, then flip to fatal | Dev |
+| **37 composer advisories** (11 packages) | Untriaged, pre-existing | `composer audit`, triage, upgrade as its own reviewable change | Dev |
+| **Hardcoded `root@135.181.46.27`** | Live — 9 occurrences in `frontend-deploy.yml` | Use the same `vars.VPS_HOST` that `deploy.yml` uses — **create the repo variable first**, or the deploy breaks | Owner + dev |
+
+### Additional debt found by this audit, not yet in §6 or §9b
+
+| # | Debt | Evidence |
+|---|---|---|
+| 1 | **Three parallel HTTP clients** | `core/network/api_client_v2.dart` (Dio), `core/services/api_client.dart` (http), `core/services/api_service.dart` — different features use different ones, and `app_initializer.dart` carries a *"C4 FIX: Token sync bridge"* shim to reconcile their tokens |
+| 2 | **Two parallel WebSocket stacks** | `core/services/websocket_hub.dart` + `ws_socket*` **vs** `bus_operations/data/services/bus_tracking_websocket_*` — both speak Pusher/Reverb, both duplicate the `dart:io`/`dart:html` split |
+| 3 | **`get_it` declared but unused** | `app_initializer.dart`: *"Replaces get_it initialization with Flutter BLoC's RepositoryProvider"* |
+| 4 | **`setState()` backlog** | Hundreds of calls across cricket (top: `player_register_page` 12, `players_list_page` 8), factory code-gen screens, and bus_ops. Rule 1 in the owner's standing instructions forbids `setState`; the pattern has drifted. Freeze new usage, burn down old |
+| 5 | **1142-line `app_router.dart`** | Covered by §7, but worth restating as the root coupling artefact |
+
+---
+
+# 15. Tracked outside this plan's scope **[NEW — audit 2026-09-24]**
+
+Five product pillars were identified in the audit. Only two overlap this plan's groups; the rest are
+recorded here so they are not lost, with their **full technical plans to be written into the new
+master document** (owner's instruction: *"yeh abhi mere liye nahi likhna, jab final new md file
+create karenge us mein sab likhna hai"*).
+
+| Pillar | Group | Backend state | Frontend state | Next step |
+|---|---|---|---|---|
+| **B — Factory anti-counterfeit scanner** | 3 Factory | **Ready** — `ConsumerScanController@verify`, `FactoryProductionController@verifySerial`, `smart_codes`, `code_verification_history`, `consumer_scans` | Camera sheet missing | **Fastest win — start here** |
+| **C — Bus fleet super-app** | 4 Bus / 1 Platform | Strong — bookings, holds, `absolute_bus_layouts` + revisions, vouchers, wallets, `passenger_safety_tokens`, family stream | Seat map excellent; telemetry/map stubbed | Real GPS + real map SDK (Pillar C plan) |
+| **D — Goods transport & freight** | 5 Goods | Freight ✅ (`freight_loads`/`freight_bids`, `FreightAuctionService`, matching job, `BiddingMeshController`); **relocation ❌**; **no `trucks` table**; **no `parcels` table** | Minimal (`goods_operations` = 5 files) | Pillar D plan |
+| **E — IoT vehicle security** | **7 Vehicle Security** | **Nothing.** No `devices`, `geofences`, or telemetry tables; **no immobilizer anywhere** | Nothing | Pillar E plan — full design required |
+| **A — PKR banknote authentication** | **8 Trust & Safety** | **Nothing** | Nothing | Pillar A plan — full design required |
+
+### Pillar A — decisions already taken by the owner
+
+Recorded now so the full plan does not re-litigate them:
+
+1. **No 100% verdict.** The product flags *suspicious* notes; it does not certify authenticity.
+   Messaging must be built around suspicion, not judgement.
+2. **Dedicated hardware is permitted.** The mobile camera is not the only capture device — a
+   purpose-built capture device is acceptable for features the phone cannot resolve.
+3. **SBP is asked first.** Serial-number verification is pursued **only** if State Bank rules permit
+   it. **Legal clearance precedes coding.**
+4. **Three phases:** capture + quality + OVI heuristic (on-device) → thread/fibre verification
+   (native kernel) → server-side model + continuous improvement.
+5. **Known hard limit, recorded honestly:** PKR micro-text is ~0.2 mm; phone-camera optical and
+   diffraction limits make reliable press-fidelity comparison an **optical** problem, not only a
+   software one. This is the reason for point 2.
+
+### Pillar E — note on scope
+
+The IoT vertical **does not exist in the legacy spec at all**. It appears only in
+`assets/landing/landing_content.json` (vertical `iot-security`, PKR 499/899 per month, roadmap
+Phase 4). Group 7 was created for it. **It must be registered as a first-class module in the new
+master document**, or it will keep being forgotten by agents that read only the spec.
+
+---
+
+# 16. Developer environment — Zed language servers **[NEW — audit 2026-09-24]**
+
+`.zed/settings.json` currently declares `file_scan_exclusions` and `agent` only — it has **no `lsp`
+section**. Zed therefore falls back to bundled/default servers, and `yaml-language-server` and
+`dart-language-server` have been failing repeatedly in this workspace.
+
+**Fix plan (no other file is affected):**
+
+1. Confirm the toolchain paths on the machine (owner runs, output shared):
+   `where dart` · `where flutter` · `where node` · `where npm` · `where yaml-language-server` ·
+   `dart --version` · `node --version`
+2. Add an explicit `lsp` block to `.zed/settings.json`:
+   - `dart` → `{"binary": {"path": "<flutter-sdk>/bin/dart", "arguments": ["language-server", "--protocol=lsp"]}}`
+   - `yaml-language-server` → `{"binary": {"path": "yaml-language-server", "arguments": ["--stdio"]}}`
+3. If the YAML server is not needed (this repo has very few YAML files — CI workflows and
+   `pubspec.yaml`), the cleanest option is to **disable it** so the failure stops appearing every
+   session: `"yaml-language-server": {"enabled": false}`.
+
+**Constraint to respect:** `.githooks/validate-json-config.mjs` validates `.zed/settings.json`
+before commit. The file is JSONC (comments allowed), so the hook's parser must accept the edit —
+run `node .githooks/validate-json-config.mjs .zed/settings.json` after changing it.

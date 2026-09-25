@@ -1,13 +1,51 @@
 # TRACE ODD — SUPREME MASTER ARCHITECTURE SPECIFICATION
-## Universal Source of Truth · Production Roadmap 2026 · v5.0 — Greenfield Cutover Edition
+## Legacy Base Document · v5.0 — Greenfield Cutover Edition · **CORRECTED 2026-09-24**
+
+> ## ⚠️ CORRECTION NOTICE — READ BEFORE USING THIS DOCUMENT
+>
+> **Status: legacy base, superseded in parts.** Still authoritative for §10's *principles*;
+> **no longer authoritative** for surface counts, entry points, build status, or fleet-app structure.
+>
+> **The master document is `docs/handoff/PANEL-SEPARATION-PLAN.md`.** Where the two disagree, that
+> plan wins — its §9 hard rule 8 already records that this file *"needs a correction pass"*.
+>
+> ### What this document gets wrong (all verified 2026-09-24)
+>
+> | Section | Claim here | Reality |
+> |---|---|---|
+> | §6, §10.11, Appendix A | Greenfield: *"only Login + an empty Dashboard"*, *"no business tables migrated"*, *"Rust FFI skeleton crate only"* | 13 `lib/main_*.dart` entry points, 135 migrations, 11 panel route files, ~52 services, a populated `media-engine/` Rust workspace, and a native Android broadcaster already exist |
+> | §10.11.1, Appendix A | 6 entry points; `main_fleet_{owner,driver,conductor}.dart`; `lib/features/fleet/**` | **Rejected by the owner** (plan **D1**). Bus and truck stay **separate** apps; `main_driver.dart` and `main_reseller.dart` are **live, not deleted**; `lib/features/fleet/**` must **not** be created |
+> | §3, §10.12 | 15 modules | **26 numbered surfaces** across **8 groups** — see plan §11. The owner's "18" was itself an estimate |
+> | §10.6 | Seat layout = `transport_bus_layouts` + `transport_bus_layout_revisions` with RFC-6902 `json_patch` | As-built is **`absolute_bus_layouts`** (freeform canvas JSON) + `absolute_bus_layout_revisions` — the migration states it is *"100% independent from the legacy `transport_bus_layouts` grid-based table"*. Both exist; the freeform canvas is what ships |
+> | §1.3 | The Rust table implies a working `flutter_rust_bridge` bridge | The bridge is **dead** — Cargo pins frb **1.82.4 (v1)**, `pubspec.yaml` declares **^2.11.1 (v2)**, zero generated artifacts, no `build.rs`. The operative path is `ffi_abi.rs` + `dart:ffi`. See plan §13 |
+> | — | *(absent)* | **PKR banknote authentication** is not mentioned anywhere in this document. It is now surface **#25**, in the new **Group 8 (Trust & Safety)** — see plan §11 and §15 |
+> | — | *(absent)* | **IoT vehicle security** appears only in `assets/landing/landing_content.json`, not here. It is now surface **#24** / **Group 7 (Vehicle Security)** — see plan §11 and §15 |
+>
+> ### What is still correct and valuable here
+>
+> - **§10.1 Global Identity & Claims Spine**, **§10.3 Feature Toggle (3-level cache)**, **§10.5
+>   Idempotent Commission Split**, **§10.7 Penalty Engine**, **§10.8 Audit Log Partitioning**,
+>   **§10.9 Telemetry Channel Routing** (the `admin.{assignment_id}.{feature_code}` scheme),
+>   **§10.10 Middleware Stack Order**, and **§10.13 Schema Delta** — well specified, still the target
+>   design. Use them.
+> - **§2 Core Architecture Laws** (visible `Scrollbar` + `SingleChildScrollView`, nested lists with
+>   `shrinkWrap: true` + `NeverScrollableScrollPhysics`, state isolation, offline-first mutators) and
+>   **§4 Cross-Cutting Concerns 12A–12O** remain standing rules.
+> - **§1.3's** note that camera binarization + OCR is *"Planned for v2"* is **accurate** — nothing has
+>   been built. It is the honest starting point for Pillar A.
+>
+> **Instruction to agents:** read `PANEL-SEPARATION-PLAN.md` **first**. Come here for §10's
+> architecture principles and §4's cross-cutting rules — never for counts, entry points, or status.
+
+> **PROTOCOL FOR ALL AI AGENTS & DEVELOPERS:** This document is the absolute, unified, and singular Source of Truth for the entire Trace Odd ecosystem. It replaces all prior master files (`PROJECT_MASTER.md`, `PROJECT_LOGICS_TREE.md`, `ARCHITECTURAL_PROPOSAL_MULTI_TENANT_CLOUD.md` v1.0, and all derivative specifications). It integrates the original ~4,000-line business requirement trees, the full technical modernization blueprint of 2026, the 15-module product registry, AND the approved **Multi-Tenant Cloud Architecture v2.0** (Section 10 — authoritative). **No code generation, architecture decision, or feature planning shall proceed without strict reference to this document.** *Amended 2026-09-24: it is a **legacy base document**, not the singular source of truth — where it conflicts with `docs/handoff/PANEL-SEPARATION-PLAN.md`, the plan wins (see the correction notice above).*
 
 ---
 
-> **PROTOCOL FOR ALL AI AGENTS & DEVELOPERS:** This document is the absolute, unified, and singular Source of Truth for the entire Trace Odd ecosystem. It replaces all prior master files (`PROJECT_MASTER.md`, `PROJECT_LOGICS_TREE.md`, `ARCHITECTURAL_PROPOSAL_MULTI_TENANT_CLOUD.md` v1.0, and all derivative specifications). It integrates the original ~4,000-line business requirement trees, the full technical modernization blueprint of 2026, the 15-module product registry, AND the approved **Multi-Tenant Cloud Architecture v2.0** (Section 10 — authoritative). **No code generation, architecture decision, or feature planning shall proceed without strict reference to this document.**
-
----
-
-> **🚨 GREENFIELD CUTOVER NOTICE (2026-06-02 — AUTHORITATIVE):**
+> **🚨 GREENFIELD CUTOVER NOTICE (2026-06-02 — SUPERSEDED IN PART, 2026-09-24):**
+>
+> **⚠️ Items 3 and 4 below are FALSE and must not be acted on.** The repo holds **13 live
+> `lib/main_*.dart` entry points** and a populated backend — nothing was purged. See the correction
+> notice above and `PANEL-SEPARATION-PLAN.md` §11. Items 1, 2, 5 and 6 still stand.
 >
 > 1. **Zero Published Apps.** No application is currently live on the Google Play Store or Apple App Store.
 > 2. **Zero Live Users.** All deployments to date are internal/testing only.
@@ -1985,6 +2023,13 @@
 
 ## 6. IMPLEMENTATION STATUS MATRIX
 
+> **⚠️ CORRECTED 2026-09-24 — the "Greenfield Reset" below is FALSE.** At the moment this was
+> written, the repository already contained 13 `lib/main_*.dart` entry points, 135 migrations,
+> 11 panel route files, ~52 services, a populated `media-engine/` Rust workspace, and a native
+> Android broadcaster. There is no "Login + empty Dashboard" baseline to reset from.
+> **For real status, read `docs/handoff/PANEL-SEPARATION-PLAN.md` §11 and §14.** The rows below are
+> useful only as *specified scope*.
+
 > **🚨 GREENFIELD STATUS RESET (v5.0 — 2026-06-02 — AUTHORITATIVE):**
 >
 > The Build / BLoC / Screens / Status columns in the matrix below describe **specified scope** carried forward from the v4.x design baseline. They **do NOT reflect physical implementation** as of the v5.0 cutover. The actual code baseline is:
@@ -3089,6 +3134,14 @@ Any route that bypasses this stack (e.g., public marketing endpoints) is explici
 
 #### 10.11.1 Three Unified Fleet Apps
 
+> **❌ REJECTED BY THE OWNER — do not implement this subsection.** Bus Driver and Truck Driver stay
+> **separate apps** (their features differ: bus = seat management and ticketing; truck = carton
+> scanning and parcel tracking). The driver's *account* is one, shared through a **backend link /
+> contract record** — not a shared frontend. `lib/features/fleet/**` must **not** be created, and
+> `main_driver.dart` / `main_reseller.dart` are live, not deleted.
+> Authoritative decision: `docs/handoff/PANEL-SEPARATION-PLAN.md` **D1** and **hard rule 7**.
+> The table below is retained as a record of the rejected design only.
+
 | Entry Point | Replaces | Vertical Selection |
 |-------------|----------|--------------------|
 | `lib/main_fleet_owner.dart` | `main_bus_owner.dart` + `main_truck_owner.dart` | `assignment.fleet_type ∈ {bus, truck}` chooses feature module under `lib/features/fleet/owner/` |
@@ -3234,6 +3287,12 @@ The following tables are introduced (➕), modified (🔄), or deleted (❌) by 
 
 ### Flutter (v5.0 Greenfield Layout)
 
+> **❌ STRUCTURAL OVERRIDE — REJECTED 2026-09-24. Do not implement.**
+> The entry points listed below are **not deleted** — they are live (see `PANEL-SEPARATION-PLAN.md`
+> §11). Bus vs Truck stays a **compile-time** separation (plan **D1**: separate apps, one shared
+> *backend* identity), **not** runtime data in `fleet_assignments.fleet_type`. The original text is
+> retained below as a record of the rejected design only.
+>
 > **STRUCTURAL OVERRIDE (v5.0):** The legacy six `main_*.dart` entry points (`main_bus_owner.dart`, `main_bus_driver.dart`, `main_bus_conductor.dart`, `main_truck_owner.dart`, `main_truck_driver.dart`, `main_truck_conductor.dart`) and `main_driver.dart`, `main_reseller.dart` are **deleted under the greenfield cutover**. Bus vs Truck is **runtime data** carried in `fleet_assignments.fleet_type`, not a compile-time distinction. The fleet ecosystem ships as **three unified apps** keyed on role (owner / driver / conductor); seven entry points collapse to four total Flutter apps (Super Admin web + 3 unified fleet apps). Dedicated Customer App and B2B Marketplace shell apps remain separate.
 
 | Path | Purpose |
