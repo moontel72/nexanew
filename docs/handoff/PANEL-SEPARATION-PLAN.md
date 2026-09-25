@@ -1534,7 +1534,7 @@ master document**, or it will keep being forgotten by agents that read only the 
 
 ---
 
-# 16. Developer environment — Zed language servers **[DIAGNOSED 2026-09-24]**
+# 16. Developer environment — Zed language servers **[DIAGNOSED 2026-09-24 · CORRECTED 2026-09-25]**
 
 Both servers were failing repeatedly in this workspace. Diagnosed from `Zed.log` and **reproduced
 directly** — they have different causes, and only one of them was a settings problem.
@@ -1564,9 +1564,21 @@ so the Dart extension cannot locate the SDK.
 **Two Flutter SDKs exist:** `C:/flutter` (Dart 3.11.1) and `C:/src/flutter` (Dart 3.12.2). The
 project's `.dart_tool/package_config.json` resolves to **`C:/src/flutter`**, so that is the SDK in use.
 
-**Fix applied — in USER settings, not project settings.** Point at the **real executable**
-(`dart.exe` in the Flutter cache), **not** `bin/dart` (a shell script) or `bin/dart.bat` (a batch
-file) — Zed spawns processes directly, and a `.bat` does not execute that way.
+**Fix applied — in USER settings, not project settings.** Two things must be right, and the first
+attempt got only one of them:
+
+1. **The path** must point at the **real executable** (`dart.exe` in the Flutter cache), **not**
+   `bin/dart` (a shell script) or `bin/dart.bat` (a batch file) — Zed spawns processes directly.
+2. **The arguments** must be supplied explicitly. A bare `dart.exe` does **not** start a language
+   server: it prints the Dart CLI usage text and exits. That produced a *second, different* error
+   after the path fix:
+   ```
+   ERROR [crates/lsp/src/lsp.rs:644] cannot read LSP message headers
+   ERROR [crates/lsp/src/lsp.rs:671] The pipe is being closed. (os error 232)
+   ```
+
+**Verified directly:** `dart.exe language-server --protocol=lsp` answers an LSP `initialize` with
+**2727 bytes** of valid response, while bare `dart.exe` prints usage. Both were tested by hand.
 
 `%APPDATA%/Zed/settings.json` = `C:\Users\picks\AppData\Roaming\Zed\settings.json` (backed up to
 `settings.json.bak` first):
@@ -1574,7 +1586,10 @@ file) — Zed spawns processes directly, and a `.bat` does not execute that way.
 ```json
 "lsp": {
   "dart": {
-    "binary": { "path": "C:/src/flutter/bin/cache/dart-sdk/bin/dart.exe" }
+    "binary": {
+      "path": "C:/src/flutter/bin/cache/dart-sdk/bin/dart.exe",
+      "arguments": ["language-server", "--protocol=lsp"]
+    }
   }
 }
 ```
@@ -1583,9 +1598,12 @@ file) — Zed spawns processes directly, and a `.bat` does not execute that way.
 the repo's shared settings would break every other clone. Do not move it there. Restart Zed (or run
 `workspace: reload`) for it to take effect.
 
-## 16.2 YAML — **not a settings problem; the server is non-functional**
+## 16.2 Node-based servers — Node version is **NOT** the cause (corrected)
 
-`Zed.log` (11 occurrences) shows the server **does spawn** and then hangs:
+**Correction to an earlier draft of this section**, which concluded the cause was Node v26.7.0.
+**That conclusion was wrong.** Direct testing proved the YAML server works on **both** Node versions.
+
+What the log shows (ids 22/25/26/29 on 2026-09-25, plus 11 earlier occurrences):
 
 ```
 INFO  [lsp] starting language server process. binary path: "C:\Program Files\nodejs\node.exe",
@@ -1596,46 +1614,60 @@ ERROR [project::lsp_store] Failed to start language server "yaml-language-server
   Caused by: Request timed out
 ```
 
-**Reproduced directly** by spawning the server and sending a correctly framed LSP `initialize`:
+**Direct verification — the server itself is healthy:**
 
-```
-TIMEOUT: server did NOT respond to initialize within 20s   (no stderr output at all)
-```
+| Test | Result |
+|---|---|
+| `node <bin> --version` | `1.24.0` ✅ |
+| LSP `initialize` on **Node v22.14.0** | **755 bytes of valid response** ✅ |
+| LSP `initialize` on **Node v26.7.0** | **755 bytes of valid response** ✅ |
+| Package install | complete — 378 files, full `out/` tree, all deps present |
 
-The earlier `missing executable` error was a **transient during npm install** (the binary was written
-one minute later). The binary now exists and runs — `--version` returns `1.24.0`. The failure is the
-**initialize handshake**, not the binary, and not a settings path.
+So the server binary, its dependencies and **both** Node runtimes are fine. The failure is in how Zed
+starts or talks to these servers, not in the servers themselves.
 
-**It is not YAML-specific.** The same 120s initialize timeout appears for every Node-based server:
+Every Node-based server shows the same 120s initialize timeout — the signature of a common Zed-side
+cause rather than a per-server one:
 
 | Server | Timeouts in log |
 |---|---|
-| `dart` | 18 — PATH problem, fixed in §16.1 |
+| `dart` | 18 — different cause, see §16.1 |
 | `yaml-language-server` | 11 |
 | `vtsls` | 2 |
 | `bash-language-server` | 2 |
 | `vscode-html-language-server` | 1 |
 | `tailwindcss-language-server` | 1 |
 
-**Most likely cause: Node v26.7.0** — the only Node on the machine (no LTS alongside), and every
-affected server is JavaScript. A secondary candidate is a blocked/hanging network call during init.
+`rust-analyzer` — a **native** binary, not Node — also hit a 120s timeout
+(*"Get diagnostics via rust-analyzer failed: Request timed out"*), which further rules Node out.
 
-**Options, in order of preference:**
+**⚠️ Known current breakage — the manual `node.exe` rename.** During this diagnosis the owner renamed
+`C:\Program Files\nodejs\node.exe` → `node_v26.exe` to force a different Node onto `PATH`. Zed's log
+still launches Node-based servers from the literal path `C:\Program Files\nodejs\node.exe`,
+**which no longer exists**, so those servers now fail to spawn at all. This must be undone (§16.3).
 
-1. **Install Node LTS (22.x) alongside v26** and point Zed's Node-based servers at it. This is the
-   real fix: it restores YAML, shell and TS/JS language support together.
-2. **Disable only what this repo does not need.** The repo has very few YAML files (CI workflows and
-   `pubspec.yaml`), so disabling the YAML server removes the failure from every session at almost no
-   cost:
+## 16.3 Action required — revert the `node.exe` rename
+
+1. **Restore `C:\Program Files\nodejs\node.exe`.** The Node version was never the problem — both
+   versions work. Renaming a file inside `Program Files` is also fragile: any Node update silently
+   restores it, and tools that hardcode that path break in the meantime.
+2. If a specific Node version should be the default, change it **cleanly** instead — via nvm's own
+   `use` command, or by fixing `PATH` order — not by renaming the binary.
+3. **Restart Zed** so it re-resolves `node` from `PATH`.
+4. **If the timeouts persist on a working Node**, the cause is Zed-side. Reduce what Zed is asked to
+   start: this repo is Flutter + Laravel + Rust and does **not** need the Tailwind, HTML or ESLint
+   servers, and each disabled server removes one concurrent 120s stall. `rust-analyzer` diagnostics
+   over `rust/` + `media-engine/` are also expensive here.
+5. Disabling the YAML server remains a last resort (this repo has about two YAML files) — but the
+   evidence above does **not** justify it:
    ```jsonc
    "lsp": { "yaml-language-server": { "enabled": false } }
    ```
-   **Owner decision required** — option 2 trades away YAML validation.
 
 **Do not** commit a `yaml-language-server` binary path into `.zed/settings.json`; it is
 Node-installed and machine-specific, exactly like the Dart path.
 
-## 16.3 Constraint to respect
+## 16.4 Constraint to respect
 
 `.githooks/validate-json-config.mjs` validates `.zed/settings.json` before commit. If that file is
 ever edited, run `node .githooks/validate-json-config.mjs .zed/settings.json` — the hook is JSONC-aware
