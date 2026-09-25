@@ -1503,11 +1503,24 @@ create karenge us mein sab likhna hai"*).
 
 | Pillar | Group | Backend state | Frontend state | Next step |
 |---|---|---|---|---|
-| **B — Factory anti-counterfeit scanner** | 3 Factory | **Ready** — `ConsumerScanController@verify`, `FactoryProductionController@verifySerial`, `smart_codes`, `code_verification_history`, `consumer_scans` | Camera sheet missing | **Fastest win — start here** |
+| **B — Factory anti-counterfeit scanner** | 3 Factory | **Ready** — `ConsumerScanController@verify`, `FactoryProductionController@verifySerial`, `smart_codes`, `code_verification_history`, `consumer_scans` | Camera sheet missing; scan bloc exists in the orphaned copy | **Full plan drafted → `docs/handoff/PILLAR-B-PRODUCT-ANTI-COUNTERFEIT.md`** — fastest win |
 | **C — Bus fleet super-app** | 4 Bus / 1 Platform | Strong — bookings, holds, `absolute_bus_layouts` + revisions, vouchers, wallets, `passenger_safety_tokens`, family stream | Seat map excellent; telemetry/map stubbed | Real GPS + real map SDK (Pillar C plan) |
 | **D — Goods transport & freight** | 5 Goods | Freight ✅ (`freight_loads`/`freight_bids`, `FreightAuctionService`, matching job, `BiddingMeshController`); **relocation ❌**; **no `trucks` table**; **no `parcels` table** | Minimal (`goods_operations` = 5 files) | Pillar D plan |
 | **E — IoT vehicle security** | **7 Vehicle Security** | **Nothing.** No `devices`, `geofences`, or telemetry tables; **no immobilizer anywhere** | Nothing | **Full plan drafted → `docs/handoff/PILLAR-E-IOT-VEHICLE-SECURITY.md`** |
 | **A — PKR banknote authentication** | **8 Trust & Safety** | **Nothing** | Nothing | **Full plan drafted → `docs/handoff/PILLAR-A-BANKNOTE-AUTHENTICATION.md`** |
+
+### Pillar B — note on status
+
+The **full Pillar B plan now lives in `docs/handoff/PILLAR-B-PRODUCT-ANTI-COUNTERFEIT.md`**. Its
+backend is **already implemented**, and the scan→verify bloc already exists — in the **orphaned**
+customer-app copy. So Pillar B's first two steps (fix the stale route-map entry, consolidate the two
+customer-app copies per §6) are work this plan already requires. Two findings worth noting here:
+
+- `lib/core/navigation/panel_routes.dart:305` declares `/api/v1/consumer/verify`, **which does not
+exist** — `consumer.php` registers four routes and none is `verify`. The real endpoint is
+`POST /api/v1/marketplace/consumer/verify`.
+- That endpoint **requires `lat`/`lng`**, and the repo has **no location source at all**. One plugin
+decision unblocks Pillars B, C and E together.
 
 ### Pillar A — decisions already taken by the owner
 
