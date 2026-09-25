@@ -1,6 +1,6 @@
 {
   "$comment": "Tracked cross-panel coupling (PANEL-SEPARATION-PLAN.md §5c mechanism 1). These import statements exist today and are grandfathered so the guard can run without a red build. Statement-level on purpose: a folder-pair baseline would let a brand-new file cross the same boundary unnoticed. REMOVE an entry once that import has been extracted — never add one without an owner decision.",
-  "generatedAt": "2026-09-25T21:37:38.599Z",
+  "generatedAt": "2026-09-25T21:59:23.573Z",
   "summary": {
     "core -> features/auth": 1,
     "core -> features/factory": 25,
@@ -11,7 +11,6 @@
     "features/bus_operations -> features/storekeeper": 6,
     "features/goods_operations -> features/bus_operations": 3,
     "features/nexa_admin -> features/bus_operations": 1,
-    "features/transport -> features/transport_marketplace": 2,
     "shared -> features/bus_operations": 1,
     "shared -> features/auth": 6
   },
@@ -84,8 +83,6 @@
     "lib/features/goods_operations/presentation/pages/truck_owner_dashboard.dart -> lib/features/bus_operations/presentation/widgets/dashboard_kpi_section.dart",
     "lib/features/goods_operations/presentation/pages/truck_owner_dashboard.dart -> lib/features/bus_operations/presentation/widgets/staff_list_section.dart",
     "lib/features/nexa_admin/presentation/screens/super_admin/bus_fleet_dashboard_screen.dart -> lib/features/bus_operations/presentation/widgets/fleet_dispatch_dialog.dart",
-    "lib/features/transport/presentation/bloc/transport_integration_bloc.dart -> lib/features/transport_marketplace/domain/entities/bid.dart",
-    "lib/features/transport/presentation/bloc/transport_integration_bloc.dart -> lib/features/transport_marketplace/domain/entities/load.dart",
     "lib/shared/bloc/telemetry_tracking/telemetry_models.dart -> lib/features/bus_operations/data/services/bus_tracking_models.dart",
     "lib/shared/utils/fleet_bloc_setup.dart -> lib/features/auth/data/repositories/panel_auth_repository.dart",
     "lib/shared/utils/fleet_bloc_setup.dart -> lib/features/auth/presentation/bloc/panel_auth_bloc.dart",
