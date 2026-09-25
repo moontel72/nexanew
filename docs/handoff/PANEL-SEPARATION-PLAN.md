@@ -400,7 +400,7 @@ import each other. Eight mechanisms, in priority order.
 
 | # | Mechanism | What it fixes |
 |---|---|---|
-| 1 | **CI boundary enforcement** — `analysis_options.yaml` rules + a dependency-cruiser script that **fails the build** on `shared → features` or `features/A → features/B` | stops new coupling merging. Documented rules get broken; enforced ones do not. Existing 4 edges are grandfathered as tracked debt |
+| 1 | **CI boundary enforcement** — `.scripts/check-panel-isolation.mjs`, run by `.github/workflows/panel-isolation.yml`; **fails the build** on `shared → features`, `features/A → features/B`, and `core → shared/features` | stops new coupling merging. Documented rules get broken; enforced ones do not. **✅ DONE 2026-09-25 (`ca591a98`).** Measured state: **84 violating import statements across 12 folder-pairs**, recorded as tracked debt in `.scripts/panel-isolation-baseline.json`. The earlier "4 edges" / "3 remaining edges" figures were folder-pair estimates — the real count is higher. The gate is **statement-level**, so a brand-new file cannot start crossing an already-tracked boundary; verified by adding a deliberate violation and confirming a non-zero exit |
 | 2 | **Path-filtered per-panel CI** — each panel its own workflow with a `paths:` filter on its feature folder and `main_*.dart` | today `frontend-deploy.yml` triggers on `lib/**`, so **any** change redeploys **all 8**. A cricket-only change can block every panel |
 | 3 | **Per-panel test gates** — widget + bloc + integration + contract tests, run in that panel's workflow | there are **zero** Flutter tests today (a 17-line placeholder) |
 | 4 | **No shared mutable globals** — delete `auth_state.dart` globals; per-panel scoped state | the exact mechanism of the Factory/Sub-Admin bug (§7c) |
@@ -1030,6 +1030,11 @@ it is the single change that stops this problem recurring.
 - [x] **Move `missile_3d_button.dart`** into `lib/shared/widgets/buttons/` — **`3fbbeb90`**.
       6 import sites across 4 domains; git recorded it as a 100% rename. `shared → features`
       backward imports dropped **4 edges → 3**.
+- [x] **Add the CI boundary check (containment mechanism 1)** — **`ca591a98`**.
+      `.scripts/check-panel-isolation.mjs` + `.github/workflows/panel-isolation.yml`.
+      **This is the change that makes every later extraction stick.** Statement-level baseline of
+      **84 existing violations across 12 folder-pairs** (see §5c #1). Verified non-vacuous.
+      Report command: `node .scripts/check-panel-isolation.mjs --report`.
 - [ ] **Add `.github/CODEOWNERS`** — per-panel ownership requiring review. *(Low value on a
       single-owner repo; CODEOWNERS only has effect with org teams.)*
 - [ ] **Add per-panel `paths:` filters** to the deploy workflow — stops the all-or-nothing
