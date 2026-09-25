@@ -464,12 +464,47 @@ and `features/auth` — rename one.
 
 | Item | Destination |
 |---|---|
-| `super_admin/bus_fleet_dashboard_screen.dart`, `super_admin/bus_fleet/**`, `bus_company_login_screen`, `bus_companies_list`, `add_bus_company` | **BUS** |
-| `super_admin/goods_fleet_dashboard_screen.dart`, `super_admin/goods_fleet/**`, `goods_company_login_screen`, `goods_companies_list`, `add_goods_company` | **GOODS** |
+| `super_admin/bus_fleet_dashboard_screen.dart`, `super_admin/bus_fleet/**`, `bus_company_login_screen` | **BUS** |
+| **`super_admin/companies/bus_companies_list_screen.dart` + `add_bus_company_screen.dart`** | ⚠️ **DELETE, not move** — see note below |
+| `super_admin/goods_fleet_dashboard_screen.dart`, `super_admin/goods_fleet/**`, `goods_company_login_screen` | **GOODS** |
+| **`super_admin/companies/goods_companies_list_screen.dart` + `add_goods_company_screen.dart`** | ⚠️ **DELETE, not move** — see note below |
 | `super_admin/transport/**` (wallet, marketplace admin, drivers, fraud), `super_admin/reseller_management/**`, `bloc/{transport_admin,reseller_management}` | **B2B** |
 | `sub_admin/cricket/**` (manager CRUD) | **CRICKET** |
 | `sub_admin/{sub_admin_list_screen,add_sub_admin_screen}` | **stay** (platform) |
 | `super_admin/{dashboard,login,shell}`, `site_content/`, `plans/**`, `billing/**`, `companies/**` (registry), `data/**`, `domain/**`, `presentation/bloc/{auth,billing,invoices,plans,companies,dashboard}` | **stay** (platform) |
+
+> **⚠️ Duplicate company-registration path — verified 2026-09-26, still present.**
+>
+> The owner reported that bus-fleet companies should be registered by the **Bus-Fleet Sub-Admin**, not the
+> Super Admin — and that an earlier agent said it had been moved but **never removed the Super Admin
+> side**. That is correct, and the Super Admin side is still live:
+>
+> | Still on the Super Admin side | Evidence |
+> |---|---|
+> | `/bus-companies` → `BusCompaniesListScreen` | `app_router.dart:695-698` |
+> | `/bus-companies/add` → `AddBusCompanyScreen` | `app_router.dart:699-705` |
+> | `/goods-companies` → `GoodsCompaniesListScreen` | `app_router.dart:709-712` |
+> | `/goods-companies/add` → `AddGoodsCompanyScreen` | `app_router.dart:713-719` |
+>
+> **The Sub-Admin panel already owns this completely** — `SubAdminBloc` performs **full CRUD** against
+> `/api/v1/admin/bus-companies/*`: `create`, list, `{id}/status` (patch), `{id}` (put), `{id}` (delete),
+> `{id}/restore`. Its dashboard has the *Add Bus Company* action and the registered-companies list inline.
+> So the Super Admin screens are a **strict subset duplicate** — nothing is lost by removing them.
+>
+> **Removal steps (not yet done):** delete the 4 routes and the 4 screen files above; then confirm nothing
+> links to them (`companies_list_screen.dart` and the super-admin sidebar still need a final look — the
+> nav search in this session did not complete); then check whether `CompanyRegisterBloc` is used only by
+> the two deleted *add* screens.
+>
+> **Data note:** `admin_users` holds an `admin@nexatrace.local` (super_admin) plus **three
+> `company_admin` rows** (`armi@gmail.com` "Organization", `aziz@gmail.com` "Awan Express Admin",
+> `khan@gmail.com` "Ahmed Khan") — these look like the legacy registrations made through the Super Admin
+> path. Whether to delete them is a **data decision for the owner**, and it depends on whether the same
+> companies were re-registered later through the Sub-Admin panel. Compare first — never delete blind.
+>
+> **Small bug found in the Sub-Admin sidebar:** `sub_admin_dashboard.dart:1457-1463` builds a
+> `Missile3DButton(label: 'Bus Companies', ...)` with **`onTap: () {}`** — an empty action. The real bus
+> company management lives inline in the dashboard body, so either wire this button to it or drop it.
 
 ---
 
