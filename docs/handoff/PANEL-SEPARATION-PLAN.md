@@ -1833,14 +1833,36 @@ and confirmed working (*"JSON config valid (7 files checked)"* on commit `29a5fc
 
 ---
 
-# 17. Phase 1 — auth-state globals and the `/sub-admin` guard **[RESEARCH DONE 2026-09-25 — not executed]**
+# 17. Phase 1 — auth-state globals and the `/sub-admin` guard **[step 5 ✅ DONE 2026-09-25 — `9f59ef28`; steps 1-4, 6 pending]**
 
-Research and consumer inventory are complete; the change itself was **deliberately not attempted**.
-Reason at the bottom (§17.7). Everything needed to execute it is here.
+> **Step 5 is done:** `/sub-admin/*` now requires a sub-admin session. What changed —
+>
+> | File | Change |
+> |---|---|
+> | `lib/core/utils/auth_state.dart` | added `isSubAdminAuthenticatedCache` / `setSubAdminAuthenticatedCache()` — deliberately **not** cleared by `resetAuthState()`, so a super-admin logout cannot bounce a valid sub-admin session |
+> | `lib/app/app_initializer.dart` | loads `sub_admin_token` from prefs **before** `setAuthCheckCompleted(true)`, so the cache is populated on cold start |
+> | `lib/routes/app_router.dart` | `/sub-admin/login` stays public; every other `/sub-admin/*` route now redirects to the sub-admin login when the cache is empty |
+> | `.../bloc/sub_admin/sub_admin_bloc.dart` | sets the cache to `true` on login success, `false` on logout |
+>
+> **Verified:** `dart analyze` — *No issues found!* on all four touched files (including `app_router.dart`, the largest graph) and the isolation guard stays green.
+>
+> ### ⚠️ A human MUST smoke-test this — it cannot be verified statically
+>
+> - [ ] Sub-admin: login → lands on `/sub-admin/dashboard` (**no redirect loop**)
+> - [ ] Sub-admin: hard-refresh `/sub-admin/dashboard` while logged in → **stays** logged in
+> - [ ] Sub-admin: logout → then visit `/sub-admin/dashboard` → **bounced** to `/sub-admin/login`
+> - [ ] In a private/incognito window, visit `/sub-admin/dashboard` directly with no session → **bounced** to login
+> - [ ] Super-admin: login → dashboard → logout → `/login` (unchanged)
+> - [ ] Factory: login → factory dashboard → logout (unchanged)
+>
+> The first two are the ones that matter most: a wrong redirect here shows up as a **login loop**, not as an error.
 
-## 17.1 The concrete bug, found by reading the router
+Research and consumer inventory for the remaining steps are complete; steps 1-4 and 6 were
+**deliberately not attempted**. Everything needed to execute them is below.
 
-`lib/routes/app_router.dart:254-258`:
+## 17.1 The concrete bug, found by reading the router — **✅ FIXED 2026-09-25**
+
+`lib/routes/app_router.dart:254-258` **before** the fix:
 
 ```dart
 if (path == '/sub-admin/login') return null;
@@ -1929,13 +1951,12 @@ It mixes **two independent auth domains** in one process-wide bag, and any panel
     is exactly where loops appear)
 - ⚠️ Do this when the owner is **not** mid-rotation — a mistake here locks every panel out at once.
 
-## 17.7 Recommendation, and why this was not executed
+## 17.7 Recommendation, and why steps 1-4 and 6 were not executed
 
-**Do step 5 on its own first** if you want the symptom gone today: guarding `/sub-admin/*` is roughly ten
-lines and directly fixes what was observed.
+**Step 5 is done** (§17 top). It was the ~10-line change that fixed the observed symptom directly.
 
 The full globals removal (steps 1-4 and 6) is the architectural fix from §5c mechanism #4, and it should
-land **with a human available to test logins**. It was not started in this session because:
+land **with a human available to test logins**. It was not started because:
 
 - it touches **≈12 files on the authentication critical path** — the one place where a subtle mistake
   locks every panel out;
