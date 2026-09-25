@@ -27,11 +27,21 @@ use Illuminate\Support\Str;
  *   - A sub_admin_assignments row linking to their vertical
  *   - A TenantAccount bridge for Sanctum token login
  *
- * Default password for all sub-admins: SubAdmin@2026!
+ * Default password for sub-admins: supplied via NEXATRACE_SUBADMIN_PASSWORD
  */
 class SubAdminSeeder extends Seeder
 {
-    private const DEFAULT_PASSWORD = 'SubAdmin@2026!';
+    /**
+     * SECURITY: never hardcode a shared password for every sub-admin. Supply it via
+     * NEXATRACE_SUBADMIN_PASSWORD. See docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md
+     */
+    private function defaultPassword(): string
+    {
+        return env('NEXATRACE_SUBADMIN_PASSWORD')
+            ?: throw new \RuntimeException(
+                'Set NEXATRACE_SUBADMIN_PASSWORD before running SubAdminSeeder.'
+            );
+    }
 
     private const VERTICALS = [
         [
@@ -83,7 +93,7 @@ class SubAdminSeeder extends Seeder
             $identity = GlobalIdentity::create([
                 'identity_token' => GlobalIdentity::generateToken('sub_admin'),
                 'display_name'   => $name,
-                'password'       => self::DEFAULT_PASSWORD,
+                'password'       => $this->defaultPassword(),
                 'identity_type'  => 'sub_admin',
                 'kyc_status'     => 'verified',
                 'kyc_tier'       => 2,

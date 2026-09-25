@@ -36,6 +36,13 @@ about. Two of them were live UI exposure, which is worse than a doc leak.
 | 7 | `backend/database/DEPLOYMENT.md` | `CREATE ROLE ... PASSWORD '...'` for all three roles, plus `.env` example password | 🟠 High |
 | 8 | `NEXATRACE_SUPREME_MASTER_SPEC.md` §8.6 | A "Login Credentials" table listing the admin passwords | 🟡 Medium |
 | 9 | `docs/handoff/PANEL-SEPARATION-{PLAN,RECOMMENDATIONS}.md` | Quote the compromised values as incident evidence | 🟡 Medium (already public in git history) |
+| 10 | `backend/database/seeders/MasterAdminSeeder.php` | A hardcoded **Master Admin** password constant (the highest-privilege account in the system), which the seeder also printed to the console. *(Value deliberately not repeated here — read it from git history, then rotate.)* | 🔴 Critical |
+| 11 | `backend/database/seeders/SubAdminSeeder.php` | A hardcoded **`DEFAULT_PASSWORD`** — one shared password for **every** sub-admin. *(Value deliberately not repeated here.)* | 🔴 Critical |
+| 12 | `lib/features/nexa_admin/.../sub_admin_login_screen.dart` | Sub-admin login used `hintText: 'subadmin@nexatrace.com'` — discloses a real admin account name | 🟡 Medium |
+
+Rows 1, 3, 4, 5, 6, 8, 10, 11 and 12 were **found by this audit** (rows 1, 5, 10 and 11 are the serious ones);
+rows 2, 7, 9 were already known. Note that rows 10 and 11 create **live accounts** when the seeders
+run — so those passwords must be rotated as well, not just removed from the code.
 
 **Reused passwords matter here.** The Postgres **superuser** password was reused verbatim in at
 least three files, and one admin password was shared across every admin account. Assume every
@@ -258,6 +265,63 @@ ls -la /root/.pgpass 2>/dev/null
 
 **Rule for the future:** after **any** `.env` change, run
 `php artisan optimize:clear && php artisan optimize`.
+
+---
+
+### 3.9.1 CONFIRMED root cause and fix (live incident, 2026-09-25)
+
+This section was written as a prediction; it then reproduced **exactly** on the production server. Recording
+the confirmed version here.
+
+**Root cause: the `DB_PASSWORD` value contained a `#` character and was **unquoted** in `.env`.**
+phpdotenv treats an unquoted `#` as the start of a comment, so it **truncated the password** before
+Laravel ever saw it. PostgreSQL held the full value; Laravel sent a shortened one — hence
+`password authentication failed` for a password that "was neither the old nor the new".
+
+**Evidence that proved it (no value ever printed):**
+
+| Test | Result | Meaning |
+|---|---|---|
+| `has-#:YES` on the `.env` line | `#` present, unquoted | the trigger |
+| `config(...password)` fingerprint vs `.env` fingerprint | **differed** | Laravel was not using the `.env` value |
+| config cache present? | **absent**, `Config: NOT CACHED` | ruled out |
+| process env `DB_PASSWORD`? | **NOT SET** | ruled out |
+| `.env.production`? | **file does not exist** | ruled out |
+| `psql` with the FULL value | **LOGIN OK** | the DB password is the full value |
+| `psql` with `-w` and no `PGPASSWORD` | `no password supplied` | `trust` ruled out — a password really is required |
+
+**The fix that worked:**
+
+```bash
+cd /var/www/traceodd/admin-panel
+grep -c "^DB_PASSWORD=.*'" .env                     # must be 0 (no quote already present)
+sed -i "s/^DB_PASSWORD=\([^']*\)$/DB_PASSWORD='\1'/" .env    # wrap in SINGLE quotes
+php artisan optimize:clear
+php artisan db:show                                  # verified: 150 tables listed
+```
+
+**Two general rules this produced:**
+
+1. **Quote every secret in `.env`** — `DB_PASSWORD='…'`. Single quotes keep `#` and `$` literal;
+double quotes still interpolate `$`. Unquoted values break on `#`, `$`, spaces, quotes and `\`.
+2. **Prefer passwords without shell/env-hostile characters.** Safe alphabet:
+`A–Z a–z 0–9` plus `- _ . ~ ! @ % ^ * +`. A `#` in a secret is a landmine in `.env`, shell,
+`systemd EnvironmentFile` and Docker `env_file` alike.
+
+---
+
+### 3.10 Other findings from the same live investigation
+
+Found while diagnosing the above, on the production server. Independent of the password issue.
+
+| # | Finding | Impact | Fix |
+|---|---|---|---|
+| 1 | **`Debug Mode … ENABLED` while `Environment: production`** | Any error response leaks stack traces, file paths and environment values to the caller | `APP_DEBUG=false` in `.env`, then `php artisan optimize:clear`. **Do this now.** |
+| 2 | **`intl` PHP extension missing** — `php artisan db:show` dies in `Number.php:443` | Number/currency formatting and parts of localisation fail | `apt install php8.3-intl && systemctl reload php8.3-fpm && php -m \| grep intl` |
+| 3 | **`bootstrap/cache/config.php` owned by `root`** (created by running `php artisan optimize` as root) | The web app runs as `www-data`; a later `optimize:clear`/`optimize` from the app user can fail with *permission denied* | `chown -R www-data:www-data bootstrap/cache storage`, and run artisan as the app user: `sudo -u www-data php artisan …` |
+| 4 | **`.env` mode `644` (world-readable)** | Any local user can read the DB password | `chmod 640 .env && chown www-data:www-data .env` |
+| 5 | **A stray `md5` line in `pg_hba.conf`** (`host all all 127.0.0.1/32 md5`, after the `scram-sha-256` lines) | Dead today (first match wins) but deprecated and confusing | Delete the line, reload PostgreSQL |
+| 6 | **Server code drifts from the repo** — `NexaBootstrapSeeder.php` on the server contains `'contact_person_email' => 'factory-adminnexatrace.local'` (missing `@`), but the repo has it correct | The deployed code is not identical to the repo; the seeder fixes committed on 2026-09-25 are **not** on the server yet | Re-deploy, then verify the file matches |
 
 ---
 

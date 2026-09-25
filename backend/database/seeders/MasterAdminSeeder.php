@@ -25,7 +25,19 @@ class MasterAdminSeeder extends Seeder
     private const MASTER_ADMIN_EMAIL  = 'admin@nexatrace.com';
     private const MASTER_ADMIN_PHONE  = '+920000000000';
     private const MASTER_ADMIN_NAME   = 'Trace Odd Master Admin';
-    private const MASTER_ADMIN_PASS   = 'NexaTrace@2026!Secure';
+
+    /**
+     * SECURITY: the Master Admin password is never hardcoded in this repo.
+     * Supply it via the NEXATRACE_MASTER_ADMIN_PASSWORD environment variable.
+     * See docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md
+     */
+    private function masterAdminPassword(): string
+    {
+        return env('NEXATRACE_MASTER_ADMIN_PASSWORD')
+            ?: throw new \RuntimeException(
+                'Set NEXATRACE_MASTER_ADMIN_PASSWORD before running MasterAdminSeeder.'
+            );
+    }
 
     public function run(): void
     {
@@ -40,7 +52,7 @@ class MasterAdminSeeder extends Seeder
 
         $this->command?->info('Master Admin bootstrap complete.');
         $this->command?->info("  Email:    " . self::MASTER_ADMIN_EMAIL);
-        $this->command?->info("  Password: " . self::MASTER_ADMIN_PASS);
+        $this->command?->info('  Password: (the value of NEXATRACE_MASTER_ADMIN_PASSWORD — not printed)');
         $this->command?->info("  Token:    " . $identity->identity_token);
     }
 
@@ -51,7 +63,7 @@ class MasterAdminSeeder extends Seeder
         if (!$identity) {
             $identity = GlobalIdentity::create([
                 'display_name'   => self::MASTER_ADMIN_NAME,
-                'password'       => self::MASTER_ADMIN_PASS,
+                'password'       => $this->masterAdminPassword(),
                 'identity_type'  => 'admin',
                 'kyc_status'     => 'verified',
                 'kyc_tier'       => 3,
