@@ -1830,3 +1830,117 @@ Node-installed and machine-specific, exactly like the Dart path.
 `.githooks/validate-json-config.mjs` validates `.zed/settings.json` before commit. If that file is
 ever edited, run `node .githooks/validate-json-config.mjs .zed/settings.json` — the hook is JSONC-aware
 and confirmed working (*"JSON config valid (7 files checked)"* on commit `29a5fc28`).
+
+---
+
+# 17. Phase 1 — auth-state globals and the `/sub-admin` guard **[RESEARCH DONE 2026-09-25 — not executed]**
+
+Research and consumer inventory are complete; the change itself was **deliberately not attempted**.
+Reason at the bottom (§17.7). Everything needed to execute it is here.
+
+## 17.1 The concrete bug, found by reading the router
+
+`lib/routes/app_router.dart:254-258`:
+
+```dart
+if (path == '/sub-admin/login') return null;
+if (path == '/sub-admin/dashboard') return null;
+if (path.startsWith('/sub-admin/')) return null;   // no auth check at all
+```
+
+The sub-admin panel has **no client-side guard whatsoever**. Any visitor reaches the panel shell.
+
+This is the direct cause of the owner's observed symptom — *"Factory Admin and Sub-Admin open the same
+thing"*. All panels live in **one bundle**, so once the sub-admin dashboard is reachable, it renders
+inside the same running app the factory admin is already in.
+
+**Severity: UI exposure, not data loss.** The API is protected by the `sub.admin` middleware, so data
+calls return 401 — but the panel itself is openly reachable, and that is what was seen.
+
+## 17.2 Why the obvious fix needs care
+
+Sub-admin auth is a **`sub_admin_token` in SharedPreferences** — written by `SubAdminBloc` on login
+(`sub_admin_bloc.dart:62`) and removed on logout (`:530-536`). It is **not** one of the router's globals,
+so the existing flags cannot guard those routes.
+
+A guard must therefore read that token. `_safeRedirect` is already `async`, so it *could* await
+`SharedPreferences` — but its own doc comment states it *"NEVER makes API calls, only checks local
+cached state"*, precisely to avoid redirect loops. Adding an async read there is a **design change that
+must be tested, not assumed**.
+
+**Suggested shape:** cache the sub-admin token in memory at startup (alongside the other flags) and let
+the redirect read the cache — preserving the "no I/O inside redirect" invariant.
+
+## 17.3 The globals to remove (§5c containment mechanism #4)
+
+`lib/core/utils/auth_state.dart` is 162 lines of **module-level mutable state** shared by every panel:
+
+```
+bool _authCheckCompleted, _isAuthenticatedCache, _isFactoryAuthenticatedCache
+String? _userTypeCache, _userIdCache, _factoryIdCache, _tokenCache
++ 12 getters/setters, getFactoryAuthToken(), getFactoryId(),
+  resetAuthState(), resetFactoryAuthState(), setSuperAdminAuthState(), setFactoryAuthState()
+```
+
+It mixes **two independent auth domains** in one process-wide bag, and any panel can write any field.
+
+## 17.4 Full consumer inventory (the expensive part — already done)
+
+| File | Uses |
+|---|---|
+| `lib/routes/app_router.dart` | reads `isAuthCheckCompleted`, `isAuthenticatedCache`, `isFactoryAuthenticatedCache` — ≈10 sites, L190-313 |
+| `lib/app/app_initializer.dart` | writes both flags + `setAuthCheckCompleted`, `setFactoryAuthState` |
+| `lib/features/factory/admin/presentation/bloc/auth/factory_auth_bloc.dart` | `setFactoryAuthState`, `resetFactoryAuthState` |
+| `lib/features/factory/admin/presentation/screens/factory_login_screen.dart` | `isFactoryAuthenticatedCache`, `setFactoryAuthState` |
+| `lib/features/nexa_admin/presentation/screens/super_admin/login_screen.dart` | `setIsAuthenticatedCache`, `setAuthCheckCompleted` |
+| `lib/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart` | `resetAuthState` (logout, twice) |
+| `lib/features/factory/admin/data/datasources/billing_remote_datasource.dart` | `getFactoryAuthToken()`, `getFactoryId()` |
+| `lib/features/factory/admin/presentation/screens/codes/unit_codes/unit_code_generate_screen.dart` | `getFactoryId()` |
+| *(plus)* readers of `getAuthToken`, `getUserId`, `userTypeCache`, `tokenCache` | see the grep from this session |
+
+**≈12+ files on the auth critical path.**
+
+## 17.5 Ready-to-execute steps
+
+1. **Split the state by domain** — `AdminAuthState` and `FactoryAuthState`, each owning only its own
+   fields. After this a factory write *cannot* touch an admin field — the mixing dies by construction.
+2. **Provide one instance each** — create both in `lib/app/app_initializer.dart`, expose via
+   `RepositoryProvider`, and pass the admin instance into `AppRouter`'s constructor (it already takes
+   `authRepo`).
+3. **Update the writers** — factory bloc + factory login screen → `FactoryAuthState`; super-admin login
+   screen + `admin_auth_bloc` → `AdminAuthState`.
+4. **Update the readers** — the router reads the admin instance; the factory datasources read the
+   factory instance.
+5. **Guard `/sub-admin/*`** (§17.1/§17.2) using the sub-admin token cache.
+6. **Delete `lib/core/utils/auth_state.dart`** — then prove it: `node .scripts/check-panel-isolation.mjs`
+   green, plus a grep for every removed name returning nothing in `lib/`.
+
+## 17.6 Verification — and its honest limit
+
+- ✅ `dart analyze <each touched file>` — reliable on targeted files (proven in §15b).
+- ✅ `node .scripts/check-panel-isolation.mjs` — must stay green.
+- ✅ grep every removed global name — must return nothing in `lib/`.
+- ❌ **Runtime login flows cannot be verified from here.** A human MUST smoke-test these afterwards:
+  - super-admin: login → dashboard → logout → `/login`
+  - factory: login → factory dashboard → logout
+  - sub-admin: login → `/sub-admin/dashboard`, **and** a direct visit to `/sub-admin/dashboard`
+    *without* a token (must be blocked)
+  - a hard refresh on each dashboard (the redirect runs on cold start, and `isAuthCheckCompleted` gating
+    is exactly where loops appear)
+- ⚠️ Do this when the owner is **not** mid-rotation — a mistake here locks every panel out at once.
+
+## 17.7 Recommendation, and why this was not executed
+
+**Do step 5 on its own first** if you want the symptom gone today: guarding `/sub-admin/*` is roughly ten
+lines and directly fixes what was observed.
+
+The full globals removal (steps 1-4 and 6) is the architectural fix from §5c mechanism #4, and it should
+land **with a human available to test logins**. It was not started in this session because:
+
+- it touches **≈12 files on the authentication critical path** — the one place where a subtle mistake
+  locks every panel out;
+- its correctness is **runtime behaviour** (login, logout, cold-start redirect), which cannot be
+  verified by `dart analyze`, by the isolation guard, or by any static check available here; and
+- the owner was **actively logging in** during the credential rotation at the time.
+
+Shipping this blind would risk a worse outcome than shipping it next, verified.
