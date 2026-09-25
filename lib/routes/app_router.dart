@@ -251,11 +251,23 @@ class AppRouter {
     if (path == '/bus-fleet/login') return null;
     if (path == '/bus-fleet/dashboard') return null;
     if (path.startsWith('/bus-fleet/')) return null;
-    // Sub-Admin login + dashboard — separate auth from super-admin
+    // Sub-Admin panel — its own Bearer session (`sub_admin_token`), separate from super-admin.
+    // The login screen stays public; every other /sub-admin/* route requires that session.
+    // Before §17 step 5 these three lines returned null unconditionally, which left the whole
+    // sub-admin panel reachable by any visitor — the cause of "Factory Admin and Sub-Admin open
+    // the same thing" (all panels share one bundle, so the shell rendered in the same app).
     if (path == '/sub-admin/login') return null;
-    if (path == '/sub-admin/dashboard') return null;
-    // All sub-admin scoped routes (cricket managers, etc.)
-    if (path.startsWith('/sub-admin/')) return null;
+    if (path.startsWith('/sub-admin/')) {
+      if (!isSubAdminAuthenticatedCache) {
+        if (kDebugMode) {
+          debugPrint(
+            'ROUTER_REDIRECT: No sub-admin session, redirecting to sub-admin login',
+          );
+        }
+        return '/sub-admin/login';
+      }
+      return null;
+    }
     // Cricket Public Viewer — no auth required
     if (path.startsWith('/cricket/')) return null;
     // Cricket Manager Panel — separate Bearer auth, no super-admin session needed

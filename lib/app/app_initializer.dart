@@ -199,6 +199,19 @@ class _AppInitializerState extends State<AppInitializer> {
               setIsAuthenticatedCache(isAdminAuthed);
               setIsFactoryAuthenticatedCache(isFactoryAuthed);
 
+              // ── Sub-admin session ──
+              // Sub-admin authenticates with its own token (`sub_admin_token`), not with the flags
+              // above. Cache it BEFORE setAuthCheckCompleted(true) so the router can guard
+              // /sub-admin/* without performing I/O inside a redirect.
+              // See PANEL-SEPARATION-PLAN.md §17 step 5.
+              setSubAdminAuthenticatedCache(
+                (context.read<SharedPreferences>().getString(
+                          'sub_admin_token',
+                        ) ??
+                        '')
+                    .isNotEmpty,
+              );
+
               if (isFactoryAuthed) {
                 final prefs = context.read<SharedPreferences>();
                 final token = prefs.getString('factory_auth_token');

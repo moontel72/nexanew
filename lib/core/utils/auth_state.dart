@@ -106,7 +106,8 @@ void setFactoryAuthState({
 
   if (kDebugMode) {
     debugPrint(
-        'AUTH_STATE: Factory auth set - userType=$userType, userId=$userId, factoryId=$factoryId');
+      'AUTH_STATE: Factory auth set - userType=$userType, userId=$userId, factoryId=$factoryId',
+    );
   }
 }
 
@@ -125,7 +126,8 @@ void setSuperAdminAuthState({
 
   if (kDebugMode) {
     debugPrint(
-        'AUTH_STATE: Super admin auth set - userType=$userType, userId=$userId');
+      'AUTH_STATE: Super admin auth set - userType=$userType, userId=$userId',
+    );
   }
 }
 
@@ -158,5 +160,28 @@ void resetFactoryAuthState() {
   _tokenCache = null;
   if (kDebugMode) {
     debugPrint('AUTH_STATE: Reset factory auth state');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sub-admin session (PANEL-SEPARATION-PLAN.md §17 step 5)
+//
+// The sub-admin panel authenticates with its OWN Bearer token (`sub_admin_token` in
+// SharedPreferences). It does NOT use the super-admin or factory flags above. The router now
+// guards `/sub-admin/*` with this cache, because `_safeRedirect` must never perform I/O.
+//
+// Written in three places: at startup from prefs, on sub-admin login, and on sub-admin logout.
+//
+// NOTE: deliberately NOT cleared by `resetAuthState()`. The two domains are independent, and a
+// *super-admin* logout must not bounce a still-valid sub-admin session to its login screen.
+// ─────────────────────────────────────────────────────────────────────────────
+bool _isSubAdminAuthenticatedCache = false;
+
+bool get isSubAdminAuthenticatedCache => _isSubAdminAuthenticatedCache;
+
+void setSubAdminAuthenticatedCache(bool value) {
+  _isSubAdminAuthenticatedCache = value;
+  if (kDebugMode) {
+    debugPrint('AUTH_STATE: isSubAdminAuthenticated=$value');
   }
 }

@@ -3,6 +3,7 @@ import 'package:bloc/bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/config/api_config.dart';
 import 'package:trace_odd/core/services/api_client.dart';
+import 'package:trace_odd/core/utils/auth_state.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_event.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_state.dart';
 
@@ -61,6 +62,9 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
             : <String, dynamic>{};
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('sub_admin_token', token);
+        // Keep the in-memory flag in step with the token, so the router's /sub-admin/* guard
+        // lets this session through immediately (PANEL-SEPARATION-PLAN.md §17 step 5).
+        setSubAdminAuthenticatedCache(true);
         await _api.setAuthToken(token);
         await prefs.setString(
           'sub_admin_name',
@@ -68,7 +72,8 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
         );
         await prefs.setString(
           'sub_admin_vertical',
-          (data['sub_admin_vertical'] ?? data['identity_type'] ?? '').toString(),
+          (data['sub_admin_vertical'] ?? data['identity_type'] ?? '')
+              .toString(),
         );
         await prefs.setString(
           'sub_admin_email',
@@ -402,10 +407,7 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
     }
   }
 
-  void _onToggleStudio(
-    ToggleStudioAccess e,
-    Emitter<SubAdminState> emit,
-  ) {
+  void _onToggleStudio(ToggleStudioAccess e, Emitter<SubAdminState> emit) {
     emit(state.copyWith(canAccessStudio: e.value));
   }
 
@@ -533,6 +535,9 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
     await p.remove('sub_admin_name');
     await p.remove('sub_admin_vertical');
     await p.remove('sub_admin_email');
+    // Clear the in-memory flag too, or the router's guard would keep letting this session through
+    // after logout (PANEL-SEPARATION-PLAN.md §17 step 5).
+    setSubAdminAuthenticatedCache(false);
   }
 
   void _onClear(ClearSubAdminError e, Emitter<SubAdminState> emit) => emit(
