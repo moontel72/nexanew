@@ -175,7 +175,18 @@ Locking yourself out of the server is a worse outcome than the leak — hence st
 
 ### 3.6 Rotate the panel admin logins
 
-The Super Admin, **Master Admin** and **all sub-admins** had publicly readable passwords. Two separate
+> ⚠️ **CORRECTION (2026-09-26) — this section originally missed the table that actually matters.**
+> The `admin.traceodd.com` login runs `AdminAuthController@login`, which authenticates against
+> **`admin_users`** (`config/auth.php`: guard `admin` → provider `admin_users` → `App\Models\AdminUser`).
+> `postgres`/`global_identities`/`tenant_accounts` are **different** logins. If you rotated only those,
+> **the public Super Admin login was left unchanged.**
+>
+> There is **no self-service reset**: the login screen's *Forgot Password?* link is a placeholder —
+> `lib/features/nexa_admin/presentation/screens/super_admin/login_screen.dart:360` carries
+> `// TODO: Implement forgot password flow` and only shows *"Please contact the system administrator to
+> reset your password."* So an operator must set it.
+
+The Super Admin, **Master Admin** and **all sub-admins** had publicly readable passwords. Three separate
 concerns:
 
 **A. Fixing the seeders does NOT change existing accounts.** The rows already in the database keep
@@ -286,6 +297,94 @@ are manual, one-off bootstrap seeders.
 
 **Minor inconsistency noticed:** sub-admin emails use `@nexatrace.com` while other seeders use
 `@nexatrace.local`. Two admin domains is confusing; worth unifying in a later pass.
+
+### 3.6.1 Super Admin (`admin_users`) — setting the password safely
+
+**This is the login at `https://admin.traceodd.com/login`.** Use this when the password is unknown or
+needs rotating, and the requirement is that the value **never appears in any chat, ticket, or shell
+history**.
+
+The method below reads the password from a **hidden terminal prompt** and hashes it through the model's
+own mutator. The value therefore never reaches: this repository, a chat message, `argv` (visible in
+`ps`), bash history, psysh history, or a script left on disk.
+
+**Step 1 — find the account** (no passwords are shown):
+
+```bash
+sudo -u postgres psql -d nexasystem_db -c \
+  "SELECT id, email, name, role, status, force_password_change FROM admin_users ORDER BY email;"
+```
+
+**Step 2 — create the helper script** (`cat` with a quoted heredoc, so nothing is interpolated):
+
+```bash
+cd /var/www/traceodd/admin-panel
+cat > reset-admin-pw.php <<'PHP'
+<?php
+// Set ONE admin_users password, entered WITHOUT echo.
+// The value never appears in argv, shell history, psysh history, or any chat.
+require __DIR__.'/vendor/autoload.php';
+$app = require_once __DIR__.'/bootstrap/app.php';
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+use App\Models\AdminUser;
+
+$email = $argv[1] ?? null;
+if (!$email) { fwrite(STDERR, "usage: php reset-admin-pw.php <email>\n"); exit(2); }
+
+$u = AdminUser::where('email', $email)->first();
+if (!$u) { fwrite(STDERR, "No admin_users row for {$email}\n"); exit(1); }
+
+function hidden(string $prompt): string {
+    echo $prompt;
+    system('stty -echo');
+    $v = rtrim((string) fgets(STDIN), "\r\n");
+    system('stty echo');
+    echo "\n";
+    return $v;
+}
+
+$pw = hidden("New password for {$email} (typing hidden): ");
+if (strlen($pw) < 12) { fwrite(STDERR, "Refusing: use at least 12 characters.\n"); exit(1); }
+if ($pw !== hidden('Repeat: ')) { fwrite(STDERR, "Refusing: passwords did not match.\n"); exit(1); }
+
+$u->password = $pw;              // AdminUser::setPasswordAttribute -> Hash::make()
+$u->force_password_change = false;
+$u->password_changed_at = now();
+$u->save();
+
+echo "Updated {$u->email}. Log in to verify, then delete this script.\n";
+PHP
+```
+
+**Step 3 — run it and type the password at the prompt** (it will not be echoed):
+
+```bash
+sudo -u www-data php reset-admin-pw.php <the-email-from-step-1>
+```
+
+> If `stty` complains about no terminal, run it without `sudo` (as root) — the database connection
+does not depend on the OS user.
+
+**Step 4 — verify, then remove the script:**
+
+```bash
+# log in at https://admin.traceodd.com/login
+rm -f reset-admin-pw.php
+```
+
+**Notes**
+
+- `AdminUser` has a `setPasswordAttribute` mutator that calls `Hash::make`, so **assign the plaintext** —
+do **not** hash it in the script.
+- `force_password_change` is cleared, so the *"needs password change"* prompt will not reappear.
+- **There is no self-service reset.** The login screen's *Forgot Password?* link is a placeholder
+(`login_screen.dart:360`, `// TODO: Implement forgot password flow`). Implementing a real flow would
+need a mail/token path — out of scope for Phase 0a.
+- The API alternative exists — `POST /api/v1/admin/change-password` with `current_password` — but it
+obviously requires knowing the current password, so it cannot recover a lost one.
+- **Do not** paste the password into a chat, ticket, or commit, and do not leave the script on the
+server after use.
 
 ### 3.7 Verify from outside
 
