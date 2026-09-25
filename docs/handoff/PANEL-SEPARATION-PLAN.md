@@ -4,8 +4,9 @@
 **Read with:** `docs/handoff/FAULT-REMEDIATION-HISTORY.md` (separate scope: GStreamer faults).
 **Updated 2026-09-24:** §11–§16 added from the ecosystem audit — the numbered panel registry,
 the per-surface architecture standard (BLoC vs native), the verified native/Rust layer state,
-the corrected risk register, the pillars tracked outside this plan, and the developer-environment
-fix. **Nothing already in this file was removed.** §11 is now the counting authority for
+the corrected risk register, the pillars tracked outside this plan, and the **verified
+developer-environment diagnosis** (Dart fixed; YAML blocked on the machine's Node v26 — see §16).
+**Nothing already in this file was removed.** §11 is now the counting authority for
 app/panel numbers; it supersedes the informal "18 panels" figure and the spec's "15 modules".
 **Governance:** this file remains the master. `NEXATRACE_SUPREME_MASTER_SPEC.md` is the legacy
 base and now carries a correction notice; see §11 and plan hard rule 8.
@@ -1479,6 +1480,7 @@ several rows are already shipped and only need an owner action.
 | **`dart analyze` backlog** | CI gate shipped (`ce560194`), `--no-fatal-warnings`, **57 warnings / 0 errors** | Burn down the 57, then flip to fatal | Dev |
 | **37 composer advisories** (11 packages) | Untriaged, pre-existing | `composer audit`, triage, upgrade as its own reviewable change | Dev |
 | **Hardcoded `root@135.181.46.27`** | Live — 9 occurrences in `frontend-deploy.yml` | Use the same `vars.VPS_HOST` that `deploy.yml` uses — **create the repo variable first**, or the deploy breaks | Owner + dev |
+| **Live LLM API key in plaintext** | Not in git — `%APPDATA%/Zed/settings.json` stores `language_models.openai.api_key` in **plaintext**. Exposed to screenshots, settings sync and backups, and it bills against the owner's account | Move to an environment variable or the OS keyring; **rotate the key** if that file has ever been shared, synced or screenshotted | **Owner** |
 
 ### Additional debt found by this audit, not yet in §6 or §9b
 
@@ -1532,24 +1534,109 @@ master document**, or it will keep being forgotten by agents that read only the 
 
 ---
 
-# 16. Developer environment — Zed language servers **[NEW — audit 2026-09-24]**
+# 16. Developer environment — Zed language servers **[DIAGNOSED 2026-09-24]**
 
-`.zed/settings.json` currently declares `file_scan_exclusions` and `agent` only — it has **no `lsp`
-section**. Zed therefore falls back to bundled/default servers, and `yaml-language-server` and
-`dart-language-server` have been failing repeatedly in this workspace.
+Both servers were failing repeatedly in this workspace. Diagnosed from `Zed.log` and **reproduced
+directly** — they have different causes, and only one of them was a settings problem.
 
-**Fix plan (no other file is affected):**
+## 16.1 Dart — **fixed**
 
-1. Confirm the toolchain paths on the machine (owner runs, output shared):
-   `where dart` · `where flutter` · `where node` · `where npm` · `where yaml-language-server` ·
-   `dart --version` · `node --version`
-2. Add an explicit `lsp` block to `.zed/settings.json`:
-   - `dart` → `{"binary": {"path": "<flutter-sdk>/bin/dart", "arguments": ["language-server", "--protocol=lsp"]}}`
-   - `yaml-language-server` → `{"binary": {"path": "yaml-language-server", "arguments": ["--stdio"]}}`
-3. If the YAML server is not needed (this repo has very few YAML files — CI workflows and
-   `pubspec.yaml`), the cleanest option is to **disable it** so the failure stops appearing every
-   session: `"yaml-language-server": {"enabled": false}`.
+`Zed.log` (18 occurrences):
 
-**Constraint to respect:** `.githooks/validate-json-config.mjs` validates `.zed/settings.json`
-before commit. The file is JSONC (comments allowed), so the hook's parser must accept the edit —
-run `node .githooks/validate-json-config.mjs .zed/settings.json` after changing it.
+```
+Failed to start language server "dart": from extension "Dart" version 0.4.1:
+dart must be installed from dart.dev/get-dart or pointed to by the LSP binary settings
+```
+
+**Cause:** `dart` and `flutter` are **not on `PATH`** on this machine (`command -v dart` → not found),
+so the Dart extension cannot locate the SDK.
+
+**Verified toolchain:**
+
+| Tool | Result |
+|---|---|
+| `dart` | **not on PATH** |
+| `flutter` | **not on PATH** |
+| `node` | `C:\Program Files\nodejs\node.exe` — **v26.7.0** |
+| `npm` | present |
+| `yaml-language-server` | not installed globally |
+
+**Two Flutter SDKs exist:** `C:/flutter` (Dart 3.11.1) and `C:/src/flutter` (Dart 3.12.2). The
+project's `.dart_tool/package_config.json` resolves to **`C:/src/flutter`**, so that is the SDK in use.
+
+**Fix applied — in USER settings, not project settings.** Point at the **real executable**
+(`dart.exe` in the Flutter cache), **not** `bin/dart` (a shell script) or `bin/dart.bat` (a batch
+file) — Zed spawns processes directly, and a `.bat` does not execute that way.
+
+`%APPDATA%/Zed/settings.json` = `C:\Users\picks\AppData\Roaming\Zed\settings.json` (backed up to
+`settings.json.bak` first):
+
+```json
+"lsp": {
+  "dart": {
+    "binary": { "path": "C:/src/flutter/bin/cache/dart-sdk/bin/dart.exe" }
+  }
+}
+```
+
+**Why user settings and not `.zed/settings.json`:** the path is **machine-specific**. Putting it in
+the repo's shared settings would break every other clone. Do not move it there. Restart Zed (or run
+`workspace: reload`) for it to take effect.
+
+## 16.2 YAML — **not a settings problem; the server is non-functional**
+
+`Zed.log` (11 occurrences) shows the server **does spawn** and then hangs:
+
+```
+INFO  [lsp] starting language server process. binary path: "C:\Program Files\nodejs\node.exe",
+  args: [".../yaml-language-server/bin/yaml-language-server", "--stdio"]
+...
+ERROR [lsp] Cancelled LSP request task for "initialize" id 0 which took over 120s
+ERROR [project::lsp_store] Failed to start language server "yaml-language-server":
+  Caused by: Request timed out
+```
+
+**Reproduced directly** by spawning the server and sending a correctly framed LSP `initialize`:
+
+```
+TIMEOUT: server did NOT respond to initialize within 20s   (no stderr output at all)
+```
+
+The earlier `missing executable` error was a **transient during npm install** (the binary was written
+one minute later). The binary now exists and runs — `--version` returns `1.24.0`. The failure is the
+**initialize handshake**, not the binary, and not a settings path.
+
+**It is not YAML-specific.** The same 120s initialize timeout appears for every Node-based server:
+
+| Server | Timeouts in log |
+|---|---|
+| `dart` | 18 — PATH problem, fixed in §16.1 |
+| `yaml-language-server` | 11 |
+| `vtsls` | 2 |
+| `bash-language-server` | 2 |
+| `vscode-html-language-server` | 1 |
+| `tailwindcss-language-server` | 1 |
+
+**Most likely cause: Node v26.7.0** — the only Node on the machine (no LTS alongside), and every
+affected server is JavaScript. A secondary candidate is a blocked/hanging network call during init.
+
+**Options, in order of preference:**
+
+1. **Install Node LTS (22.x) alongside v26** and point Zed's Node-based servers at it. This is the
+   real fix: it restores YAML, shell and TS/JS language support together.
+2. **Disable only what this repo does not need.** The repo has very few YAML files (CI workflows and
+   `pubspec.yaml`), so disabling the YAML server removes the failure from every session at almost no
+   cost:
+   ```jsonc
+   "lsp": { "yaml-language-server": { "enabled": false } }
+   ```
+   **Owner decision required** — option 2 trades away YAML validation.
+
+**Do not** commit a `yaml-language-server` binary path into `.zed/settings.json`; it is
+Node-installed and machine-specific, exactly like the Dart path.
+
+## 16.3 Constraint to respect
+
+`.githooks/validate-json-config.mjs` validates `.zed/settings.json` before commit. If that file is
+ever edited, run `node .githooks/validate-json-config.mjs .zed/settings.json` — the hook is JSONC-aware
+and confirmed working (*"JSON config valid (7 files checked)"* on commit `29a5fc28`).
