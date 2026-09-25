@@ -1567,7 +1567,97 @@ master document**, or it will keep being forgotten by agents that read only the 
 
 ---
 
-# 16. Developer environment — Zed language servers **[DIAGNOSED 2026-09-24 · CORRECTED 2026-09-25]**
+# 15b. Phase 1 — the provider split, ready to execute **[NEW — 2026-09-25]**
+
+§5b.2 item 5 says *"Split `app_providers.dart` (284 lines, 59 imports) into
+`features/<panel>/providers.dart`"*. This section records everything needed to do it safely, after a
+read of the real file. **It is the single highest-leverage change toward group isolation**, because
+the same file is the mechanism behind the Factory/Sub-Admin mixing bug (§7c).
+
+## 15b.1 Why it is a *pure move* — and why that makes it low-risk
+
+`lib/core/providers/app_providers.dart` currently holds one class (`AppProviders`) with six static
+methods. It imports **19 factory files and 20 nexa_admin files**, plus 4 core files.
+
+Move each panel-specific method into that panel's own folder and the imports become
+`features/<panel> → features/<panel>` — **the same layer, which the model allows**. No logic changes,
+no behaviour changes. The violation disappears because the *file* moved, not because the code changed.
+
+| Violation today | After the move |
+|---|---|
+| `core -> features/factory` — 25 statements | **0** |
+| `core -> features/nexa_admin` — 20 statements | **0** |
+| **Baseline total 77** | **~32** |
+
+## 15b.2 The dump
+
+| `AppProviders` method | Contents | New home |
+|---|---|---|
+| `getRepositoryProviders` | SharedPreferences, SecureStorageInterface, ApiClient, ApiService, Dio **+ all nexa_admin repos + all factory repos** | **split**: core services stay in `core/`; the rest goes to the two panel files |
+| `getNexaAdminBlocProviders` | 7 blocs | `features/nexa_admin/providers.dart` |
+| `getFactoryAdminBlocProviders` | 11 blocs | `features/factory/providers.dart` |
+| `getDriverBlocProviders` | 2 blocs (factory driver) | `features/factory/providers.dart` |
+| `getStoreKeeperBlocProviders` | **empty list** | `features/factory/providers.dart` |
+| `getGlobalBlocProviders` | **empty list** | stays (no feature imports) |
+
+## 15b.3 ⚠️ Two assumptions that are WRONG — found by reading, 2026-09-25
+
+1. **§7c claims `reseller_app_initializer.dart` "never touches `AppProviders`". It does.**
+   `lib/features/reseller/app/reseller_app_initializer.dart:70-80` calls
+   `AppProviders.getRepositoryProviders(...)` as its base. So the reseller app currently receives
+   **nexa_admin + factory repositories it does not need** — B2B leakage. The split must therefore
+   decide explicitly what reseller keeps (see step 4), and cannot simply strip the list.
+2. **`app_initializer.dart` lives in `core/widgets/` — it is itself a violation.**
+   `lib/core/widgets/app_initializer.dart` imports `features/bus_operations/.../ticket_vault_service.dart`
+   (that is the whole `core -> features/bus_operations: 1`). Any per-panel providers file it imports
+   would add more. **App-level composition does not belong in `core/`** — it belongs to the layer the
+   model calls "other" (entry points and routing), which may import anything.
+
+## 15b.4 Step list (each step is independently verifiable)
+
+1. **Move `app_initializer.dart` out of `core/`** — to `lib/app/app_initializer.dart` (new folder,
+   layer "other"). Update the one import in `lib/main.dart`. Verify: `dart analyze lib/main.dart`.
+   *Do this first — it is the precondition for the next steps being clean.*
+2. **Create `lib/features/nexa_admin/providers.dart`** — `NexaAdminProviders.repositoryProviders()` and
+   `.blocProviders()`, moved verbatim, same order.
+3. **Create `lib/features/factory/providers.dart`** — `FactoryProviders.repositoryProviders()`,
+   `.adminBlocProviders()`, `.driverBlocProviders()`, `.storeKeeperBlocProviders()`, moved verbatim.
+4. **Slim `lib/core/providers/app_providers.dart` to core services only** — SharedPreferences,
+   SecureStorageInterface, ApiClient, ApiService, Dio. It must import **no** `features/` file when done.
+5. **Compose at the call sites** (both are layer "other", so both are allowed to import features):
+   - `lib/app/app_initializer.dart` — `[...core, ...NexaAdminProviders.repo(), ...FactoryProviders.repo()]`,
+     then the bloc lists. **Keep the exact order** — `RepositoryProvider` dependencies are resolved by
+     `context.read` during `create`, so order is behavioural, not cosmetic.
+   - `reseller_app_initializer.dart` — decide what B2B actually needs. **Behaviour-preserving default:**
+     keep all three lists unchanged, then open a separate task to trim the unused ones.
+6. **Delete nothing else.** `getGlobalBlocProviders`/`getStoreKeeperBlocProviders` returning empty
+   lists are harmless; they can be removed when their callers are touched.
+
+## 15b.5 Verification gates (all runnable)
+
+```bash
+# The guard: must drop from 77 to ~32, and the check must still PASS
+node .scripts/check-panel-isolation.mjs --report
+node .scripts/check-panel-isolation.mjs
+
+# Then re-baseline, which is the point of the exercise:
+node .scripts/check-panel-isolation.mjs --write-baseline
+```
+
+- `dart analyze <changed paths>` — works and is fast on a narrow scope; the **full-project** run
+  exceeded 10 minutes locally, so scope it to the touched files.
+- `frontend-deploy.yml` runs `dart analyze` **before** any build, so a compile error fails CI and
+  never reaches the server. That is the backstop — but do not rely on it in place of local analysis.
+- Runtime smoke test: the admin bundle must still boot, log in, and load a dashboard.
+
+## 15b.6 Order relative to the subdomain work
+
+This (§15b) **is Blocker B** from `PANEL-SUBDOMAIN-LINKING-PLAYBOOK.md` §2. Until it is done, panels
+#1, #2, #3, #7 and #8 cannot be locked to their own subdomains — one bundle still serves five panels
+and one login still sets state another panel reads.
+
+---
+
 
 Both servers were failing repeatedly in this workspace. Diagnosed from `Zed.log` and **reproduced
 directly** — they have different causes, and only one of them was a settings problem.
