@@ -1,65 +1,29 @@
-﻿// App Providers for NexaTrace System
-// This file provides dependency injection using Flutter BLoC's RepositoryProvider
+﻿// App Providers — CORE SERVICES ONLY.
+//
+// PANEL-SEPARATION-PLAN.md §15b: this file used to hold every panel's repositories and BLoCs, which
+// made `lib/core/` import `lib/features/` (45 violating imports). The panel-specific providers now
+// live with their panels:
+//
+//     lib/features/nexa_admin/providers.dart   → NexaAdminProviders
+//     lib/features/factory/providers.dart      → FactoryProviders
+//
+// This file must import **nothing** from `lib/features/`. If a panel needs a provider, add it to that
+// panel's own providers file — `node .scripts/check-panel-isolation.mjs` enforces this.
 
 import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/constants/api_endpoints.dart' as api;
+import 'package:trace_odd/core/interfaces/secure_storage_interface.dart';
 import 'package:trace_odd/core/services/api_client.dart';
 import 'package:trace_odd/core/services/api_service.dart';
-import 'package:trace_odd/features/factory/admin/data/repositories/factory_auth_repository.dart';
-import 'package:trace_odd/features/factory/admin/data/repositories/factory_products_repository.dart';
-import 'package:trace_odd/features/factory/admin/data/datasources/codes_remote_datasource.dart';
-import 'package:trace_odd/features/factory/admin/data/repositories/codes_repository_impl.dart';
-import 'package:trace_odd/features/factory/store_keeper/presentation/bloc/store_keeper_bloc.dart';
-import 'package:trace_odd/features/factory/store_keeper/data/repositories/store_keeper_repository.dart';
-import 'package:trace_odd/features/factory/driver/presentation/bloc/factory_driver_geofence_bloc.dart';
-import 'package:trace_odd/features/factory/driver/presentation/bloc/driver_bloc.dart';
-import 'package:trace_odd/features/factory/driver/data/repositories/driver_repository_impl.dart';
-import 'package:trace_odd/features/factory/driver/data/datasources/driver_remote_datasource.dart';
-import 'package:trace_odd/features/factory/admin/domain/repositories/codes_repository.dart';
-import 'package:trace_odd/features/factory/admin/presentation/bloc/auth/factory_auth_bloc.dart';
-import 'package:trace_odd/features/factory/admin/presentation/bloc/store_keepers/store_keepers_bloc.dart';
-import 'package:trace_odd/features/factory/admin/presentation/bloc/drivers/drivers_bloc.dart';
-import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_codes_bloc.dart';
-import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_bloc.dart';
-import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_packing_bloc.dart';
-import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/carton_codes/carton_codes_bloc.dart';
-import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/packet_codes/packet_codes_bloc.dart';
-import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/unit_codes/unit_codes_bloc.dart';
-import 'package:trace_odd/features/factory/admin/presentation/bloc/products/products_bloc.dart';
-import 'package:trace_odd/features/nexa_admin/data/repositories/company_management_repository.dart';
-import 'package:trace_odd/features/nexa_admin/data/repositories/admin_auth_repository.dart';
-import 'package:trace_odd/features/nexa_admin/data/repositories/dashboard_repository.dart';
-import 'package:trace_odd/features/nexa_admin/data/repositories/plan_management_repository.dart';
-import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
-import 'package:trace_odd/features/nexa_admin/presentation/bloc/companies/company_management_bloc.dart';
-import 'package:trace_odd/features/nexa_admin/presentation/bloc/dashboard/admin_dashboard_bloc.dart';
-import 'package:trace_odd/features/nexa_admin/presentation/bloc/layout/super_admin_layout_cubit.dart';
-import 'package:trace_odd/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart';
-import 'package:trace_odd/features/nexa_admin/presentation/bloc/invoices/invoice_bloc.dart';
-import 'package:trace_odd/features/nexa_admin/data/datasources/reseller_management_remote_datasource.dart';
-import 'package:trace_odd/features/nexa_admin/data/repositories/reseller_management_repository.dart';
-import 'package:trace_odd/features/nexa_admin/presentation/bloc/reseller_management/reseller_management_bloc.dart';
-import 'package:trace_odd/core/interfaces/secure_storage_interface.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-// Billing imports
-import 'package:trace_odd/features/factory/admin/data/repositories/billing_repository_impl.dart';
-import 'package:trace_odd/features/factory/admin/domain/repositories/billing_repository.dart';
-import 'package:trace_odd/features/factory/admin/presentation/bloc/billing/billing_bloc.dart';
-
-import 'package:trace_odd/features/nexa_admin/data/datasources/billing_datasource.dart'
-    as admin_billing_ds;
-import 'package:trace_odd/features/nexa_admin/data/repositories/billing_repository.dart'
-    as admin_billing_repo;
-import 'package:trace_odd/features/nexa_admin/presentation/bloc/billing/billing_bloc.dart'
-    as admin_billing_bloc;
-import 'package:trace_odd/features/nexa_admin/domain/usecases/generate_invoice_usecase.dart';
-import 'package:trace_odd/features/nexa_admin/domain/usecases/process_payment_usecase.dart';
-import 'package:trace_odd/features/nexa_admin/domain/usecases/reconcile_payments_usecase.dart';
 
 class AppProviders {
-  /// Get all repository providers for the root of the app
+  AppProviders._();
+
+  /// Core services every panel depends on. Panel providers are composed AFTER this list by the
+  /// caller (an entry point or `lib/app/app_initializer.dart`), because providers are resolved with
+  /// `context.read` during creation — order matters.
   static List<RepositoryProvider> getRepositoryProviders({
     required SharedPreferences sharedPreferences,
     required SecureStorageInterface secureStorage,
@@ -85,191 +49,6 @@ class AppProviders {
             },
           ),
         ),
-      ),
-
-      // Nexa Admin Repositories
-      RepositoryProvider<AdminAuthRepository>(
-        create: (context) => AdminAuthRepository(
-          apiClient: context.read<ApiClient>(),
-          secureStorage: context.read<SecureStorageInterface>(),
-          sharedPreferences: context.read<SharedPreferences>(),
-        ),
-      ),
-      RepositoryProvider<PlanManagementRepository>(
-        create: (context) =>
-            PlanManagementRepository(apiClient: context.read<ApiClient>()),
-      ),
-      RepositoryProvider<CompanyManagementRepository>(
-        create: (context) =>
-            CompanyManagementRepository(apiService: context.read<ApiService>()),
-      ),
-      RepositoryProvider<DashboardRepository>(
-        create: (context) =>
-            DashboardRepository(apiClient: context.read<ApiClient>()),
-      ),
-
-      RepositoryProvider<admin_billing_ds.BillingDataSource>(
-        create: (context) =>
-            admin_billing_ds.BillingDataSourceImpl(context.read<ApiClient>()),
-      ),
-      RepositoryProvider<admin_billing_repo.BillingRepository>(
-        create: (context) => admin_billing_repo.BillingRepositoryImpl(
-          context.read<admin_billing_ds.BillingDataSource>(),
-        ),
-      ),
-
-      RepositoryProvider<ResellerManagementRemoteDatasource>(
-        create: (context) => ResellerManagementRemoteDatasource(
-          apiService: context.read<ApiService>(),
-        ),
-      ),
-      RepositoryProvider<ResellerManagementRepository>(
-        create: (context) => ResellerManagementRepository(
-          remote: context.read<ResellerManagementRemoteDatasource>(),
-        ),
-      ),
-
-      // Factory Admin Repositories
-      RepositoryProvider<FactoryAuthRepository>(
-        create: (context) => FactoryAuthRepository(
-          apiClient: context.read<ApiClient>(),
-          sharedPreferences: context.read<SharedPreferences>(),
-        ),
-      ),
-      RepositoryProvider<FactoryProductsRepository>(
-        create: (context) =>
-            FactoryProductsRepository(apiService: context.read<ApiService>()),
-      ),
-      RepositoryProvider<CodesRemoteDatasource>(
-        create: (context) =>
-            CodesRemoteDatasource(apiService: context.read<ApiService>()),
-      ),
-      RepositoryProvider<CodesRepository>(
-        create: (context) => CodesRepositoryImpl(
-          remoteDatasource: context.read<CodesRemoteDatasource>(),
-        ),
-      ),
-      // Billing Repository
-      RepositoryProvider<BillingRepository>(
-        create: (context) =>
-            BillingRepositoryImpl(apiClient: context.read<ApiClient>()),
-      ),
-    ];
-  }
-
-  /// Get BLoC providers for Store Keeper module
-  static List<BlocProvider> getStoreKeeperBlocProviders() {
-    return [
-      // Add Store Keeper BLoCs here
-    ];
-  }
-
-  /// Get BLoC providers for Driver module
-  static List<BlocProvider> getDriverBlocProviders() {
-    return [
-      BlocProvider<FactoryDriverGeofenceBloc>(
-        create: (context) => FactoryDriverGeofenceBloc(),
-      ),
-      BlocProvider<DriverBloc>(
-        create: (context) => DriverBloc(
-          repository: DriverRepositoryImpl(
-            remoteDatasource: DriverRemoteDatasource(),
-          ),
-        ),
-      ),
-    ];
-  }
-
-  /// Get BLoC providers for Nexa Admin module
-  static List<BlocProvider> getNexaAdminBlocProviders() {
-    return [
-      BlocProvider<AdminAuthBloc>(
-        create: (context) =>
-            AdminAuthBloc(authRepository: context.read<AdminAuthRepository>()),
-      ),
-      BlocProvider<PlanManagementBloc>(
-        create: (context) => PlanManagementBloc(
-          planRepository: context.read<PlanManagementRepository>(),
-        ),
-      ),
-      BlocProvider<CompanyManagementBloc>(
-        create: (context) => CompanyManagementBloc(
-          repository: context.read<CompanyManagementRepository>(),
-        ),
-      ),
-      BlocProvider<AdminDashboardBloc>(
-        create: (context) => AdminDashboardBloc(
-          dashboardRepository: context.read<DashboardRepository>(),
-        ),
-      ),
-      BlocProvider<SuperAdminLayoutCubit>(
-        create: (context) => SuperAdminLayoutCubit(),
-      ),
-      BlocProvider<admin_billing_bloc.BillingBloc>(
-        create: (context) {
-          final repo = context.read<admin_billing_repo.BillingRepository>();
-          return admin_billing_bloc.BillingBloc(
-            generateInvoiceUseCase: GenerateInvoiceUseCase(repo),
-            processPaymentUseCase: ProcessPaymentUseCase(repo),
-            reconcilePaymentsUseCase: ReconcilePaymentsUseCase(repo),
-            billingRepository: repo,
-          );
-        },
-      ),
-      BlocProvider<InvoiceBloc>(
-        create: (context) => InvoiceBloc(
-          billingRepository: context
-              .read<admin_billing_repo.BillingRepository>(),
-        ),
-      ),
-      BlocProvider<ResellerManagementBloc>(
-        create: (context) => ResellerManagementBloc(
-          repo: context.read<ResellerManagementRepository>(),
-        ),
-      ),
-    ];
-  }
-
-  /// Get BLoC providers for Factory Admin module
-  static List<BlocProvider> getFactoryAdminBlocProviders() {
-    return [
-      BlocProvider<FactoryAuthBloc>(
-        create: (context) => FactoryAuthBloc(
-          authRepository: context.read<FactoryAuthRepository>(),
-        ),
-      ),
-      BlocProvider<ProductsBloc>(
-        create: (context) =>
-            ProductsBloc(repository: context.read<FactoryProductsRepository>()),
-      ),
-      BlocProvider<UnitCodesBloc>(
-        create: (context) =>
-            UnitCodesBloc(codesRepository: context.read<CodesRepository>()),
-      ),
-      BlocProvider<PacketCodesBloc>(
-        create: (context) =>
-            PacketCodesBloc(codesRepository: context.read<CodesRepository>()),
-      ),
-      BlocProvider<CartonCodesBloc>(
-        create: (context) =>
-            CartonCodesBloc(codesRepository: context.read<CodesRepository>()),
-      ),
-      BlocProvider<BundleCodesBloc>(
-        create: (context) =>
-            BundleCodesBloc(codesRepository: context.read<CodesRepository>()),
-      ),
-      BlocProvider<BundleBloc>(create: (context) => BundleBloc()),
-      BlocProvider<BundlePackingBloc>(create: (context) => BundlePackingBloc()),
-      BlocProvider<StoreKeepersBloc>(create: (context) => StoreKeepersBloc()),
-      BlocProvider<DriversBloc>(create: (context) => DriversBloc()),
-      BlocProvider<StoreKeeperBloc>(
-        create: (context) =>
-            StoreKeeperBloc(repository: StoreKeeperRepository()),
-      ),
-      // Billing Bloc
-      BlocProvider<BillingBloc>(
-        create: (context) =>
-            BillingBloc(billingRepository: context.read<BillingRepository>()),
       ),
     ];
   }

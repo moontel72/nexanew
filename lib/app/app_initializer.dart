@@ -1,6 +1,10 @@
-﻿// File: lib/core/widgets/app_initializer.dart
-// Widget that initializes async dependencies before showing the app
-// Replaces get_it initialization with Flutter BLoC's RepositoryProvider
+// File: lib/app/app_initializer.dart
+// App-level composition root: initializes async dependencies, then composes the core services with
+// each panel's providers before showing the app.
+//
+// MOVED here from `lib/core/widgets/` (PANEL-SEPARATION-PLAN.md §15b). App-level composition must not
+// live in `core/`, because composing panels means importing `features/` — and `core/` must not depend
+// on `features/`. Entry points and routing (this layer) may import anything.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,6 +16,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/providers/app_providers.dart';
 import 'package:trace_odd/core/services/api_client.dart';
 import 'package:trace_odd/features/bus_operations/data/services/ticket_vault_service.dart';
+import 'package:trace_odd/features/factory/providers.dart';
+import 'package:trace_odd/features/nexa_admin/providers.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb, debugPrint;
 import 'package:trace_odd/core/interfaces/secure_storage_interface.dart';
 import 'package:trace_odd/core/services/secure_storage_service.dart';
@@ -152,12 +158,20 @@ class _AppInitializerState extends State<AppInitializer> {
       );
     }
 
-    // Provide dependencies to the entire app using RepositoryProvider
+    // Provide dependencies to the entire app.
+    //
+    // ORDER IS BEHAVIOURAL: providers resolve their dependencies with `context.read` while they are
+    // created, so core services must come first, then the panels. This is the same order the single
+    // combined list used before the §15b split.
     return MultiRepositoryProvider(
-      providers: AppProviders.getRepositoryProviders(
-        sharedPreferences: _sharedPreferences!,
-        secureStorage: _secureStorage!,
-      ),
+      providers: [
+        ...AppProviders.getRepositoryProviders(
+          sharedPreferences: _sharedPreferences!,
+          secureStorage: _secureStorage!,
+        ),
+        ...NexaAdminProviders.repositoryProviders(),
+        ...FactoryProviders.repositoryProviders(),
+      ],
       child: Builder(
         builder: (context) {
           _authWarmup ??= Future.wait([
@@ -218,9 +232,9 @@ class _AppInitializerState extends State<AppInitializer> {
                     return MultiBlocProvider(
                       providers: [
                         ...AppProviders.getGlobalBlocProviders(),
-                        ...AppProviders.getDriverBlocProviders(),
-                        ...AppProviders.getNexaAdminBlocProviders(),
-                        ...AppProviders.getFactoryAdminBlocProviders(),
+                        ...FactoryProviders.driverBlocProviders(),
+                        ...NexaAdminProviders.blocProviders(),
+                        ...FactoryProviders.adminBlocProviders(),
                       ],
                       child: ScreenUtilInit(
                         designSize: const Size(375, 812),
