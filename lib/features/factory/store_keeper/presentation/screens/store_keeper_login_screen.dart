@@ -24,8 +24,8 @@ class _StoreKeeperLoginScreenState extends State<StoreKeeperLoginScreen> {
   @override
   void initState() {
     super.initState();
-    _emailC.text = 'fasail@gmail.com';
-    _passC.text = 'admin12345';
+    // SECURITY: never pre-fill credentials in the UI.
+    // See docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md
   }
 
   @override

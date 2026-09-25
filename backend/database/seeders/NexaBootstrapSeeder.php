@@ -263,7 +263,9 @@ class NexaBootstrapSeeder extends Seeder
                     'id' => (string) Str::uuid(),
                     'name' => 'Super Admin',
                     'email' => 'admin@nexatrace.local',
-                    'password' => 'admin12345',
+                    // SECURITY: password must come from the environment — never hardcoded.
+                    // See docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md
+                    'password' => env('NEXATRACE_BOOTSTRAP_ADMIN_PASSWORD') ?: throw new \RuntimeException('Set NEXATRACE_BOOTSTRAP_ADMIN_PASSWORD before running NexaBootstrapSeeder.'),
                     'role' => 'super_admin',
                     'status' => 'active',
                     'metadata' => [],
@@ -332,7 +334,10 @@ class NexaBootstrapSeeder extends Seeder
                     'is_active' => true,
                     'metadata' => [],
                 ]);
-                $factoryUser->setPassword('admin12345');
+                $factoryUser->setPassword(
+                    env('NEXATRACE_BOOTSTRAP_ADMIN_PASSWORD')
+                        ?: throw new \RuntimeException('Set NEXATRACE_BOOTSTRAP_ADMIN_PASSWORD before running NexaBootstrapSeeder.')
+                );
                 $factoryUser->save();
             }
         });

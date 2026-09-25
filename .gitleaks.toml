@@ -1,0 +1,32 @@
+# gitleaks configuration — NexaTrace
+#
+# Companion to .github/workflows/secret-scan.yml and
+# docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md.
+#
+# SCOPE: the scan runs against the WORKING TREE (`gitleaks detect --no-git`), not git
+# history — per docs/handoff/PANEL-SEPARATION-PLAN.md §7b.5. Git history still contains
+# credentials that were removed in this cycle; scanning history would fail the build on
+# findings that are already deleted and pending rotation, which tells us nothing.
+#
+# ⚠️ RULES FOR FUTURE EDITORS
+#   1. Never add a broad allowlist for `lib/**`, `backend/app/**`, `backend/routes/**`
+#      or `assets/**`. Real, live credentials have been committed in those trees before.
+#   2. Every allowlist entry must carry a comment saying WHY it exists and WHEN to remove it.
+
+title = "NexaTrace"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = """
+Remediation-evidence documents. These two files quote the compromised password values
+as evidence of the Phase 0a incident, so they trip the default rules on every run.
+
+REMOVE these entries once the passwords have been rotated AND the docs have been
+re-redacted to describe the incident without quoting the values.
+"""
+paths = [
+  '''docs/handoff/PANEL-SEPARATION-PLAN\.md''',
+  '''docs/handoff/PANEL-SEPARATION-RECOMMENDATIONS\.md''',
+]

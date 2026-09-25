@@ -7,18 +7,32 @@ param(
     [string]$HostName = "localhost",
     [int]$Port = 5444,
     [string]$AdminUser = "postgres",
-    [string]$AdminPassword = "awan1972",
+    # SECURITY: passwords are NEVER defaulted in this repo. Supply each one as a parameter
+    # or via its environment variable. See docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md
+    [string]$AdminPassword = $env:NEXATRACE_PG_ADMIN_PASSWORD,
     [string]$AppUser = "nexa_app",
-    [string]$AppPassword = "NexaAppPassword123!",
+    [string]$AppPassword = $env:NEXATRACE_PG_APP_PASSWORD,
     [string]$ReadOnlyUser = "nexa_readonly",
-    [string]$ReadOnlyPassword = "ReadOnlyPassword456!",
+    [string]$ReadOnlyPassword = $env:NEXATRACE_PG_READONLY_PASSWORD,
     [string]$SuperAdminUser = "nexa_superadmin",
-    [string]$SuperAdminPassword = "SuperAdminPassword789!",
+    [string]$SuperAdminPassword = $env:NEXATRACE_PG_SUPERADMIN_PASSWORD,
     [string]$ProjectPath = "C:\Ecosystem\NexaTrace_System",
     [switch]$SkipInstall = $false,
     [switch]$SkipSampleData = $false,
     [switch]$Force = $false
 )
+
+# ── SECURITY GATE — passwords are never committed to this repo ───────────────
+# Supply each password as a parameter, or set its environment variable.
+# See docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md
+$missingPasswords = @()
+if ([string]::IsNullOrWhiteSpace($AdminPassword))      { $missingPasswords += 'AdminPassword / NEXATRACE_PG_ADMIN_PASSWORD' }
+if ([string]::IsNullOrWhiteSpace($AppPassword))        { $missingPasswords += 'AppPassword / NEXATRACE_PG_APP_PASSWORD' }
+if ([string]::IsNullOrWhiteSpace($ReadOnlyPassword))   { $missingPasswords += 'ReadOnlyPassword / NEXATRACE_PG_READONLY_PASSWORD' }
+if ([string]::IsNullOrWhiteSpace($SuperAdminPassword)) { $missingPasswords += 'SuperAdminPassword / NEXATRACE_PG_SUPERADMIN_PASSWORD' }
+if ($missingPasswords.Count -gt 0) {
+    throw ("Missing required password(s): " + ($missingPasswords -join ', ') + ". Refusing to install with an empty or default password.")
+}
 
 # Error handling
 $ErrorActionPreference = "Stop"

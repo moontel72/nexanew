@@ -2612,8 +2612,8 @@ flutter build web --release --no-tree-shake-icons
 
 | Role | URL | Email | Password |
 |------|-----|-------|----------|
-| **Super Admin** | `http://135.181.46.27` | `admin@nexatrace.local` | `admin12345` |
-| **Factory Admin** | `http://135.181.46.27/factory/login` | `factory-admin@nexatrace.local` | `admin12345` |
+| **Super Admin** | `http://135.181.46.27` | `admin@nexatrace.local` | *(not stored in this repo — see the team password manager)* |
+| **Factory Admin** | `http://135.181.46.27/factory/login` | `factory-admin@nexatrace.local` | *(not stored in this repo — see the team password manager)* |
 | **Store Keeper** | `http://135.181.46.27/factory/store-keeper/login` | *(factory-assigned)* | *(factory-assigned)* |
 | **Reseller** | `http://135.181.46.27/reseller/login` | *(registered)* | *(registered)* |
 | **Factory Driver** | `http://135.181.46.27/driver/login` | *(factory-assigned)* | *(factory-assigned)* |

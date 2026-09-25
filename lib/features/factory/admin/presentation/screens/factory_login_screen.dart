@@ -34,9 +34,8 @@ class _FactoryLoginScreenState extends State<FactoryLoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill with test credentials for development
-    _emailController.text = 'factory-admin@nexatrace.local';
-    _passwordController.text = 'admin12345';
+    // SECURITY: never pre-fill credentials in the UI. Doing so let anyone sign in
+    // without knowing a password. See docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md
   }
 
   @override

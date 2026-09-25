@@ -6,13 +6,20 @@ param(
     [string]$HostName = "localhost",
     [int]$Port = 5444,
     [string]$Username = "postgres",
-    [string]$Password = "awan1972",
+    # SECURITY: never defaulted in this repo. Supply as a parameter or via
+    # NEXATRACE_PG_ADMIN_PASSWORD. See docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md
+    [string]$Password = $env:NEXATRACE_PG_ADMIN_PASSWORD,
     [string]$BackupDir = "C:\nexatrace_backups",
     [int]$RetentionDays = 7,
     [switch]$Compress = $true,
     [switch]$Verify = $true,
     [switch]$Silent = $false
 )
+
+# ── SECURITY GATE — passwords are never committed to this repo ───────────────
+if ([string]::IsNullOrWhiteSpace($Password)) {
+    throw "Missing required password. Set NEXATRACE_PG_ADMIN_PASSWORD or pass -Password."
+}
 
 # Error handling
 $ErrorActionPreference = "Stop"

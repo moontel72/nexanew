@@ -41,7 +41,7 @@ php artisan serve --host=0.0.0.0 --port=8090 > /dev/null 2>&1 &
 7. Manual API Start via SSH
 Bash
 ssh root@135.181.46.27
-# Password: qUXXErRRghjE
+# Password: NOT stored in this repo — see the team password manager
 cd /var/www/nexatrace/admin-panel
 php artisan serve --host=0.0.0.0 --port=8090
 8. Clearing Cache/Optimization
@@ -51,7 +51,7 @@ Type this in your CMD and press Enter:
 DOS
 ssh root@135.181.46.27
 # User: root
-# Password: qUXXErRRghjE
+# Password: NOT stored in this repo — see the team password manager
 Clear Cache:
 
 Bash
@@ -66,13 +66,13 @@ Super Admin:
 
 Email: admin@nexatrace.local
 
-Password: admin12345
+Password: <not stored in this repo — see the team password manager>
 
 Factory Admin:
 
 Email: factory-admin@nexatrace.local
 
-Password: admin12345
+Password: <not stored in this repo — see the team password manager>
 
 10. Hetzner Server Details
 IPv4: 135.181.46.27/32
@@ -83,7 +83,7 @@ Server Name: ubuntu-16gb-hel1-2
 
 User: root
 
-Password: qUXXErRRghjE
+Password: <not stored in this repo — see the team password manager>
 --------------
 **1. Super Admin Panel (Billing & Monitoring) - Under NexaTrace**
 

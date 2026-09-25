@@ -101,13 +101,14 @@ psql -U postgres -d nexasystem_db -f migrations/001_initial_schema.sql
 #### 4.1 Create Roles and Set Passwords
 ```sql
 -- Create application role with full access
-CREATE ROLE nexa_app WITH LOGIN PASSWORD 'ChangeThisPassword123!';
+-- NEVER put a real password here. Use a placeholder and set the real value on the server.
+CREATE ROLE nexa_app WITH LOGIN PASSWORD '<set-a-strong-password>';
 
 -- Create read-only role for reporting
-CREATE ROLE nexa_readonly WITH LOGIN PASSWORD 'ReadOnlyPassword456!';
+CREATE ROLE nexa_readonly WITH LOGIN PASSWORD '<set-a-strong-password>';
 
 -- Create admin role for super admin panel
-CREATE ROLE nexa_superadmin WITH LOGIN PASSWORD 'SuperAdminPassword789!';
+CREATE ROLE nexa_superadmin WITH LOGIN PASSWORD '<set-a-strong-password>';
 ```
 
 #### 4.2 Grant Permissions
@@ -214,7 +215,7 @@ INSERT INTO factory_users (id, company_id, email, full_name, position,
     'superadmin@nexatrace.com',
     'Super Administrator',
     'admin',
-    -- Password: Admin123! (bcrypt hash)
+    -- Password hash — set a strong password yourself and generate the bcrypt value locally
     '$2a$12$K9q8q7v6s5d4f3e2r1t0y9u8i7o6p5q4w3e2r1t0y9u8i7o6p5q4w3e2r1',
     '$2a$12$K9q8q7v6s5d4f3e2r1t0y9u',
     TRUE
@@ -302,7 +303,7 @@ database:
   port: 5432
   name: nexasystem_db
   username: nexa_app
-  password: ChangeThisPassword123!
+  password: <set-a-strong-password>   # never commit a real value
   pool:
     min: 2
     max: 10
@@ -316,7 +317,7 @@ DB_HOST=127.0.0.1
 DB_PORT=5432
 DB_DATABASE=nexasystem_db
 DB_USERNAME=nexa_app
-DB_PASSWORD=ChangeThisPassword123!
+DB_PASSWORD=<set-a-strong-password>   # never commit a real value
 ```
 
 #### 8.3 Flutter Configuration
