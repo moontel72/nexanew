@@ -1965,3 +1965,101 @@ land **with a human available to test logins**. It was not started because:
 - the owner was **actively logging in** during the credential rotation at the time.
 
 Shipping this blind would risk a worse outcome than shipping it next, verified.
+
+## 17.8 The concrete cross-domain defect — found while preparing steps 1-4 (2026-09-25)
+
+Steps 1-4 are hygiene **with one real bug behind them**. This is that bug, and it is worth fixing for its
+own sake.
+
+`auth_state.dart` keeps `_tokenCache`, `_userIdCache` and `_userTypeCache` as **shared** fields, but
+**both domains write them**:
+
+- `setSuperAdminAuthState(...)` → `_tokenCache = token`
+- `setFactoryAuthState(...)` → `_tokenCache = token`
+
+And the **factory** side reads them back as if they were its own:
+
+```dart
+// billing_remote_datasource.dart
+final token = getFactoryAuthToken();   // returns _tokenCache
+final factoryId = getFactoryId();      // returns _factoryIdCache
+```
+
+**So: after a super-admin login, `getFactoryAuthToken()` returns the *admin* token.** Any factory billing
+call made in that state sends the admin's Bearer token to a factory endpoint. `_factoryIdCache` is *not*
+overwritten by the admin path, so it can still hold a stale factory id — producing a request carrying an
+admin token together with a factory id.
+
+That is exactly what §5c mechanism #4 was written to prevent — *"one bag of mutable state any panel can
+write"*. It is a **credential-mixing defect**, not a style issue.
+
+### Why a compatibility shim would be unsafe here
+
+The obvious cheap fix — split the fields into domain classes and keep the old top-level names as
+delegating wrappers — **cannot be done safely**, because for the shared fields (`tokenCache`,
+`userIdCache`, `userTypeCache`, `isAuthCheckCompleted`) the shim would have to guess which domain a
+*reader* meant. `getFactoryAuthToken()` clearly means factory; a bare `tokenCache` read has no recorded
+intent. Guessing there is how you hand the wrong token to the wrong API.
+
+**So the call sites must be migrated explicitly.** That is steps 3-4: mechanical, but per-file, with
+`dart analyze` after each file.
+
+## 17.9 Complete call-site inventory — the 11 files importing `auth_state.dart`
+
+Obtained by grepping for **the import itself** (the precise method — it also surfaced two files an
+earlier symbol-grep had missed). Every file below must be migrated:
+
+| # | File | Domain it touches |
+|---|---|---|
+| 1 | `lib/routes/app_router.dart` | admin + factory + sub-admin reads (≈10 sites) |
+| 2 | `lib/app/app_initializer.dart` | both writers + sub-admin |
+| 3 | `lib/features/factory/admin/presentation/bloc/auth/factory_auth_bloc.dart` | factory |
+| 4 | `lib/features/factory/admin/data/datasources/billing_remote_datasource.dart` | factory — **the §17.8 leak** |
+| 5 | `lib/features/factory/admin/presentation/screens/factory_login_screen.dart` | factory |
+| 6 | `lib/features/factory/admin/presentation/screens/codes/unit_codes/unit_code_generate_screen.dart` | factory (`getFactoryId`) |
+| 7 | `lib/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart` | admin (`resetAuthState`) |
+| 8 | `lib/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_bloc.dart` | sub-admin |
+| 9 | `lib/features/nexa_admin/presentation/screens/super_admin/login_screen.dart` | admin |
+| 10 | `lib/features/nexa_admin/presentation/screens/super_admin/bus_company_login_screen.dart` | admin — symbol set not yet read |
+| 11 | `lib/features/nexa_admin/presentation/screens/super_admin/goods_company_login_screen.dart` | admin — symbol set not yet read |
+
+**Suggested order** (safest first — and it closes the leak early):
+
+1. `billing_remote_datasource.dart`, `unit_code_generate_screen.dart`, `factory_auth_bloc.dart`,
+   `factory_login_screen.dart` → `FactoryAuthState`. **This step alone closes the §17.8 leak.**
+2. `login_screen.dart`, `bus_company_login_screen.dart`, `goods_company_login_screen.dart`,
+   `admin_auth_bloc.dart` → `AdminAuthState`.
+3. `sub_admin_bloc.dart` → `SubAdminAuthState`.
+4. `app_router.dart` → read the three instances instead of the shim.
+5. `app_initializer.dart` → provide/write the instances last.
+6. Delete the shim, then delete `auth_state.dart`; the guard and a grep must both be clean.
+
+Each step is independently verifiable with `dart analyze <file>` (proven to work on targeted files,
+including the largest graph) plus the human smoke-test list at the top of §17.
+
+## 17.10 Why steps 1-4 were not executed in this session
+
+Not for lack of information — §17.9 is complete and §17.8 proves the need. The blocker is **verification
+depth**: the migration is ≈35-40 call sites across 11 files on the authentication path, each needing its
+own analysis pass — and a **partially** migrated file, mixing the shim with a domain instance, is exactly
+the state that hands the wrong token to the wrong API. Landing it half-done is worse than not landing it.
+
+**Recommended next session:** run the §17.9 order, one file at a time, `dart analyze` after each, and the
+§17 smoke-test list before the commit that deletes the shim.
+
+---
+
+# 18. Provenance — what this cycle changed
+
+| Commit | What | Isolation baseline |
+|---|---|---|
+| `ca591a98` | CI boundary guard; measured the real debt | 84 |
+| `969aab00` | 4 dead `core/` files removed | 77 |
+| `3be02476` | dead `transport` + `transport_marketplace` removed (20 files, −6,116 lines) | 75 |
+| `eba16ee6` | **§15b provider split** — `core → features` is now 0 | **28** |
+| `9f59ef28` | **§17 step 5** — `/sub-admin/*` guard (owner smoke-tested: all pass) | 28 |
+| `e723bcc0`, `22742200`, `3ada51b8` | plan records for the above, plus §17 research | 28 |
+
+Also in this cycle (separate work streams, recorded in their own files): Phase 0a credential
+remediation (`PHASE-0A-CREDENTIAL-REMEDIATION.md`), Pillar A and Pillar B and Pillar E specs, and the
+subdomain linking playbook (`PANEL-SUBDOMAIN-LINKING-PLAYBOOK.md`).
