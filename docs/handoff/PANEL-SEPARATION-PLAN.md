@@ -400,7 +400,7 @@ import each other. Eight mechanisms, in priority order.
 
 | # | Mechanism | What it fixes |
 |---|---|---|
-| 1 | **CI boundary enforcement** — `.scripts/check-panel-isolation.mjs`, run by `.github/workflows/panel-isolation.yml`; **fails the build** on `shared → features`, `features/A → features/B`, and `core → shared/features` | stops new coupling merging. Documented rules get broken; enforced ones do not. **✅ DONE 2026-09-25 (`ca591a98`).** Measured state: **84 violating import statements across 12 folder-pairs**, recorded as tracked debt in `.scripts/panel-isolation-baseline.json`. The earlier "4 edges" / "3 remaining edges" figures were folder-pair estimates — the real count is higher. The gate is **statement-level**, so a brand-new file cannot start crossing an already-tracked boundary; verified by adding a deliberate violation and confirming a non-zero exit |
+| 1 | **CI boundary enforcement** — `.scripts/check-panel-isolation.mjs`, run by `.github/workflows/panel-isolation.yml`; **fails the build** on `shared → features`, `features/A → features/B`, and `core → shared/features` | stops new coupling merging. Documented rules get broken; enforced ones do not. **✅ DONE 2026-09-25 (`ca591a98`).** The gate is **statement-level**, so a brand-new file cannot start crossing an already-tracked boundary; verified by adding a deliberate violation and confirming a non-zero exit. Measured progress: **84 → 77** (dead-code deletions) → **28** (§15b provider split). **28 remain**, all tracked in `.scripts/panel-isolation-baseline.json` |
 | 2 | **Path-filtered per-panel CI** — each panel its own workflow with a `paths:` filter on its feature folder and `main_*.dart` | today `frontend-deploy.yml` triggers on `lib/**`, so **any** change redeploys **all 8**. A cricket-only change can block every panel |
 | 3 | **Per-panel test gates** — widget + bloc + integration + contract tests, run in that panel's workflow | there are **zero** Flutter tests today (a 17-line placeholder) |
 | 4 | **No shared mutable globals** — delete `auth_state.dart` globals; per-panel scoped state | the exact mechanism of the Factory/Sub-Admin bug (§7c) |
@@ -656,9 +656,12 @@ This is now the best explanation we have, and it is a **code** cause, not a gues
 - Storage keys are panel-scoped **by convention only** (`busFleet_fleet_role`,
   `cricket_manager_token`, `factory_auth_token`); nothing prevents a cross-read.
 
-**Contrast with the panels that work:** `main_cricket_manager.dart`, `main_cricket_public.dart`
-and `reseller_app_initializer.dart` create their **own** `BlocProvider`s inline and never touch
-`AppProviders`. That is the reference model, and it is why Cricket and B2B never had this bug.
+- **Contrast with the panels that work:** `main_cricket_manager.dart`, `main_cricket_public.dart`
+and `reseller_app_initializer.dart` create their **own** `BlocProvider`s inline. **Correction (2026-09-25):**
+the reseller claim in the line above was wrong — `reseller_app_initializer.dart` **does** call
+`AppProviders.getRepositoryProviders(...)`. What made it harmless is that reseller uses **none** of
+the nexa_admin/factory providers it was receiving — pure leakage. See §15b.3. Cricket is the true
+reference model.
 
 ---
 
@@ -1035,6 +1038,15 @@ it is the single change that stops this problem recurring.
       **This is the change that makes every later extraction stick.** Statement-level baseline of
       **84 existing violations across 12 folder-pairs** (see §5c #1). Verified non-vacuous.
       Report command: `node .scripts/check-panel-isolation.mjs --report`.
+- [x] **Delete the dead files listed in §6** — **`969aab00`** (4 dead `core/` files) and **`3be02476`**
+      (`features/transport/**` + `features/transport_marketplace/**`, 20 files, −6,116 lines).
+      Verified by path **and** class-name grep across `lib/` **and** `test/`.
+      ⚠️ **`whip_client.dart` was restored** — §6's row said "0 importers" but missed that it has a
+      test (`test/features/broadcaster/whip_client_test.dart`). Row corrected.
+- [x] **Split `app_providers.dart` into per-panel providers (§15b)** — **`eba16ee6`**.
+      `lib/app/app_initializer.dart` (moved out of `core/`), `features/nexa_admin/providers.dart`,
+      `features/factory/providers.dart`; `core/providers/app_providers.dart` is now core-only.
+      **Isolation baseline 75 → 28.** Verified with `dart analyze` on all five touched files.
 - [ ] **Add `.github/CODEOWNERS`** — per-panel ownership requiring review. *(Low value on a
       single-owner repo; CODEOWNERS only has effect with org teams.)*
 - [ ] **Add per-panel `paths:` filters** to the deploy workflow — stops the all-or-nothing
@@ -1567,7 +1579,29 @@ master document**, or it will keep being forgotten by agents that read only the 
 
 ---
 
-# 15b. Phase 1 — the provider split, ready to execute **[NEW — 2026-09-25]**
+# 15b. Phase 1 — the provider split **[✅ DONE 2026-09-25 — `eba16ee6`]**
+
+> **RESULT: the isolation baseline went 75 → 28 violating imports.** The three biggest edges
+> (`core -> features/factory` 25, `core -> features/nexa_admin` 20, `core -> features/bus_operations`
+> 1) are **gone**. What was done, exactly:
+>
+> | Step | Outcome |
+> |---|---|
+> | `app_initializer.dart` moved `core/widgets/` → **`lib/app/`** | git recorded it as an 88 % rename — content preserved |
+> | **`lib/features/nexa_admin/providers.dart`** created | `NexaAdminProviders.repositoryProviders()` + `.blocProviders()` |
+> | **`lib/features/factory/providers.dart`** created | `FactoryProviders.repositoryProviders()`, `.adminBlocProviders()`, `.driverBlocProviders()`, `.storeKeeperBlocProviders()` |
+> | `lib/core/providers/app_providers.dart` slimmed | now **core services only** — imports nothing from `features/` |
+> | Call site composed | `lib/app/app_initializer.dart` builds `[...core, ...nexa, ...factory]` in the original order |
+> | `reseller_app_initializer.dart` | **unchanged** — verified it uses none of the panel repos, so losing them is not a behaviour change |
+>
+> **Verified by the real Dart analyzer** (`dart analyze` on all five touched files: *No issues found!*)
+> and by the guard (no new coupling). `dart analyze` on a **targeted file** works fine — only the
+> whole-project run is unreliable locally.
+>
+> **Still open for a later pass:** `main.dart` is still a mega-launcher (Super Admin + Factory +
+> Store Keeper in one bundle). This section removed the *coupling*; slimming `main.dart` to
+> Super-Admin-only is the next Phase 1 item (§5b.2 item 8) and is what finally unblocks subdomains
+> #1, #2, #7 and #8.
 
 §5b.2 item 5 says *"Split `app_providers.dart` (284 lines, 59 imports) into
 `features/<panel>/providers.dart`"*. This section records everything needed to do it safely, after a
@@ -1658,6 +1692,7 @@ and one login still sets state another panel reads.
 
 ---
 
+# 16. Developer environment — Zed language servers **[DIAGNOSED 2026-09-24 · CORRECTED 2026-09-25]**
 
 Both servers were failing repeatedly in this workspace. Diagnosed from `Zed.log` and **reproduced
 directly** — they have different causes, and only one of them was a settings problem.
