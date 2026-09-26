@@ -44,13 +44,15 @@ Priority 3 means **login + dashboard entry only** — do **not** start fixing wh
 
 | Order | Phase | Content | Status |
 |---|---|---|---|
-| **1** | **A** | **A1** double-hash footgun · **A2** `CompanyRegisterBloc` check · **A3** dead sidebar button | A1 ✅ · A2 ✅ · **A3 ⏳ remaining** |
-| **2** | **B1** | factory auth domain split (`PANEL-SEPARATION-PLAN.md` §17.9 step 1) — closes the cross-domain **token leak** (§17.8) | ⏳ |
+| **1** | **A** | **A1** double-hash footgun · **A2** `CompanyRegisterBloc` check · **A3** dead sidebar button | A1 ✅ · A2 ✅ · **A3 ✅ (commit `3b072d09`)** |
+| **2** | **B1** | factory auth domain split (`PANEL-SEPARATION-PLAN.md` §17.9 step 1) — closes the cross-domain **token leak** (§17.8) | **✅ factory domain done 2026-09-26** — admin/sub-admin steps 2-4, 6 pending |
 | **3** | **C0** | design for the Group-Incharge model (owner's answers already folded in) | ⏳ |
 | **4** | **C1** | add the missing verticals + give `financial_auditor` `plans/**` + `billing/**` | ⏳ needs C0 |
 | **5** | **C2 → C3 → C4 → C5** | factory creation → remove group-account creation from Super Admin → read-only group activity + payments → audited "enter sub-admin view" | ⏳ C5 last |
 
-### A3 — the one remaining item in Phase A
+### A3 — ✅ done (`3b072d09`)
+
+The dead button below is **already removed**. Recorded for the next session so it is not re-done:
 
 `lib/features/nexa_admin/presentation/screens/sub_admin/sub_admin_dashboard.dart:1457-1463` builds:
 
@@ -385,4 +387,8 @@ rm -f make-admin-spine.php
 Also in this period: Phase 0a credential remediation, the pillar specs (A/B/E), the subdomain playbook,
 the plan's §15b/§17 (provider split + auth globals + the `/sub-admin` fix), and §18 provenance.
 
-**Not started:** A3 (§3), B1, C0–C5, the Marketing design (§5), and the four per-pillar builds.
+**Not started:** C0–C5, the Marketing design (§5), and the four per-pillar builds.
+
+> **Correction (2026-09-26, later session):** this §8 line originally listed **A3** and **B1** as not started.
+> A3 was in fact already done in `3b072d09` (the same commit that added this file), and **B1** (the factory
+> auth domain split) landed in a later session. See §3 for live status.

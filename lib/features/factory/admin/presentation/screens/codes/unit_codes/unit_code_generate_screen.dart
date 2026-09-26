@@ -7,7 +7,7 @@ import 'package:trace_odd/features/factory/admin/presentation/bloc/products/prod
 import 'package:trace_odd/shared/models/code/base_code_model.dart';
 import 'package:trace_odd/shared/models/code/code_generation_request.dart';
 import 'package:trace_odd/shared/models/product/product_model.dart';
-import 'package:trace_odd/core/utils/auth_state.dart';
+import 'package:trace_odd/features/factory/factory_auth_cache.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
@@ -68,7 +68,7 @@ class _UnitCodeGenerateScreenState extends State<UnitCodeGenerateScreen> {
       return;
     }
     final request = UnitCodeGenerationRequest(
-      factoryId: getFactoryId() ?? '',
+      factoryId: FactoryAuthCache.instance.factoryId ?? '',
       subscriptionPlanId: '',
       count: int.parse(_countCtrl.text),
       prefix: _prefixCtrl.text.trim(),

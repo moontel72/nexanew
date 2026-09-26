@@ -7,8 +7,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/core/constants/app_constants.dart';
-import 'package:trace_odd/core/utils/auth_state.dart';
 import 'package:trace_odd/features/factory/admin/presentation/bloc/auth/factory_auth_bloc.dart';
+import 'package:trace_odd/features/factory/factory_auth_cache.dart';
 
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
@@ -50,8 +50,8 @@ class _FactoryLoginScreenState extends State<FactoryLoginScreen> {
     return BlocListener<FactoryAuthBloc, FactoryAuthState>(
       listener: (context, state) {
         if (state is FactoryAuthAuthenticated) {
-          if (!isFactoryAuthenticatedCache) {
-            setFactoryAuthState(
+          if (!FactoryAuthCache.instance.isAuthenticated) {
+            FactoryAuthCache.instance.set(
               isAuthenticated: true,
               userType: 'factory',
               userId: state.user['id']?.toString() ?? '',

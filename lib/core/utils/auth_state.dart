@@ -1,6 +1,14 @@
-// Global authentication state for Flutter Web
+// Global (super-admin) authentication state for Flutter Web
 // This file provides safe access to auth state for router redirects
 // without causing provider timing issues
+//
+// ── Domains: what lives here, and where the others went (PANEL-SEPARATION-PLAN.md §17) ──────────
+//   * super-admin / admin — the fields in this file.
+//   * factory             — `lib/features/factory/factory_auth_cache.dart` (§17.8 / step B1). This
+//                           file used to keep `token`, `userId` and `userType` in one bag that BOTH
+//                           domains wrote, so `getFactoryAuthToken()` returned the ADMIN token after
+//                           an admin login — a cross-domain credential leak.
+//   * sub-admin           — the `sub_admin_token` cache at the bottom of this file.
 
 import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 
@@ -8,28 +16,16 @@ import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 /// These ensure redirect only runs AFTER auth state is known
 bool _authCheckCompleted = false;
 bool _isAuthenticatedCache = false;
-bool _isFactoryAuthenticatedCache = false;
 String? _userTypeCache;
 String? _userIdCache;
-String? _factoryIdCache;
 String? _tokenCache;
 
 /// Getters for router to check auth state safely
 bool get isAuthCheckCompleted => _authCheckCompleted;
 bool get isAuthenticatedCache => _isAuthenticatedCache;
-bool get isFactoryAuthenticatedCache => _isFactoryAuthenticatedCache;
 String? get userTypeCache => _userTypeCache;
 String? get userIdCache => _userIdCache;
-String? get factoryIdCache => _factoryIdCache;
 String? get tokenCache => _tokenCache;
-
-String getFactoryAuthToken() {
-  final token = _tokenCache;
-  if (token == null || token.isEmpty) {
-    throw Exception('Auth token not found. Please login again.');
-  }
-  return token;
-}
 
 String? getAuthToken() => _tokenCache;
 
@@ -49,14 +45,6 @@ void setIsAuthenticatedCache(bool value) {
   }
 }
 
-/// Set factory authenticated cache
-void setIsFactoryAuthenticatedCache(bool value) {
-  _isFactoryAuthenticatedCache = value;
-  if (kDebugMode) {
-    debugPrint('AUTH_STATE: isFactoryAuthenticated=$value');
-  }
-}
-
 /// Set user type cache
 void setUserTypeCache(String? value) {
   _userTypeCache = value;
@@ -73,41 +61,11 @@ void setUserIdCache(String? value) {
   }
 }
 
-/// Set factory ID cache
-void setFactoryIdCache(String? value) {
-  _factoryIdCache = value;
-  if (kDebugMode) {
-    debugPrint('AUTH_STATE: factoryId=$value');
-  }
-}
-
 /// Set token cache
 void setTokenCache(String? value) {
   _tokenCache = value;
   if (kDebugMode) {
     debugPrint('AUTH_STATE: token=${value != null ? '***' : 'null'}');
-  }
-}
-
-/// Set factory authentication state
-void setFactoryAuthState({
-  required bool isAuthenticated,
-  required String userType,
-  required String userId,
-  required String token,
-  String? factoryId,
-}) {
-  _isFactoryAuthenticatedCache = isAuthenticated;
-  _userTypeCache = userType;
-  _userIdCache = userId;
-  _tokenCache = token;
-  _factoryIdCache = factoryId;
-  _authCheckCompleted = true;
-
-  if (kDebugMode) {
-    debugPrint(
-      'AUTH_STATE: Factory auth set - userType=$userType, userId=$userId, factoryId=$factoryId',
-    );
   }
 }
 
@@ -131,35 +89,20 @@ void setSuperAdminAuthState({
   }
 }
 
-/// Get user ID (for factory dashboard)
-String? getUserId() => _userIdCache;
-
-/// Get factory ID (for factory dashboard)
-String? getFactoryId() => _factoryIdCache;
-
-/// Reset auth state (for logout)
+/// Reset auth state (for logout).
+///
+/// **Super-admin domain only.** It deliberately leaves the factory session (`FactoryAuthCache`) and the
+/// sub-admin session (`isSubAdminAuthenticatedCache`) alone: they are independent domains, and a
+/// super-admin logout must not sign them out. Before §17.8/B1 this also cleared the factory fields —
+/// the reverse half of the same mixing defect.
 void resetAuthState() {
   _authCheckCompleted = false;
   _isAuthenticatedCache = false;
-  _isFactoryAuthenticatedCache = false;
   _userTypeCache = null;
   _userIdCache = null;
-  _factoryIdCache = null;
   _tokenCache = null;
   if (kDebugMode) {
-    debugPrint('AUTH_STATE: Reset all auth state');
-  }
-}
-
-/// Reset factory auth state only
-void resetFactoryAuthState() {
-  _isFactoryAuthenticatedCache = false;
-  _userTypeCache = null;
-  _userIdCache = null;
-  _factoryIdCache = null;
-  _tokenCache = null;
-  if (kDebugMode) {
-    debugPrint('AUTH_STATE: Reset factory auth state');
+    debugPrint('AUTH_STATE: Reset super-admin auth state');
   }
 }
 

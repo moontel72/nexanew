@@ -1892,7 +1892,7 @@ and confirmed working (*"JSON config valid (7 files checked)"* on commit `29a5fc
 
 ---
 
-# 17. Phase 1 — auth-state globals and the `/sub-admin` guard **[step 5 ✅ DONE 2026-09-25 — `9f59ef28`; steps 1-4, 6 pending]**
+# 17. Phase 1 — auth-state globals and the `/sub-admin` guard **[step 5 ✅ 2026-09-25 `9f59ef28` · factory half of step 1 ✅ 2026-09-26 (§17.11); remaining: admin + sub-admin domains, router instance reads, delete the file]**
 
 > **Step 5 is done:** `/sub-admin/*` now requires a sub-admin session. What changed —
 >
@@ -2086,6 +2086,9 @@ earlier symbol-grep had missed). Every file below must be migrated:
 
 1. `billing_remote_datasource.dart`, `unit_code_generate_screen.dart`, `factory_auth_bloc.dart`,
    `factory_login_screen.dart` → `FactoryAuthState`. **This step alone closes the §17.8 leak.**
+   ✅ **Done 2026-09-26 — see §17.11.** The class is named **`FactoryAuthCache`** (the §17.9 name
+   `FactoryAuthState` is already the bloc's state class), and `app_initializer.dart` + `app_router.dart`
+   had to be included for step 1 to be coherent.
 2. `login_screen.dart`, `bus_company_login_screen.dart`, `goods_company_login_screen.dart`,
    `admin_auth_bloc.dart` → `AdminAuthState`.
 3. `sub_admin_bloc.dart` → `SubAdminAuthState`.
@@ -2108,6 +2111,68 @@ the state that hands the wrong token to the wrong API. Landing it half-done is w
 
 ---
 
+## 17.11 Factory domain split — what landed 2026-09-26 (B1)
+
+B1 (`GROUP-INCHARGE-MODEL.md` §4) is §17.9 **step 1**, scoped to the **factory** domain. It is in the tree.
+
+**The fix.** The factory's auth state no longer shares the process-wide bag in `auth_state.dart`. It has
+its own owner: **`lib/features/factory/factory_auth_cache.dart`** (`FactoryAuthCache`), holding
+`isAuthenticated`, `token`, `userId`, `userType`, `factoryId`, with `set()`, `requireToken()` (throws when
+absent) and `reset()`.
+
+> **Name deviation, deliberate:** §17.9 calls this class `FactoryAuthState`. That name is **already taken**
+> — it is the factory auth bloc's state class (`factory_auth_bloc.dart:29`). Hence `FactoryAuthCache`.
+
+**Both halves of §17.8 are closed**, not only the token one:
+
+| Defect | Before | After |
+|---|---|---|
+| **token leak** | `setSuperAdminAuthState` wrote `_tokenCache`, so `getFactoryAuthToken()` handed the **admin** token to factory billing calls | factory reads `FactoryAuthCache.instance.requireToken()`; the admin path cannot write it |
+| **stale id pairing** | `getFactoryId()` / `getUserId()` read the shared bag, so the router could pass the **admin's** user id into `FactoryDashboard` | both now read `FactoryAuthCache` |
+| **reverse leak** | `resetFactoryAuthState()` cleared the shared `_tokenCache` (the *admin* token), and `resetAuthState()` (admin logout) cleared the factory flags | `FactoryAuthCache.reset()` touches only the factory domain; `resetAuthState()` clears only the super-admin domain |
+
+**Files touched (8):**
+
+| File | Change |
+|---|---|
+| `lib/features/factory/factory_auth_cache.dart` | **new** — the factory domain's own state |
+| `lib/core/utils/auth_state.dart` | factory fields + `getFactoryAuthToken` / `getFactoryId` / `getUserId` / `setFactoryAuthState` / `resetFactoryAuthState` / the factory flags **removed**; header documents the three domains; `resetAuthState()` no longer clears factory state |
+| `.../factory/admin/presentation/bloc/auth/factory_auth_bloc.dart` | `set` / `reset` → `FactoryAuthCache` |
+| `.../factory/admin/presentation/screens/factory_login_screen.dart` | guard + `set` → `FactoryAuthCache` |
+| `.../factory/admin/data/datasources/billing_remote_datasource.dart` | **the §17.8 leak site** — token via `requireToken()`, id via `factoryId` |
+| `.../factory/admin/.../codes/unit_codes/unit_code_generate_screen.dart` | `getFactoryId()` → `FactoryAuthCache.instance.factoryId` |
+| `lib/app/app_initializer.dart` | cold-start factory restore → `FactoryAuthCache` |
+| `lib/routes/app_router.dart` | `/factory/*` guard + the `FactoryDashboard` id/userId reads → `FactoryAuthCache` |
+
+**Why `app_initializer.dart` and `app_router.dart` are part of step 1.** §17.9 lists them as steps 4–5,
+but step 1 alone is **not coherent**: `app_initializer` is where the cold-start factory session is
+*written*, and `app_router` is where the factory flags are *read*. Migrating the four factory files
+without them would write factory state in one place while the guard read another — the partial-migration
+state §17.10 warns about. Only the **factory** symbols moved in those two files; their admin and
+sub-admin reads are untouched.
+
+**Verification run:**
+
+- `dart analyze` — **No issues found!** on all 8 touched files (SDK `C:/src/flutter/bin/cache/dart-sdk/bin/dart.exe`, per §16.1).
+- `node .scripts/check-panel-isolation.mjs` — **green**: 28 tracked / 28 baseline, no new coupling.
+- grep for every removed name (`isFactoryAuthenticatedCache`, `setIsFactoryAuthenticatedCache`, `factoryIdCache`, `setFactoryIdCache`, `getFactoryAuthToken`, `getFactoryId`, `getUserId`, `setFactoryAuthState`, `resetFactoryAuthState`) — **nothing in `lib/`** beyond the two explanatory comments.
+
+**Still owed — the human smoke test** (not statically verifiable; run the §17 list, factory rows first):
+
+- [ ] factory: login → factory dashboard → logout
+- [ ] factory: **hard-refresh `/factory/dashboard` while logged in** → stays logged in
+- [ ] factory billing call (§17.8's path) → sends the **factory** token, not an admin token
+- [ ] super-admin: login → dashboard → logout → `/login`
+
+**Not done (still §17.9 steps 2–5 and 6):** the admin and sub-admin domains are still in
+`auth_state.dart`, the router still reads them from there, and the file still exists. Those steps carry
+the §17.2 / §17.6 risk (a wrong redirect surfaces as a login loop), so they still want the owner present.
+The vestigial admin fields (`tokenCache` / `userIdCache` / `userTypeCache` / `getAuthToken` and their
+setters) are **externally dead** — kept deliberately, so step 6 deletes them together with the file
+rather than in this step.
+
+---
+
 # 18. Provenance — what this cycle changed
 
 | Commit | What | Isolation baseline |
@@ -2118,6 +2183,7 @@ the state that hands the wrong token to the wrong API. Landing it half-done is w
 | `eba16ee6` | **§15b provider split** — `core → features` is now 0 | **28** |
 | `9f59ef28` | **§17 step 5** — `/sub-admin/*` guard (owner smoke-tested: all pass) | 28 |
 | `e723bcc0`, `22742200`, `3ada51b8` | plan records for the above, plus §17 research | 28 |
+| *(2026-09-26, not committed at time of writing)* | **§17.11 / B1 — factory auth domain split** (`FactoryAuthCache`); §17.8 leak closed, both directions | 28 |
 
 Also in this cycle (separate work streams, recorded in their own files): Phase 0a credential
 remediation (`PHASE-0A-CREDENTIAL-REMEDIATION.md`), Pillar A and Pillar B and Pillar E specs, and the

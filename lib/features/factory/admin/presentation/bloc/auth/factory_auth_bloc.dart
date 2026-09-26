@@ -3,8 +3,8 @@
 
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:trace_odd/core/utils/auth_state.dart';
 import 'package:trace_odd/features/factory/admin/data/repositories/factory_auth_repository.dart';
+import 'package:trace_odd/features/factory/factory_auth_cache.dart';
 
 // Events
 abstract class FactoryAuthEvent {}
@@ -112,7 +112,7 @@ class FactoryAuthBloc extends Bloc<FactoryAuthEvent, FactoryAuthState> {
       }
 
       // Set factory authentication state
-      setFactoryAuthState(
+      FactoryAuthCache.instance.set(
         isAuthenticated: true,
         userType: 'factory',
         userId: userData['id']?.toString() ?? '',
@@ -154,7 +154,7 @@ class FactoryAuthBloc extends Bloc<FactoryAuthEvent, FactoryAuthState> {
       await _authRepository.logout();
 
       // Reset factory auth state
-      resetFactoryAuthState();
+      FactoryAuthCache.instance.reset();
 
       _sessionTimer?.cancel();
       _tokenRefreshTimer?.cancel();
@@ -162,7 +162,7 @@ class FactoryAuthBloc extends Bloc<FactoryAuthEvent, FactoryAuthState> {
       emit(FactoryAuthUnauthenticated(message: 'Logged out successfully'));
     } catch (error) {
       // Even if logout fails, clear local auth data
-      resetFactoryAuthState();
+      FactoryAuthCache.instance.reset();
 
       _sessionTimer?.cancel();
       _tokenRefreshTimer?.cancel();

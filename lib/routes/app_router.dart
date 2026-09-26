@@ -70,6 +70,7 @@ import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/r
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/site_content/site_content_screen.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/factory_login_screen.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/factory_dashboard.dart';
+import 'package:trace_odd/features/factory/factory_auth_cache.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/factory_shell.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/codes/bundle_codes/bundle_codes_list_screen.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/codes/bundle_codes/bundle_code_generate_screen.dart';
@@ -207,7 +208,7 @@ class AppRouter {
     }
 
     if (isFactoryRoute) {
-      if (!isFactoryAuthenticatedCache && !isFactoryLogin) {
+      if (!FactoryAuthCache.instance.isAuthenticated && !isFactoryLogin) {
         if (isStoreKeeperRoute) return null;
         if (kDebugMode) {
           debugPrint(
@@ -217,7 +218,7 @@ class AppRouter {
         return '/factory/login';
       }
 
-      if (isFactoryAuthenticatedCache && isFactoryLogin) {
+      if (FactoryAuthCache.instance.isAuthenticated && isFactoryLogin) {
         if (kDebugMode) {
           debugPrint(
             'ROUTER_REDIRECT: Already factory authenticated, redirecting to factory dashboard',
@@ -777,8 +778,8 @@ class AppRouter {
           path: '/factory/dashboard',
           name: 'factory_dashboard',
           builder: (context, state) {
-            final factoryId = getFactoryId() ?? '';
-            final userId = getUserId() ?? '';
+            final factoryId = FactoryAuthCache.instance.factoryId ?? '';
+            final userId = FactoryAuthCache.instance.userId ?? '';
             return FactoryDashboard(factoryId: factoryId, userId: userId);
           },
         ),

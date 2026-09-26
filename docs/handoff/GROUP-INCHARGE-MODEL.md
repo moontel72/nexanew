@@ -282,8 +282,8 @@ Minimum requirements before it ships:
 
 | Order | Phase | Gate |
 |---|---|---|
-| **1** | **A** — A1 ✅ done · A2 (`CompanyRegisterBloc`) · A3 (dead sidebar button) | none — safe |
-| **2** | **B** — B1: factory auth domain split (`§17.9` step 1) | closes the cross-domain token leak |
+| **1** | **A** — A1 ✅ done · A2 ✅ (no action needed) · A3 ✅ done (`3b072d09`) | none — safe |
+| **2** | **B** — B1 ✅ **done 2026-09-26** (factory auth domain split, `§17.9` step 1) | closes the cross-domain token leak |
 | **3** | **C0** — design, with the owner's answers folded in | none |
 | **4** | **C1** — add the missing verticals, and expand `financial_auditor` to own `plans/**` + `billing/**` | needs C0 |
 | **5** | **C2 → C3 → C4 → C5** | C5 last, and only with the audit chain |
@@ -297,7 +297,7 @@ the owner tests the panels.
 |---|---|---|
 | **A1** | **Remove the double-hash footgun.** `AdminUser::setPasswordAttribute` (and `GlobalIdentity`'s) currently re-hash anything given to them, so passing an already-hashed value silently breaks login. Guard with `Hash::isHashed()` — Laravel's own `hashed` cast behaviour | The owner hit exactly this trap; one line prevents a lockout |
 | **A2** | ✅ **Checked 2026-09-26 — no action needed.** `CompanyRegisterBloc` is used by `super_admin/companies/register_company_screen.dart`, which was **not** deleted (it is the generic factory registry at `/companies/register`, and §6 keeps it as platform). So it is **not orphaned** — leave it | Finishes the duplicate removal |
-| **A3** | Sub-Admin sidebar: `Missile3DButton(label: 'Bus Companies', onTap: () {})` at `sub_admin_dashboard.dart:1457-1463` — either wire it to the inline bus-company section or remove it | Dead button in a live panel |
+| **A3** | ✅ **Done (`3b072d09`).** The dead `Missile3DButton(label: 'Bus Companies', onTap: () {})` was **removed** from `sub_admin_dashboard.dart` (its replacement is a comment saying why), because bus-company management is already inline in the same dashboard | Dead button in a live panel — resolved |
 
 **Verify:** `dart analyze <changed files>` + `node .scripts/check-panel-isolation.mjs` green.
 
@@ -305,7 +305,7 @@ the owner tests the panels.
 
 | # | Item | Why now |
 |---|---|---|
-| **B1** | `PANEL-SEPARATION-PLAN.md` §17.9 **step 1** — migrate the 4 factory files to `FactoryAuthState`. This closes the **cross-domain token leak** (§17.8: after a super-admin login, `getFactoryAuthToken()` returns the *admin* token) | It is a live defect, and it is on the critical path for everything that follows |
+| **B1** | ✅ **Done 2026-09-26.** `PANEL-SEPARATION-PLAN.md` §17.9 **step 1** — the factory domain's auth state moved out of the shared bag into its own owner, `lib/features/factory/factory_auth_cache.dart` (`FactoryAuthCache`). This closes the **cross-domain token leak** (§17.8: after a super-admin login, `getFactoryAuthToken()` returned the *admin* token). Named `FactoryAuthCache`, **not** `FactoryAuthState`, because that name is already the factory auth bloc's state class. Full record: `PANEL-SEPARATION-PLAN.md` §17.11 | It is a live defect, and it is on the critical path for everything that follows |
 
 ### Phase C — the Group-Incharge program (largest; needs design + owner testing)
 

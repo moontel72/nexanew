@@ -16,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/providers/app_providers.dart';
 import 'package:trace_odd/core/services/api_client.dart';
 import 'package:trace_odd/features/bus_operations/data/services/ticket_vault_service.dart';
+import 'package:trace_odd/features/factory/factory_auth_cache.dart';
 import 'package:trace_odd/features/factory/providers.dart';
 import 'package:trace_odd/features/nexa_admin/providers.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb, debugPrint;
@@ -197,7 +198,7 @@ class _AppInitializerState extends State<AppInitializer> {
               final isFactoryAuthed = values.length > 1 ? values[1] : false;
 
               setIsAuthenticatedCache(isAdminAuthed);
-              setIsFactoryAuthenticatedCache(isFactoryAuthed);
+              FactoryAuthCache.instance.isAuthenticated = isFactoryAuthed;
 
               // ── Sub-admin session ──
               // Sub-admin authenticates with its own token (`sub_admin_token`), not with the flags
@@ -218,7 +219,7 @@ class _AppInitializerState extends State<AppInitializer> {
                 final userJson = prefs.getString('factory_user');
                 if (token != null && userJson != null) {
                   final user = jsonDecode(userJson) as Map<String, dynamic>;
-                  setFactoryAuthState(
+                  FactoryAuthCache.instance.set(
                     isAuthenticated: true,
                     userType: 'factory',
                     userId: user['id']?.toString() ?? '',

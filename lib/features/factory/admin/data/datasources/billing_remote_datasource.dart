@@ -4,7 +4,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:trace_odd/core/config/api_config.dart';
-import 'package:trace_odd/core/utils/auth_state.dart';
+import 'package:trace_odd/features/factory/factory_auth_cache.dart';
 import 'package:trace_odd/shared/models/billing/invoice_model.dart';
 
 class BillingRemoteDatasource {
@@ -156,8 +156,8 @@ class BillingRemoteDatasource {
   // Helper methods
 
   Future<Map<String, String>> _getAuthHeaders() async {
-    final token = getFactoryAuthToken();
-    final factoryId = getFactoryId();
+    final token = FactoryAuthCache.instance.requireToken();
+    final factoryId = FactoryAuthCache.instance.factoryId;
 
     if (factoryId == null) {
       throw Exception('Factory ID not found. Please login again.');
