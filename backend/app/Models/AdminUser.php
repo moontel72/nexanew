@@ -56,12 +56,22 @@ class AdminUser extends Authenticatable
         return in_array($this->role, ['super_admin', 'admin'], true);
     }
 
+    /**
+     * Hash a plaintext password — but accept an ALREADY-hashed value unchanged.
+     *
+     * Without the Hash::isHashed() guard, passing a bcrypt string (which is exactly what happens when a
+     * hash is copied between tables, e.g. into tenant_accounts.password) silently double-hashes it and
+     * the account can never log in again. That is a lockout waiting to happen — the same trap
+     * documented in docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md §3.6.1.
+     */
     public function setPasswordAttribute($value): void
     {
         if ($value === null || $value === '') {
             return;
         }
 
-        $this->attributes['password'] = Hash::make($value);
+        $this->attributes['password'] = Hash::isHashed($value)
+            ? $value
+            : Hash::make($value);
     }
 }

@@ -78,9 +78,18 @@ class GlobalIdentity extends Model
 
     // ─── Password ────────────────────────────────────────────
 
+    /**
+     * Hash a plaintext password — but accept an ALREADY-hashed value unchanged.
+     *
+     * Same lockout risk as AdminUser::setPasswordAttribute: a bcrypt string passed in must not be
+     * hashed a second time, or the identity can never authenticate again. See
+     * docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md §3.6.1.
+     */
     public function setPasswordAttribute(string $value): void
     {
-        $this->attributes['password_hash'] = Hash::make($value);
+        $this->attributes['password_hash'] = Hash::isHashed($value)
+            ? $value
+            : Hash::make($value);
     }
 
     public function verifyPassword(string $plain): bool
