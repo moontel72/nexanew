@@ -491,37 +491,39 @@ and `features/auth` — rename one.
 > `{id}/restore`. Its dashboard has the *Add Bus Company* action and the registered-companies list inline.
 > So the Super Admin screens are a **strict subset duplicate** — nothing is lost by removing them.
 >
-> **Removal steps — nav-link check is now COMPLETE (2026-09-26).** Every entry point is known:
+> **✅ REMOVED 2026-09-26 — commit `126f618d`.** The duplicate Super Admin company-registration path
+> is gone: 4 screen files deleted, 2 `GoRoute` blocks, 4 unused `goTo*` helpers and 4 imports removed,
+> the *Goods Fleet* sidebar section removed, the `/goods-companies` title + breadcrumb branches removed,
+> and the 2 dashboard quick-action tiles removed. **2,346 lines deleted.** Verified: zero dangling
+> references, `dart analyze` clean on all 3 changed files, isolation guard green.
+>
+> The nav-link check (below) was the piece that made this safe — done first, as asked.
 >
 > | Where | What | Action |
 > |---|---|---|
-> | `app_router.dart:695-705` | `GoRoute` `/bus-companies` + `/bus-companies/add` | remove |
-> | `app_router.dart:709-719` | `GoRoute` `/goods-companies` + `/goods-companies/add` | remove |
-> | `app_router.dart` imports (6) | the four screens + `bus_company_login_screen` / `goods_company_login_screen` | remove the four **screen** imports |
-> | `app_router.dart:1132-1143` | `goToBusCompanies`, `goToAddBusCompany`, `goToGoodsCompanies`, `goToAddGoodsCompany` | remove (the two `Add*` helpers have **no callers**; the other two are called only from the dashboard) |
-> | `super_admin_shell.dart:128-137` | sidebar items *"View Goods Companies"* + *"Add Goods Company"* | remove |
-> | `super_admin_shell.dart:233-243` | `_titleForLocation` branches for `/goods-companies*` | remove |
-> | `super_admin_shell.dart:273-280` | breadcrumb branches for `/goods-companies*` | remove |
-> | `super_admin/dashboard_screen.dart:1101-1112` | two quick-action `onTap`s calling `goToBusCompanies` / `goToGoodsCompanies` | remove (or repoint — see below) |
-> | 4 screen files | `bus_companies_list_screen`, `add_bus_company_screen`, `goods_companies_list_screen`, `add_goods_company_screen` | **delete** |
+> | `app_router.dart:695-705` | `GoRoute` `/bus-companies` + `/bus-companies/add` | ✅ removed |
+> | `app_router.dart:709-719` | `GoRoute` `/goods-companies` + `/goods-companies/add` | ✅ removed |
+> | `app_router.dart` imports (4) | the four screens | ✅ removed |
+> | `app_router.dart:1132-1143` | the four `goTo*` helpers (the two `Add*` helpers had **no callers**) | ✅ removed |
+> | `super_admin_shell.dart:124-139` | the whole *Goods Fleet* sidebar section | ✅ removed |
+> | `super_admin_shell.dart:240-242` | `_titleForLocation` branches | ✅ removed |
+> | `super_admin_shell.dart:275-280` | breadcrumb branches | ✅ removed |
+> | `super_admin/dashboard_screen.dart:1098-1113` | the two quick-action `ListTile`s | ✅ removed |
+> | 4 screen files | bus/goods list + add screens | ✅ deleted |
 >
-> **Safe execution order** (each step leaves a consistent tree, so a stop mid-way never breaks the app):
-> 1. remove the **entry points** (sidebar items, title/breadcrumb branches, dashboard onTaps) —
->    the routes stay, but nothing links to them;
-> 2. remove the **routes, imports and helpers** — the screens become unreferenced but still valid Dart;
-> 3. **delete** the four screen files;
-> 4. `dart analyze <each changed file>`, then the isolation guard, then commit.
+> **Execution order used (keep this for any similar removal):** entry points first, then routes, then
+> files. ⚠️ The reverse order crashes — `go_router` throws when navigating to an unknown route, so
+> removing a route while a link to it still exists produces a visible crash instead of a tidy removal.
+> Each step above left the tree consistent, so a stop mid-way would not have broken the app.
 >
-> ⚠️ **Do not remove the routes while the sidebar/dashboard links still exist** — `go_router` throws on
-> navigation to an unknown route, so that order produces a visible crash instead of a tidy removal.
->
-> **Also check** whether `CompanyRegisterBloc` is used only by the two deleted *add* screens.
+> **Still to check:** whether `CompanyRegisterBloc` is used only by the two deleted *add* screens.
 >
 > **Data note:** `admin_users` holds an `admin@nexatrace.local` (super_admin) plus **three
 > `company_admin` rows** (`armi@gmail.com` "Organization", `aziz@gmail.com` "Awan Express Admin",
 > `khan@gmail.com` "Ahmed Khan") — these look like the legacy registrations made through the Super Admin
-> path. Whether to delete them is a **data decision for the owner**, and it depends on whether the same
-> companies were re-registered later through the Sub-Admin panel. Compare first — never delete blind.
+> path. Whether to delete them is a **data decision for the owner**. The owner's ruling (2026-09-26):
+> **suspend, do not delete** — accounts and data can be removed manually from inside each panel by
+> whoever wants to, once they are in. That keeps every FK-dependent record intact.
 >
 > **Small bug found in the Sub-Admin sidebar:** `sub_admin_dashboard.dart:1457-1463` builds a
 > `Missile3DButton(label: 'Bus Companies', ...)` with **`onTap: () {}`** — an empty action. The real bus
