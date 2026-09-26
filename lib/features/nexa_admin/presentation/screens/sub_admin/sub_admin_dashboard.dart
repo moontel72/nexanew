@@ -1447,6 +1447,8 @@ class _Sidebar extends StatelessWidget {
     }
     // Default: existing bus/goods/marketplace sidebar
     return [
+      // Intentionally a no-op: this sidebar is only shown while the dashboard is already open.
+      // (Was a silent dead entry — now it says why, so the next reader does not "fix" it.)
       Missile3DButton(
         label: 'Dashboard',
         icon: Icons.dashboard,
@@ -1454,13 +1456,9 @@ class _Sidebar extends StatelessWidget {
         height: 64,
         onTap: () {},
       ),
-      Missile3DButton(
-        label: 'Bus Companies',
-        icon: Icons.directions_bus,
-        color: const Color(0xFF16A34A),
-        height: 64,
-        onTap: () {},
-      ),
+      // NOTE: a 'Bus Companies' button used to sit here with an empty onTap. Removed 2026-09-26
+      // (A3): the bus-company management is inline in this same dashboard, so the entry was a dead
+      // duplicate. Re-add a WIRED shortcut only if it is actually given a destination.
       Missile3DButton(
         label: 'Seat Templates & Presets',
         icon: Icons.airline_seat_recline_normal,
