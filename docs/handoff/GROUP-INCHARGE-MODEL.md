@@ -68,7 +68,7 @@ The Super Admin dashboard has KPI tiles and quick actions, but no cross-tenant o
 
 ---
 
-## 1.4 Group 9 — Marketing & Growth (new, owner-confirmed 2026-09-26)
+### 1.4 Group 9 — Marketing & Growth (new, owner-confirmed 2026-09-26)
 
 **Owner's ruling:** the Marketing hierarchy deserves **its own Group**, not a corner of an existing one.
 Reasons that hold up on inspection:
@@ -81,12 +81,15 @@ Reasons that hold up on inspection:
 
 ### The four surfaces
 
+Each level is a **separate surface with its own app** — this is why Group 9 adds four rows to the §11
+registry, not one.
+
 | # (to allocate) | Surface | Notes |
 |---|---|---|
 | — | **Marketing Sub-Admin** | one, appointed by the Super Admin — same pattern as the other verticals |
-| — | **District Marketing Administrator** | **4–5**, one per district |
-| — | **District Marketing Manager** | one per district, under its administrator |
-| — | **Marketing Agent** | many, under each manager |
+| — | **District Marketing Administrator** | **not** one-per-district — the sub-admin decides how many districts each administrator holds (owner's example: Sargodha + Khushab + Jhang + Chakwal under one) |
+| — | **District Marketing Manager** | **not** a fixed one-per-district — it works the district(s) the sub-admin allows it, drawn from its administrator's districts |
+| — | **Marketing Agent** | many; scoped to the district(s) it is allowed, under its manager |
 
 **Group 9 = its own frontend + backend (schema) + database, and its own server later.**
 Run its **LOCK** exactly like `PANEL-SUBDOMAIN-LINKING-PLAYBOOK.md` describes for the other groups.
@@ -133,15 +136,30 @@ For **each** of the three field roles (Administrator, Manager, Agent), the mode 
 The mode is set at **approval** time and must be re-editable by the marketing sub-admin. An agent with no
 commission mode must **not** be silently given one, and vice versa.
 
-### Coverage — the sub-admin chooses the district count
+### Coverage — the sub-admin decides every level's districts (owner's correction, 2026-09-26)
 
-The marketing sub-admin decides **how many districts one administrator covers** — from a single district,
-to a handful (the owner's example: *Sargodha, Khushab, Jhang, Chakwal* under one), or the whole country.
-So *administrator → district* is **many-to-one**, not a fixed 1-to-1.
+**No level is fixed to one district except by the sub-admin's choice.** This is a per-person allowance the
+sub-admin edits, and it is what makes each panel's scope.
 
-And: **the districts an administrator is incharge of determine what that administrator's panel shows** —
-the **managers and agents of exactly those districts** flow into the administrator's panel. This makes the
-administrator's panel a scoped roll-up, not a global list.
+| Level | District scope | Who decides |
+|---|---|---|
+| **Administrator** | any number — one district, a handful (e.g. Sargodha + Khushab + Jhang + Chakwal), or the whole country | the sub-admin, at assignment |
+| **Manager** | the district(s) the sub-admin allows — a manager may be given **extra districts**, but **only from within its administrator's districts** | the sub-admin |
+| **Agent** | the district(s) it is allowed, under its manager | the sub-admin (or the manager, if that is delegated later) |
+
+**The scope rule that follows from this:**
+
+> **An administrator's panel shows the managers and agents of exactly the districts it holds — and nothing
+> else.** Two districts assigned → two districts' managers and agents. Four → four. Outside those, it has
+> no relationship with any district at all.
+
+So the administrator's panel is a **scoped roll-up of its own districts**, never the global list. The same
+mechanism repeats downward: a manager's panel covers the districts it was given, and an agent's covers its
+own.
+
+**Consequence for the data model:** the concrete *allowance* per person must be stored as its own record
+(person → districts), not derived from a fixed hierarchy — because it is editable and it can overlap
+(a manager's extra districts are still drawn from its administrator's set).
 
 ### Manager accounts — two paths
 
@@ -161,16 +179,27 @@ agents.)
 | **Compensation per person, 3 modes:** salary only · salary + commission · commission only | per-agent compensation mode on the model, and the commission path **must reuse the idempotent split engine** (`PANEL-SEPARATION-PLAN.md` §10.5) — **no second ledger** |
 | **"Include the world's marketing approaches"** | the design step must pick a concrete, finite set (referral, partner/reseller, commission tiers, district targets, campaigns) rather than an open-ended list |
 
+### If the client stops paying — the owner's ruling (2026-09-26)
+
+**The client pays in advance.** Shares are earned **per month paid**, and there is **no clawback**:
+
+- Stop after month 3 → the four parties keep **exactly the shares already fixed for months 1 and 2**.
+- **From month 3, everyone's accrual simply stops** — no further payout, and the month-3-to-12 tier never
+  applies.
+- Nothing already earned is taken back.
+
+So the tier table above is **contingent on continued payment**, not a promise for twelve months.
+
 ### Open questions for C1b
 
 1. Commission per **sale**, per **signed-up company**, or per **subscription renewal**? *(The owner's
-example implies **per renewal** — month 2 and months 3–12 are still paid on the same factory.)*
+example is **per renewal** — months 2 and 3–12 pay on the same factory.)* — **answered in substance:**
+   accrual is per month actually paid.
 2. Is a "district" a row in the existing **`districts`** table?
 3. Does this hierarchy sit **under** the Group-Incharge model or **beside** it?
 4. Do the four surfaces share one login identity with different roles, or four separate ones?
 5. Who edits the **split percentages** — the marketing sub-admin only, or the Super Admin too?
-6. What happens to an agent's month-1 share if the client **stops paying from month 3**? (Clawback, or
-   simply nothing further accrues?)
+6. ~~Clawback?~~ — **answered:** no clawback; accrual stops when payment stops (see above).
 
 ---
 
