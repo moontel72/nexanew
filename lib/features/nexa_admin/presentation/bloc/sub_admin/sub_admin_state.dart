@@ -2,6 +2,7 @@
 import 'package:equatable/equatable.dart';
 
 enum SubAdminAuthStatus { initial, loading, success, error }
+
 enum SubAdminViewStatus { initial, loading, loaded, error }
 
 class SubAdminState extends Equatable {
@@ -29,6 +30,16 @@ class SubAdminState extends Equatable {
   final List<Map<String, dynamic>> busCompanies;
   final bool busListLoading;
   final String? busListError;
+
+  // ── Factory Company Form ──
+  final bool factoryFormLoading;
+  final String? factoryFormError;
+  final String? factoryFormSuccess;
+
+  // ── Factory Company List ──
+  final List<Map<String, dynamic>> factoryCompanies;
+  final bool factoryListLoading;
+  final String? factoryListError;
 
   // ── Sub-Admin Management (list screen) ──
   final List<Map<String, dynamic>> subAdmins;
@@ -61,6 +72,12 @@ class SubAdminState extends Equatable {
     this.busCompanies = const [],
     this.busListLoading = false,
     this.busListError,
+    this.factoryFormLoading = false,
+    this.factoryFormError,
+    this.factoryFormSuccess,
+    this.factoryCompanies = const [],
+    this.factoryListLoading = false,
+    this.factoryListError,
     this.subAdmins = const [],
     this.subAdminListLoading = false,
     this.subAdminListError,
@@ -88,6 +105,12 @@ class SubAdminState extends Equatable {
     List<Map<String, dynamic>>? busCompanies,
     bool? busListLoading,
     String? busListError,
+    bool? factoryFormLoading,
+    String? factoryFormError,
+    String? factoryFormSuccess,
+    List<Map<String, dynamic>>? factoryCompanies,
+    bool? factoryListLoading,
+    String? factoryListError,
     List<Map<String, dynamic>>? subAdmins,
     bool? subAdminListLoading,
     String? subAdminListError,
@@ -107,12 +130,19 @@ class SubAdminState extends Equatable {
     activeFeatures: activeFeatures ?? this.activeFeatures,
     monthlyRevenue: monthlyRevenue ?? this.monthlyRevenue,
     busFormLoading: busFormLoading ?? this.busFormLoading,
-    busFormObscurePassword: busFormObscurePassword ?? this.busFormObscurePassword,
+    busFormObscurePassword:
+        busFormObscurePassword ?? this.busFormObscurePassword,
     busFormError: busFormError,
     busFormSuccess: busFormSuccess,
     busCompanies: busCompanies ?? this.busCompanies,
     busListLoading: busListLoading ?? this.busListLoading,
     busListError: busListError,
+    factoryFormLoading: factoryFormLoading ?? this.factoryFormLoading,
+    factoryFormError: factoryFormError,
+    factoryFormSuccess: factoryFormSuccess,
+    factoryCompanies: factoryCompanies ?? this.factoryCompanies,
+    factoryListLoading: factoryListLoading ?? this.factoryListLoading,
+    factoryListError: factoryListError,
     subAdmins: subAdmins ?? this.subAdmins,
     subAdminListLoading: subAdminListLoading ?? this.subAdminListLoading,
     subAdminListError: subAdminListError,
@@ -124,12 +154,35 @@ class SubAdminState extends Equatable {
 
   @override
   List<Object?> get props => [
-    authStatus, obscurePassword, authError, authSuccess,
-    dashStatus, subAdminName, dashError, tenantCount, activeFeatures, monthlyRevenue,
-    busFormLoading, busFormObscurePassword, busFormError, busFormSuccess,
-    busCompanies, busListLoading, busListError,
-    subAdmins, subAdminListLoading, subAdminListError,
-    actionLoading, actionError, actionSuccess,
+    authStatus,
+    obscurePassword,
+    authError,
+    authSuccess,
+    dashStatus,
+    subAdminName,
+    dashError,
+    tenantCount,
+    activeFeatures,
+    monthlyRevenue,
+    busFormLoading,
+    busFormObscurePassword,
+    busFormError,
+    busFormSuccess,
+    busCompanies,
+    busListLoading,
+    busListError,
+    factoryFormLoading,
+    factoryFormError,
+    factoryFormSuccess,
+    factoryCompanies,
+    factoryListLoading,
+    factoryListError,
+    subAdmins,
+    subAdminListLoading,
+    subAdminListError,
+    actionLoading,
+    actionError,
+    actionSuccess,
     canAccessStudio,
   ];
 }

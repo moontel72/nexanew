@@ -167,6 +167,8 @@ class _DashboardViewState extends State<_DashboardView> {
     switch (_vertical) {
       case 'cricket_ops':
         return _cricketDashboard(ctx, bloc, state);
+      case 'factory':
+        return _factoryDashboard(ctx, bloc, state);
       case 'bus_transit':
       case 'goods_logistics':
       case 'commercial_marketplace':
@@ -1009,10 +1011,690 @@ class _DashboardViewState extends State<_DashboardView> {
     );
   }
 
+  // ── Factory Management Dashboard (factory vertical) ────
+  Widget _factoryDashboard(
+    BuildContext ctx,
+    SubAdminBloc bloc,
+    SubAdminState state,
+  ) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        // KPI Cards
+        Row(
+          children: [
+            _kpiCard(
+              'Tenants',
+              '${state.tenantCount}',
+              Icons.business,
+              const Color(0xFF7C3AED),
+            ),
+            const Gap(12),
+            _kpiCard(
+              'Features',
+              '${state.activeFeatures.length}',
+              Icons.grid_view,
+              const Color(0xFF2563EB),
+            ),
+            const Gap(12),
+            _kpiCard(
+              'Revenue',
+              '\$${state.monthlyRevenue.toStringAsFixed(0)}',
+              Icons.trending_up,
+              const Color(0xFF059669),
+            ),
+          ],
+        ),
+        const Gap(24),
+
+        // Quick Actions
+        const Text(
+          'Quick Actions',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const Gap(12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _actionBtn(
+              Icons.factory,
+              'Add Factory Company',
+              () => _showAddFactoryCompanySheet(ctx, bloc),
+            ),
+            _actionBtn(Icons.list_alt, 'View Companies', () {}),
+            _actionBtn(Icons.receipt_long, 'Reports', () {}),
+          ],
+        ),
+        const Gap(24),
+
+        // Factory Companies Section
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Registered Factory Companies',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => bloc.add(const FetchFactoryCompanies()),
+              icon: const Icon(
+                Icons.refresh,
+                size: 16,
+                color: Color(0xFFBDD8DB),
+              ),
+              label: const Text(
+                'Refresh',
+                style: TextStyle(color: Color(0xFFBDD8DB)),
+              ),
+            ),
+          ],
+        ),
+        const Gap(8),
+        if (state.factoryCompanies.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1B3A4B),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Center(
+              child: Text(
+                'No factory companies registered yet.',
+                style: TextStyle(color: Colors.white54),
+              ),
+            ),
+          )
+        else
+          ...state.factoryCompanies.map(
+            (c) => _factoryCompanyCard(ctx, bloc, c),
+          ),
+      ],
+    );
+  }
+
+  // ── Factory Company Card ──
+  Widget _factoryCompanyCard(
+    BuildContext ctx,
+    SubAdminBloc bloc,
+    Map<String, dynamic> c,
+  ) {
+    final name =
+        c['name']?.toString() ?? c['account_name']?.toString() ?? 'Unknown';
+    final regNumber = c['business_registration_number']?.toString() ?? '';
+    final contactName = c['contact_person_name']?.toString() ?? '';
+    final contactEmail = c['contact_person_email']?.toString() ?? '';
+    final contactPhone = c['contact_person_phone']?.toString() ?? '';
+    final status = c['status']?.toString() ?? 'pending';
+    final id = c['id']?.toString() ?? '';
+    final statusColor = _statusColor(status);
+    final statusLabel = _statusLabel(status);
+
+    return Card(
+      color: const Color(0xFF1B3A4B),
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: statusColor,
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const Gap(12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (regNumber.isNotEmpty)
+                        Text(
+                          'Reg: $regNumber',
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 11,
+                          ),
+                        ),
+                      Text(
+                        contactName.isNotEmpty
+                            ? '$contactName · $contactEmail'
+                            : contactEmail,
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 11,
+                        ),
+                      ),
+                      if (contactPhone.isNotEmpty)
+                        Text(
+                          contactPhone,
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 11,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: Colors.white54),
+                  color: const Color(0xFF1B3A4B),
+                  onSelected: (action) {
+                    switch (action) {
+                      case 'verified':
+                        bloc.add(
+                          UpdateFactoryCompanyStatus(
+                            companyId: id,
+                            newStatus: 'verified',
+                          ),
+                        );
+                        break;
+                      case 'active':
+                        bloc.add(
+                          UpdateFactoryCompanyStatus(
+                            companyId: id,
+                            newStatus: 'active',
+                          ),
+                        );
+                        break;
+                      case 'inactive':
+                        bloc.add(
+                          UpdateFactoryCompanyStatus(
+                            companyId: id,
+                            newStatus: 'inactive',
+                          ),
+                        );
+                        break;
+                      case 'suspended':
+                        bloc.add(
+                          UpdateFactoryCompanyStatus(
+                            companyId: id,
+                            newStatus: 'suspended',
+                          ),
+                        );
+                        break;
+                      case 'edit':
+                        _showEditFactoryCompanySheet(ctx, bloc, c);
+                        break;
+                      case 'restore':
+                        bloc.add(RestoreFactoryCompany(id));
+                        break;
+                      case 'delete':
+                        showDialog(
+                          context: ctx,
+                          builder: (dctx) => AlertDialog(
+                            title: const Text('Delete Company?'),
+                            content: Text('This will archive $name.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dctx),
+                                child: const Text('Cancel'),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.error,
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(dctx);
+                                  bloc.add(DeleteFactoryCompany(id));
+                                },
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        );
+                        break;
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(
+                      value: 'verified',
+                      child: ListTile(
+                        leading: Icon(Icons.verified, color: Color(0xFF2563EB)),
+                        title: Text('Verified'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'active',
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.check_circle,
+                          color: Color(0xFF059669),
+                        ),
+                        title: Text('Active'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'inactive',
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.pause_circle,
+                          color: Color(0xFFD97706),
+                        ),
+                        title: Text('Inactive'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'suspended',
+                      child: ListTile(
+                        leading: Icon(Icons.block, color: AppColors.warning),
+                        title: Text('Suspend'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: ListTile(
+                        leading: Icon(Icons.edit, color: Color(0xFF1F5E6B)),
+                        title: Text('Update'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'restore',
+                      child: ListTile(
+                        leading: Icon(Icons.restore, color: Color(0xFF059669)),
+                        title: Text('Restore'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: ListTile(
+                        leading: Icon(Icons.delete, color: AppColors.error),
+                        title: Text('Delete'),
+                        dense: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Add Factory Company Bottom Sheet ──
+  void _showAddFactoryCompanySheet(BuildContext context, SubAdminBloc bloc) {
+    final nameCtrl = TextEditingController();
+    final regCtrl = TextEditingController();
+    final industryCtrl = TextEditingController();
+    final contactCtrl = TextEditingController();
+    final contactEmailCtrl = TextEditingController();
+    final contactPhoneCtrl = TextEditingController();
+    final countryCtrl = TextEditingController(text: 'Pakistan');
+    final cityCtrl = TextEditingController();
+    final passwordCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1B3A4B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => BlocProvider.value(
+        value: bloc,
+        child: BlocConsumer<SubAdminBloc, SubAdminState>(
+          listener: (lctx, state) {
+            if (state.factoryFormSuccess != null) {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.factoryFormSuccess!),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            }
+          },
+          builder: (lctx, state) => Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(lctx).viewInsets.bottom + 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Add Factory Company',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Gap(16),
+                  _sheetField('Company Name', nameCtrl),
+                  const Gap(10),
+                  _sheetField('Business Registration No.', regCtrl),
+                  const Gap(10),
+                  _sheetField(
+                    'Industry Type (optional)',
+                    industryCtrl,
+                    TextInputType.text,
+                    'FMCG, Pharma, Logistics',
+                  ),
+                  const Gap(10),
+                  _sheetField('Contact Person Name', contactCtrl),
+                  const Gap(10),
+                  _sheetField(
+                    'Contact Person Email',
+                    contactEmailCtrl,
+                    TextInputType.emailAddress,
+                  ),
+                  const Gap(10),
+                  _sheetField(
+                    'Contact Person Phone',
+                    contactPhoneCtrl,
+                    TextInputType.phone,
+                  ),
+                  const Gap(10),
+                  _sheetField('Country', countryCtrl),
+                  const Gap(10),
+                  _sheetField('City', cityCtrl),
+                  const Gap(10),
+                  _sheetField(
+                    'Password',
+                    passwordCtrl,
+                    TextInputType.visiblePassword,
+                  ),
+                  if (state.factoryFormError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        state.factoryFormError!,
+                        style: const TextStyle(
+                          color: AppColors.error,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  const Gap(16),
+                  ElevatedButton(
+                    onPressed: state.factoryFormLoading
+                        ? null
+                        : () {
+                            bloc.add(
+                              CreateFactoryCompany(
+                                name: nameCtrl.text.trim(),
+                                regNumber: regCtrl.text.trim(),
+                                industryType: industryCtrl.text.trim(),
+                                contactName: contactCtrl.text.trim(),
+                                contactEmail: contactEmailCtrl.text.trim(),
+                                contactPhone: contactPhoneCtrl.text.trim(),
+                                country: countryCtrl.text.trim(),
+                                city: cityCtrl.text.trim(),
+                                password: passwordCtrl.text,
+                              ),
+                            );
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1F5E6B),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: state.factoryFormLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Create Company',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Edit Factory Company Bottom Sheet ──
+  void _showEditFactoryCompanySheet(
+    BuildContext context,
+    SubAdminBloc bloc,
+    Map<String, dynamic> company,
+  ) {
+    final id = company['id']?.toString() ?? '';
+    final nameCtrl = TextEditingController(
+      text:
+          company['name']?.toString() ??
+          company['account_name']?.toString() ??
+          '',
+    );
+    final regCtrl = TextEditingController(
+      text: company['business_registration_number']?.toString() ?? '',
+    );
+    final industryCtrl = TextEditingController(
+      text: company['industry_type']?.toString() ?? '',
+    );
+    final contactCtrl = TextEditingController(
+      text: company['contact_person_name']?.toString() ?? '',
+    );
+    final contactEmailCtrl = TextEditingController(
+      text: company['contact_person_email']?.toString() ?? '',
+    );
+    final contactPhoneCtrl = TextEditingController(
+      text: company['contact_person_phone']?.toString() ?? '',
+    );
+    final countryCtrl = TextEditingController(
+      text: company['country']?.toString() ?? '',
+    );
+    final cityCtrl = TextEditingController(
+      text: company['city']?.toString() ?? '',
+    );
+    final passwordCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1B3A4B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => BlocProvider.value(
+        value: bloc,
+        child: BlocConsumer<SubAdminBloc, SubAdminState>(
+          listener: (lctx, state) {
+            if (state.actionSuccess != null) {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.actionSuccess!),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            }
+          },
+          builder: (lctx, state) => Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(lctx).viewInsets.bottom + 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Edit Factory Company',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Gap(16),
+                  _sheetField('Company Name', nameCtrl),
+                  const Gap(10),
+                  _sheetField('Business Registration No.', regCtrl),
+                  const Gap(10),
+                  _sheetField('Industry Type', industryCtrl),
+                  const Gap(10),
+                  _sheetField('Contact Person Name', contactCtrl),
+                  const Gap(10),
+                  _sheetField(
+                    'Contact Person Email',
+                    contactEmailCtrl,
+                    TextInputType.emailAddress,
+                  ),
+                  const Gap(10),
+                  _sheetField(
+                    'Contact Person Phone',
+                    contactPhoneCtrl,
+                    TextInputType.phone,
+                  ),
+                  const Gap(10),
+                  _sheetField('Country', countryCtrl),
+                  const Gap(10),
+                  _sheetField('City', cityCtrl),
+                  const Gap(10),
+                  _sheetField(
+                    'New Password (leave blank to keep existing)',
+                    passwordCtrl,
+                    TextInputType.visiblePassword,
+                  ),
+                  if (state.actionError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        state.actionError!,
+                        style: const TextStyle(
+                          color: AppColors.error,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  const Gap(16),
+                  ElevatedButton(
+                    onPressed: state.actionLoading
+                        ? null
+                        : () {
+                            final data = <String, dynamic>{
+                              'name': nameCtrl.text.trim(),
+                              'business_registration_number': regCtrl.text
+                                  .trim(),
+                              'industry_type': industryCtrl.text.trim(),
+                              'contact_person_name': contactCtrl.text.trim(),
+                              'contact_person_email': contactEmailCtrl.text
+                                  .trim(),
+                              'contact_person_phone': contactPhoneCtrl.text
+                                  .trim(),
+                              'country': countryCtrl.text.trim(),
+                              'city': cityCtrl.text.trim(),
+                            };
+                            final pwd = passwordCtrl.text;
+                            if (pwd.isNotEmpty) {
+                              data['password'] = pwd;
+                            }
+                            bloc.add(
+                              EditFactoryCompany(companyId: id, data: data),
+                            );
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1F5E6B),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: state.actionLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Save Changes',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _sheetField(
     String label,
     TextEditingController ctrl, [
     TextInputType type = TextInputType.text,
+    String? hint,
   ]) {
     return TextField(
       controller: ctrl,
@@ -1020,6 +1702,8 @@ class _DashboardViewState extends State<_DashboardView> {
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
+        hintText: hint,
+        hintStyle: const TextStyle(color: Colors.white24),
         labelStyle: const TextStyle(color: Colors.white54),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),

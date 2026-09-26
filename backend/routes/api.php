@@ -93,6 +93,19 @@ $registerRoutes = function (): void {
                 Route::patch("{id}/restore", [\App\Http\Controllers\Admin\SubAdminBusCompanyController::class, "restore"]);
             });
 
+            /// Factory Company Management (Factory Sub-Admin jurisdiction — Group-Incharge C2)
+            /// Scoped to the caller's OWN companies (metadata.created_by_sub_admin_id). No plan/billing here:
+            /// that belongs to the financial_auditor (GROUP-INCHARGE-MODEL.md section 2b.3).
+            Route::prefix("factory-companies")->group(function (): void {
+                Route::get("", [\App\Http\Controllers\Admin\SubAdminFactoryCompanyController::class, "index"]);
+                Route::post("create", [\App\Http\Controllers\Admin\SubAdminFactoryCompanyController::class, "store"]);
+                Route::get("{id}", [\App\Http\Controllers\Admin\SubAdminFactoryCompanyController::class, "show"]);
+                Route::put("{id}", [\App\Http\Controllers\Admin\SubAdminFactoryCompanyController::class, "update"]);
+                Route::delete("{id}", [\App\Http\Controllers\Admin\SubAdminFactoryCompanyController::class, "destroy"]);
+                Route::patch("{id}/status", [\App\Http\Controllers\Admin\SubAdminFactoryCompanyController::class, "updateStatus"]);
+                Route::patch("{id}/restore", [\App\Http\Controllers\Admin\SubAdminFactoryCompanyController::class, "restore"]);
+            });
+
             /// Identity Portability — Assignment Transfer (§10.11.2)
             Route::prefix("assignments")->group(function (): void {
                 Route::post("{id}/transfer", [\App\Http\Controllers\Tenant\AssignmentTransferController::class, "transfer"]);

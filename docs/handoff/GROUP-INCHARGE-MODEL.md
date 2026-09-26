@@ -355,6 +355,45 @@ when its scope is finalised. Recorded here so the Phase 6 author sees it.
 
 ---
 
+### 2b.7 What C2 delivered — the Factory Sub-Admin can create its own factories
+
+C2 moves factory **admin** creation to the Factory Sub-Admin. The Super Admin's `/companies/register`
+path is deliberately **left in place** for now — removing it is **C3** (its own row in the roadmap, "the
+owner's core requirement"), which keeps C2 reversible: if the new path misbehaves, the old one still
+exists for one release.
+
+| Piece | Detail |
+|---|---|
+| `backend/app/Http/Controllers/Admin/SubAdminFactoryCompanyController.php` | **new.** `index` / `store` / `show` / `update` / `updateStatus` / `destroy` / `restore` — the `SubAdminBusCompanyController` shape, on the **factory** domain objects (`companies` + `factory_users`) |
+| `backend/routes/api.php` | `admin/factory-companies/*` — 7 routes, directly under the existing `admin` group, mirroring `bus-companies` |
+| `sub_admin_event.dart` / `_state.dart` / `_bloc.dart` | `CreateFactoryCompany`, `FetchFactoryCompanies`, `UpdateFactoryCompanyStatus`, `EditFactoryCompany`, `ResetFactoryCompanyPassword`, `DeleteFactoryCompany`, `RestoreFactoryCompany` + their `factoryCompanies` / `factoryList*` / `factoryForm*` state and handlers |
+| `sub_admin_dashboard.dart` | `_factoryDashboard`, `_factoryCompanyCard`, `_showAddFactoryCompanySheet`, `_showEditFactoryCompanySheet`; the vertical switch gained `case 'factory'` — **every other vertical still lands on `_busDashboard`, unchanged** |
+
+**Four deliberate differences from the Super Admin path**, each of which matters:
+
+1. **Scoped by construction.** Every company records `metadata.created_by_sub_admin_id` (and the
+   sub-admin's name) at creation, and every read/write matches it with the Postgres `->>` operator. A
+   foreign id returns **404**, so one sub-admin cannot touch another's group.
+2. **No plan/ subscription.** `AdminCompanyController@store` accepts `plan_id`; this controller does not.
+   Plans are the financial_auditor's (§2b.3).
+3. **No legacy `admin_users` row.** The Super Admin path also writes a `company_admin` `AdminUser` for the
+   old `/bus-fleet/login` / `/goods-fleet/login` routes — the pattern the owner is removing. The factory
+   admin logs in through `/factory/login` → `factory_users`, which is what this creates.
+4. **Soft delete, not `delete()`.** `AdminCompanyController@destroy` calls `$company->delete()`; `Company`
+   does not use `SoftDeletes`, so that is a **hard delete**. Here, `destroy` sets
+   `status='deleted' + is_deleted + deleted_at` and `restore` reverses it — the same semantics
+   `SubAdminBusCompanyController` uses.
+
+**Included behaviour:** a company's `factory_users` logins follow its status — `verified`/`active` set
+`is_active=true`, anything else (including `deleted`) sets it false, so a suspended or deleted factory
+cannot keep a working admin login.
+
+**Still not here (Phase 6, by design):** vertical enforcement. `admin/factory-companies/*` sits behind the
+`admin` middleware, which admits any active sub-admin — exactly as `bus-companies` does today. Only the
+*scoping* is new; confining a vertical to its own endpoints is the route-to-feature map (§2b.3).
+
+---
+
 ## 3. ⚠️ The one part that needs real design — Super Admin "enters" a Sub-Admin dashboard
 
 The owner's words: *"click karne se wohi kisi bhi sub-admin ke dashboard me daakhil ho kar dekhe"*.
@@ -430,7 +469,7 @@ the owner tests the panels.
 |---|---|---|
 | **C0** | **Design doc**: group → vertical → which accounts that vertical creates | ✅ **done 2026-09-26 — §2b.** Registry, creation matrix, what `plans/**` + `billing/**` ownership means, and the 3 open owner items (a/b/c) recorded in §2b.4 |
 | **C1** | **Add the missing verticals** — `factory`, and stubs for `vehicle_security` / `trust_safety` — to `sub_admin_verticals` (seeder + `SubAdminController` validation) | ✅ **done 2026-09-26 — §2b.5.** Additive seeder + deploy step + DB-driven validation; `financial_auditor`'s `plans.*` / `billing.*` codes and bundle entries registered |
-| **C2** | **Factory account creation moves to the Factory Sub-Admin.** Backend endpoints (mirror the `bus-companies` CRUD pattern) + the Sub-Admin UI | Removes the Super Admin's `/companies/register` path for factory **admins** |
+| **C2** | **Factory account creation moves to the Factory Sub-Admin.** Backend endpoints (mirror the `bus-companies` CRUD pattern) + the Sub-Admin UI | ✅ **done 2026-09-26 — §2b.7.** Scoped `admin/factory-companies/*` + Factory Sub-Admin UI. The Super Admin's `/companies/register` path is left in place until **C3** |
 | **C3** | **Remove group-account creation from the Super Admin** for every group (Factory now; confirm B2B/Reseller). Super Admin keeps only *platform* accounts (sub-admins, plans, billing, registries as read-only) | This is the owner's core requirement |
 | **C4** | **Super Admin observation view** — per-group activity feed + payment records/graphs, read-only | Delivers most of the intent safely |
 | **C5** | **Audited "enter sub-admin view"** — the §3 requirements above | Build only after C4, and only with the audit chain in place |
@@ -469,3 +508,4 @@ confirming or overriding; none of them blocks C1.
 |---|---|
 | 2026-09-26 | Created from the owner's directive. Gap analysis verified against `SubAdminSeeder`, `SubAdminController`, `super_admin_shell.dart` and the `SubAdminBloc` endpoint list. Phased roadmap and the impersonation safety requirements recorded. |
 | 2026-09-26 | **C0 delivered (§2b)** — group→vertical registry, the creation matrix, what `plans/**` + `billing/**` ownership means, the 3 open owner items with recommended defaults, and the wildcard-hygiene caveat (§2b.6). **C1 delivered (§2b.5)** — `SubAdminVerticalExpansionSeeder` (`factory` / `vehicle_security` / `trust_safety` + `financial_auditor`'s plans/billing codes), registered in `DatabaseSeeder` and `deploy.yml`, plus DB-driven vertical validation in `SubAdminController` and the two Super Admin screens. |
+| 2026-09-26 | **C2 delivered (§2b.7)** — `SubAdminFactoryCompanyController` + `admin/factory-companies/*` routes, scoped to the creating sub-admin; Factory Sub-Admin UI (`_factoryDashboard` + add/edit sheets + status card) in the shared Sub-Admin panel. Super Admin's `/companies/register` untouched until C3. |

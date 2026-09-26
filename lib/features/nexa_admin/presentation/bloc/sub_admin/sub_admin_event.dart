@@ -109,6 +109,90 @@ class RestoreBusCompany extends SubAdminEvent {
   List<Object?> get props => [companyId];
 }
 
+// ── Factory Company Management (inside dashboard) ──
+class CreateFactoryCompany extends SubAdminEvent {
+  final String name,
+      regNumber,
+      industryType,
+      contactName,
+      contactEmail,
+      contactPhone,
+      country,
+      city,
+      password;
+  const CreateFactoryCompany({
+    required this.name,
+    required this.regNumber,
+    required this.industryType,
+    required this.contactName,
+    required this.contactEmail,
+    required this.contactPhone,
+    required this.country,
+    required this.city,
+    required this.password,
+  });
+  @override
+  List<Object?> get props => [
+    name,
+    regNumber,
+    industryType,
+    contactName,
+    contactEmail,
+    contactPhone,
+    country,
+    city,
+    password,
+  ];
+}
+
+class FetchFactoryCompanies extends SubAdminEvent {
+  const FetchFactoryCompanies();
+}
+
+class UpdateFactoryCompanyStatus extends SubAdminEvent {
+  final String companyId;
+  final String
+  newStatus; // pending, verified, active, inactive, suspended, deleted
+  const UpdateFactoryCompanyStatus({
+    required this.companyId,
+    required this.newStatus,
+  });
+  @override
+  List<Object?> get props => [companyId, newStatus];
+}
+
+class EditFactoryCompany extends SubAdminEvent {
+  final String companyId;
+  final Map<String, dynamic> data;
+  const EditFactoryCompany({required this.companyId, required this.data});
+  @override
+  List<Object?> get props => [companyId, data];
+}
+
+class ResetFactoryCompanyPassword extends SubAdminEvent {
+  final String companyId, newPassword;
+  const ResetFactoryCompanyPassword({
+    required this.companyId,
+    required this.newPassword,
+  });
+  @override
+  List<Object?> get props => [companyId, newPassword];
+}
+
+class DeleteFactoryCompany extends SubAdminEvent {
+  final String companyId;
+  const DeleteFactoryCompany(this.companyId);
+  @override
+  List<Object?> get props => [companyId];
+}
+
+class RestoreFactoryCompany extends SubAdminEvent {
+  final String companyId;
+  const RestoreFactoryCompany(this.companyId);
+  @override
+  List<Object?> get props => [companyId];
+}
+
 // ── Sub-Admin Management (list + add screens) ──
 class FetchSubAdmins extends SubAdminEvent {
   const FetchSubAdmins();

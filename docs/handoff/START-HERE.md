@@ -48,7 +48,8 @@ Priority 3 means **login + dashboard entry only** — do **not** start fixing wh
 | **2** | **B1** | factory auth domain split (`PANEL-SEPARATION-PLAN.md` §17.9 step 1) — closes the cross-domain **token leak** (§17.8) | **✅ factory domain done 2026-09-26** — admin/sub-admin steps 2-4, 6 pending |
 | **3** | **C0** | design for the Group-Incharge model (owner's answers already folded in) | **✅ done 2026-09-26 — `GROUP-INCHARGE-MODEL.md` §2b** |
 | **4** | **C1** | add the missing verticals + give `financial_auditor` `plans/**` + `billing/**` | **✅ done 2026-09-26** — §2b.5. C2 is next |
-| **5** | **C2 → C3 → C4 → C5** | factory creation → remove group-account creation from Super Admin → read-only group activity + payments → audited "enter sub-admin view" | ⏳ C5 last |
+| **5** | **C2** | factory account creation moves to the Factory Sub-Admin (`admin/factory-companies/*` + the Sub-Admin UI) | **✅ done 2026-09-26** — §2b.7. Super Admin's `/companies/register` left in place until C3 |
+| **6** | **C3 → C4 → C5** | remove group-account creation from the Super Admin → read-only group activity + payments → audited "enter sub-admin view" | ⏳ C5 last |
 
 ### A3 — ✅ done (`3b072d09`)
 
@@ -387,9 +388,9 @@ rm -f make-admin-spine.php
 Also in this period: Phase 0a credential remediation, the pillar specs (A/B/E), the subdomain playbook,
 the plan's §15b/§17 (provider split + auth globals + the `/sub-admin` fix), and §18 provenance.
 
-**Not started:** C2–C5, the Marketing design (§5), and the four per-pillar builds.
+**Not started:** C3–C5, the Marketing design (§5), and the four per-pillar builds.
 
 > **Correction (2026-09-26, later sessions):** this §8 line originally listed **A3**, **B1** and **C0–C5** as
 > not started. A3 was in fact already done in `3b072d09` (the same commit that added this file); **B1** (the
-> factory auth domain split) and **C0 + C1** (the Group-Incharge design and the missing verticals) landed in
-> later sessions. See §3 for live status.
+> factory auth domain split) and **C0 + C1 + C2** (the Group-Incharge design, the missing verticals, and
+> factory creation by the Factory Sub-Admin) landed in later sessions. See §3 for live status.

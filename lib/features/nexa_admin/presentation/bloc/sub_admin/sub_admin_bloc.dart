@@ -23,6 +23,13 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
     on<ResetBusCompanyPassword>(_onResetBusCoPwd);
     on<DeleteBusCompany>(_onDelBusCo);
     on<RestoreBusCompany>(_onRestoreBusCo);
+    on<CreateFactoryCompany>(_onCreateFactoryCo);
+    on<FetchFactoryCompanies>(_onFetchFactoryCos);
+    on<UpdateFactoryCompanyStatus>(_onUpdateFactoryCoStatus);
+    on<EditFactoryCompany>(_onEditFactoryCo);
+    on<ResetFactoryCompanyPassword>(_onResetFactoryCoPwd);
+    on<DeleteFactoryCompany>(_onDelFactoryCo);
+    on<RestoreFactoryCompany>(_onRestoreFactoryCo);
     on<FetchSubAdmins>(_onFetchAdmins);
     on<CreateSubAdmin>(_onCreateAdmin);
     on<ToggleStudioAccess>(_onToggleStudio);
@@ -121,6 +128,11 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
     emit(state.copyWith(subAdminName: name));
     add(const LoadDashboardMetrics());
     add(const FetchBusCompanies());
+    // Factory vertical additionally loads its own list (step C2,
+    // GROUP-INCHARGE-MODEL.md §2b/§4).
+    if ((p.getString('sub_admin_vertical') ?? '') == 'factory') {
+      add(const FetchFactoryCompanies());
+    }
   }
 
   Future<void> _onMetrics(
@@ -347,6 +359,201 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
         state.copyWith(actionLoading: false, actionSuccess: 'Company restored'),
       );
       add(const FetchBusCompanies());
+    } catch (ex) {
+      emit(state.copyWith(actionLoading: false, actionError: ex.toString()));
+    }
+  }
+
+  // ═══════════════ Factory Company Management ═══════════════
+
+  Future<void> _onCreateFactoryCo(
+    CreateFactoryCompany e,
+    Emitter<SubAdminState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        factoryFormLoading: true,
+        factoryFormError: null,
+        factoryFormSuccess: null,
+      ),
+    );
+    try {
+      await _api.post(
+        '${ApiConfig.apiBaseUrl}/admin/factory-companies/create',
+        data: {
+          'name': e.name,
+          'business_registration_number': e.regNumber,
+          // One login per distinct email: the contact person IS the factory
+          // admin, so `email` mirrors `contact_person_email`.
+          'email': e.contactEmail,
+          'password': e.password,
+          'country': e.country,
+          'city': e.city,
+          'contact_person_name': e.contactName,
+          'contact_person_email': e.contactEmail,
+          'contact_person_phone': e.contactPhone,
+          if (e.industryType.isNotEmpty) 'industry_type': e.industryType,
+        },
+      );
+      emit(
+        state.copyWith(
+          factoryFormLoading: false,
+          factoryFormSuccess: 'Company created',
+        ),
+      );
+      add(const FetchFactoryCompanies());
+    } catch (ex) {
+      emit(
+        state.copyWith(
+          factoryFormLoading: false,
+          factoryFormError: ex.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onFetchFactoryCos(
+    FetchFactoryCompanies e,
+    Emitter<SubAdminState> emit,
+  ) async {
+    emit(state.copyWith(factoryListLoading: true));
+    try {
+      final r = await _api.get(
+        '${ApiConfig.apiBaseUrl}/admin/factory-companies',
+      );
+      final d = r?['data'];
+      List<Map<String, dynamic>> list = d is List
+          ? d.cast<Map<String, dynamic>>()
+          : (d is Map
+                ? (d['companies'] as List?)?.cast<Map<String, dynamic>>() ??
+                      (d['data'] as List?)?.cast<Map<String, dynamic>>() ??
+                      []
+                : []);
+      emit(state.copyWith(factoryCompanies: list, factoryListLoading: false));
+    } catch (ex) {
+      emit(
+        state.copyWith(
+          factoryListLoading: false,
+          factoryListError: ex.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onUpdateFactoryCoStatus(
+    UpdateFactoryCompanyStatus e,
+    Emitter<SubAdminState> emit,
+  ) async {
+    emit(state.copyWith(actionLoading: true));
+    try {
+      await _api.patch(
+        '${ApiConfig.apiBaseUrl}/admin/factory-companies/${e.companyId}/status',
+        data: {'status': e.newStatus},
+      );
+      emit(
+        state.copyWith(
+          actionLoading: false,
+          actionSuccess: 'Status set to ${e.newStatus}',
+        ),
+      );
+      add(const FetchFactoryCompanies());
+    } catch (ex) {
+      emit(state.copyWith(actionLoading: false, actionError: ex.toString()));
+    }
+  }
+
+  Future<void> _onEditFactoryCo(
+    EditFactoryCompany e,
+    Emitter<SubAdminState> emit,
+  ) async {
+    emit(state.copyWith(actionLoading: true));
+    try {
+      // Map frontend field names to backend field names.
+      final body = <String, dynamic>{};
+      if (e.data['name'] != null) body['name'] = e.data['name'];
+      if (e.data['business_registration_number'] != null)
+        body['business_registration_number'] =
+            e.data['business_registration_number'];
+      if (e.data['industry_type'] != null)
+        body['industry_type'] = e.data['industry_type'];
+      if (e.data['contact_person_name'] != null)
+        body['contact_person_name'] = e.data['contact_person_name'];
+      if (e.data['contact_person_email'] != null) {
+        body['contact_person_email'] = e.data['contact_person_email'];
+        body['email'] = e.data['contact_person_email'];
+      }
+      if (e.data['contact_person_phone'] != null)
+        body['contact_person_phone'] = e.data['contact_person_phone'];
+      if (e.data['country'] != null) body['country'] = e.data['country'];
+      if (e.data['city'] != null) body['city'] = e.data['city'];
+      // Only include password if non-empty (otherwise backend keeps existing).
+      if (e.data['password'] != null &&
+          (e.data['password'] as String).isNotEmpty) {
+        body['password'] = e.data['password'];
+      }
+
+      await _api.put(
+        '${ApiConfig.apiBaseUrl}/admin/factory-companies/${e.companyId}',
+        data: body,
+      );
+      emit(
+        state.copyWith(actionLoading: false, actionSuccess: 'Company updated'),
+      );
+      add(const FetchFactoryCompanies());
+    } catch (ex) {
+      emit(state.copyWith(actionLoading: false, actionError: ex.toString()));
+    }
+  }
+
+  Future<void> _onResetFactoryCoPwd(
+    ResetFactoryCompanyPassword e,
+    Emitter<SubAdminState> emit,
+  ) async {
+    emit(state.copyWith(actionLoading: true));
+    try {
+      await _api.put(
+        '${ApiConfig.apiBaseUrl}/admin/factory-companies/${e.companyId}',
+        data: {'password': e.newPassword},
+      );
+      emit(
+        state.copyWith(actionLoading: false, actionSuccess: 'Password reset'),
+      );
+    } catch (ex) {
+      emit(state.copyWith(actionLoading: false, actionError: ex.toString()));
+    }
+  }
+
+  Future<void> _onDelFactoryCo(
+    DeleteFactoryCompany e,
+    Emitter<SubAdminState> emit,
+  ) async {
+    emit(state.copyWith(actionLoading: true));
+    try {
+      await _api.delete(
+        '${ApiConfig.apiBaseUrl}/admin/factory-companies/${e.companyId}',
+      );
+      emit(
+        state.copyWith(actionLoading: false, actionSuccess: 'Company deleted'),
+      );
+      add(const FetchFactoryCompanies());
+    } catch (ex) {
+      emit(state.copyWith(actionLoading: false, actionError: ex.toString()));
+    }
+  }
+
+  Future<void> _onRestoreFactoryCo(
+    RestoreFactoryCompany e,
+    Emitter<SubAdminState> emit,
+  ) async {
+    emit(state.copyWith(actionLoading: true));
+    try {
+      await _api.patch(
+        '${ApiConfig.apiBaseUrl}/admin/factory-companies/${e.companyId}/restore',
+      );
+      emit(
+        state.copyWith(actionLoading: false, actionSuccess: 'Company restored'),
+      );
+      add(const FetchFactoryCompanies());
     } catch (ex) {
       emit(state.copyWith(actionLoading: false, actionError: ex.toString()));
     }
