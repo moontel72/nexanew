@@ -24,7 +24,20 @@ and watch what they are doing.
 `goods_logistics` | Group 5 — Goods/Truck ✅ |
 `commercial_marketplace` | Group 2 — B2B ✅ |
 `cricket_ops` | Group 6 — Cricket ✅ |
-`financial_auditor` | — **cross-cutting**, maps to no group |
+| `financial_auditor` | — **cross-cutting, and the LARGEST sub-admin role** (owner, 2026-09-26) |
+
+> **`financial_auditor` — the owner's clarification.** It maps to no single group **on purpose**: it is
+> the biggest of the sub-admin jobs. It **creates, controls, changes and applies the subscription plans
+> of every group** (monthly / annual / etc.) and **controls and creates the invoices of every group's
+> users**. Compare with the other sub-admins, who look after one group each — this one looks after the
+> money across all of them. Design consequences:
+>
+> - It needs **read access across every group** for billing purposes (an explicit exception to the
+>   one-group-per-sub-admin rule, and it must be scoped to billing data only).
+> - It owns `plans/**` and `billing/**` — today those live in the **Super Admin** shell
+>   (`/plans`, `/plans/create`, `/billing/invoices`).
+> - It is the vertical most likely to need a **Feature-Grant gate** so it cannot read operational data
+>   it has no business seeing, while still reading every invoice.
 
 **So three groups have no incharge vertical at all:**
 
@@ -94,7 +107,26 @@ Super Admin  →  Group Sub-Admin  →  Group Admin  →  group staff
 
 The owner's words: *"click karne se wohi kisi bhi sub-admin ke dashboard me daakhil ho kar dekhe"*.
 Useful, but this is **impersonation**, and done casually it becomes an unaudited backdoor into every
-vertical. Minimum requirements before it ships:
+vertical. **The owner refined this (2026-09-26) — and the key rule is *which buttons stay live*:**
+
+> *"Super Admin should not be able to change anything in a sub-admin's panel. But **every button must be
+> clickable** so the Super Admin can open it and read the detail. Buttons that change nothing are live;
+> buttons that **do** change something — delete account, edit account, etc. — are **LOCKED** for the
+> Super Admin."*
+>
+> So the rule is: **inspect everything, mutate nothing.**
+>
+> | Behaviour | Super Admin, inside a sub-admin panel |
+> |---|---|
+> | Navigate every screen, open every detail view, read every list/report | ✅ allowed |
+> | Click a **mutating** button (delete, edit, approve, suspend, pay, reset password) | ⛔ **locked** — disabled, with a clear *"read-only observation"* tooltip |
+> | Any write that slips past the UI | ⛔ **still refused server-side** — the UI lock is convenience, the API gate is the real control |
+>
+> **Implementation note:** enforce it with **one server-side middleware**, not per-screen checks — an
+> `observation.mode` flag on the token that makes every non-GET request fail. Then a screen added later
+> is automatically safe, which is what makes this maintainable rather than a game of whack-a-mole.
+
+Minimum requirements before it ships:
 
 | # | Requirement | Why |
 |---|---|---|
@@ -111,7 +143,15 @@ vertical. Minimum requirements before it ships:
 
 ---
 
-## 4. Phased roadmap
+## 4. Phased roadmap — **confirmed order** (owner approved: small → large)
+
+| Order | Phase | Gate |
+|---|---|---|
+| **1** | **A** — A1 ✅ done · A2 (`CompanyRegisterBloc`) · A3 (dead sidebar button) | none — safe |
+| **2** | **B** — B1: factory auth domain split (`§17.9` step 1) | closes the cross-domain token leak |
+| **3** | **C0** — design, with the owner's answers folded in | none |
+| **4** | **C1** — add the missing verticals, and expand `financial_auditor` to own `plans/**` + `billing/**` | needs C0 |
+| **5** | **C2 → C3 → C4 → C5** | C5 last, and only with the audit chain |
 
 Small, safe phases first. Nothing in Phase A or B touches the authority model, so they can land while
 the owner tests the panels.
@@ -121,7 +161,7 @@ the owner tests the panels.
 | # | Item | Why now |
 |---|---|---|
 | **A1** | **Remove the double-hash footgun.** `AdminUser::setPasswordAttribute` (and `GlobalIdentity`'s) currently re-hash anything given to them, so passing an already-hashed value silently breaks login. Guard with `Hash::isHashed()` — Laravel's own `hashed` cast behaviour | The owner hit exactly this trap; one line prevents a lockout |
-| **A2** | Check whether `CompanyRegisterBloc` is used only by the two **deleted** *Add … Company* screens (`126f618d`). Delete if orphaned | Finishes the duplicate removal |
+| **A2** | ✅ **Checked 2026-09-26 — no action needed.** `CompanyRegisterBloc` is used by `super_admin/companies/register_company_screen.dart`, which was **not** deleted (it is the generic factory registry at `/companies/register`, and §6 keeps it as platform). So it is **not orphaned** — leave it | Finishes the duplicate removal |
 | **A3** | Sub-Admin sidebar: `Missile3DButton(label: 'Bus Companies', onTap: () {})` at `sub_admin_dashboard.dart:1457-1463` — either wire it to the inline bus-company section or remove it | Dead button in a live panel |
 
 **Verify:** `dart analyze <changed files>` + `node .scripts/check-panel-isolation.mjs` green.
@@ -145,15 +185,26 @@ the owner tests the panels.
 
 ---
 
-## 5. Open questions for the owner
+## 5. Owner's answers (2026-09-26) — questions closed
 
-| # | Question | Why it matters |
+| # | Question | Answer |
 |---|---|---|
-| 1 | **`financial_auditor`** maps to no group. Keep it as a cross-cutting role, or fold it into a group? | Affects the vertical list in C1 |
-| 2 | **Groups 7 (Vehicle Security) and 8 (Trust & Safety)** have no panels yet. Create their Sub-Admin now, or when the panels are built? | C1 scope |
-| 3 | **Who approves a group's admin accounts** — does the Sub-Admin create them outright, or create-and-the-Super-Admin-approves? | Owner said *"create, approved etc"* — needs one decision |
-| 4 | **Should the Super Admin keep read access to platform-wide company registries** after C3, or lose them too? | C3 scope |
-| 5 | **Impersonation (§3)** — confirm read-only + audited + visible-to-sub-admin is acceptable | Security design |
+| 1 | `financial_auditor` scope | **Not cross-cutting by accident — it is the biggest sub-admin role.** Creates/controls/changes the subscription plans of **every** group and the invoices of **every** group's users. See §1.1 |
+| 2 | Groups 7 (Vehicle Security) / 8 (Trust & Safety) | **Work on them per their phase** — their incharges are created with the rest in C1, not ahead of their panels |
+| 3 | Who approves a group's admin accounts | **Still open** — the owner said *"create, approved etc"*. Fold into **C0** |
+| 4 | Super Admin keeps read access to company registries? | **Still open** — folded into **C0 / C3** |
+| 5 | Impersonation design | ✅ **Agreed, with one refinement:** every button stays **clickable for inspection**, but mutating buttons are **locked**, and the real block is server-side. See §3 |
+
+**Also agreed:** build the **read-only group activity + payments view first** (C4), and the
+"enter dashboard" click-through (C5) **last**, with the audit chain.
+
+### 5.1 Still open after this round
+
+| # | Item |
+|---|---|
+| a | Sub-Admin **creates** accounts outright, or creates and the Super Admin **approves**? (Q3) |
+| b | After C3, does the Super Admin keep **read** access to the company registries? (Q4) |
+| c | `financial_auditor` — confirm it reads **billing data only** across groups, not operational data |
 
 ---
 
