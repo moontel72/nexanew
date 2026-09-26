@@ -190,6 +190,119 @@ change the constant to the owner's address before seeding.
 sets the password in the right place (spine **and** `admin_users`) instead of silently doing nothing.
 Until then, `PHASE-0A-CREDENTIAL-REMEDIATION.md` §3.6.1 handles the `admin_users` half.
 
+### The concrete fix (owner chose Option A, 2026-09-26) — `php -l` verified
+
+Confirmed on the live server: `identity_claims = 0`, `global_identities = 0`, `admin_users = 1`. This
+script puts that admin into the spine — it is the seeder's logic, but takes **any** email and reads the
+password from a hidden prompt so nothing is stored in history or in a chat.
+
+```bash
+cd /var/www/traceodd/admin-panel
+cat > make-admin-spine.php <<'PHP'
+<?php
+require __DIR__.'/vendor/autoload.php';
+$app = require_once __DIR__.'/bootstrap/app.php';
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+use App\Models\GlobalIdentity;
+use App\Models\IdentityClaim;
+use App\Models\TenantAccount;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+
+$email = $argv[1] ?? null;
+if (!$email) { fwrite(STDERR, "usage: php make-admin-spine.php <email>\n"); exit(2); }
+
+$identity = GlobalIdentity::where('identity_type', 'admin')->first();
+if (!$identity) {
+    $identity = GlobalIdentity::create([
+        'identity_token' => GlobalIdentity::generateToken('admin'),
+        'display_name'   => 'Trace Odd Super Admin',
+        'identity_type'  => 'admin',
+        'kyc_status'     => 'verified',
+        'kyc_tier'       => 3,
+        'status'         => 'active',
+        'primary_locale' => 'en-PK',
+    ]);
+    echo "created global_identities row: {$identity->id}\n";
+} else {
+    echo "reusing existing admin identity: {$identity->id}\n";
+}
+
+$normalized = IdentityClaim::normalize('email', $email);
+$claim = IdentityClaim::where('claim_type', 'email')->where('claim_value', $normalized)->where('is_revoked', false)->first();
+if (!$claim) {
+    IdentityClaim::create([
+        'global_identity_id' => $identity->id,
+        'claim_type'         => 'email',
+        'claim_value'        => $normalized,
+        'is_primary'         => true,
+        'verified_via'       => 'manual_kyc',
+        'verified_at'        => now(),
+    ]);
+    echo "created email claim for {$email}\n";
+} else {
+    echo "email claim already exists\n";
+}
+
+function hidden(string $p): string {
+    echo $p; system('stty -echo');
+    $v = rtrim((string) fgets(STDIN), "\r\n");
+    system('stty echo'); echo "\n"; return $v;
+}
+$pw = hidden("Password for {$email} (typing hidden): ");
+if (strlen($pw) < 12) { fwrite(STDERR, "Refusing: use at least 12 characters.\n"); exit(1); }
+if ($pw !== hidden('Repeat: ')) { fwrite(STDERR, "Refusing: passwords did not match.\n"); exit(1); }
+$identity->password = $pw;
+$identity->save();
+echo "spine password set\n";
+
+$hasAssignment = DB::table('master_admin_assignments')->where('global_identity_id', $identity->id)->whereNull('revoked_at')->exists();
+if (!$hasAssignment) {
+    DB::table('master_admin_assignments')->insert([
+        'id' => (string) Str::orderedUuid(),
+        'global_identity_id' => $identity->id,
+        'appointed_by_global_identity_id' => $identity->id,
+        'appointed_at' => now(), 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    echo "created master_admin_assignments row (Super Admin rights)\n";
+} else {
+    echo "master_admin_assignments already present\n";
+}
+
+$bridge = TenantAccount::where('global_identity_id', $identity->id)->first();
+if (!$bridge) {
+    TenantAccount::create([
+        'account_name' => 'Trace Odd Super Admin',
+        'email' => $email,
+        'password' => $identity->password_hash,
+        'phone_number' => '+920000000000',
+        'global_identity_id' => $identity->id,
+        'is_independent' => true,
+        'account_type' => 'master_admin',
+        'status' => 'active',
+    ]);
+    echo "created tenant_accounts bridge\n";
+} else {
+    $bridge->password = $identity->password_hash;
+    $bridge->save();
+    echo "synced tenant_accounts bridge password\n";
+}
+
+echo "\nDONE. Log in at https://admin.traceodd.com/login with {$email}\n";
+echo "Then delete this script:  rm -f make-admin-spine.php\n";
+PHP
+
+sudo -u www-data php make-admin-spine.php tahawan72@gmail.com
+rm -f make-admin-spine.php
+```
+
+**Then log in.** Verified with `php -l` (no syntax errors). Notes:
+
+- It is **idempotent** — run it again for the same admin and it reuses the identity, skips existing
+  claims/assignments, and just resets the password.
+- It deliberately does **not** touch `admin_users`. If both must work, run §3.6.1 for that table as well.
+- The password is typed by you, hidden, and never printed — consistent with the owner's rule.
+
 ---
 
 ## 7. Owner's decisions recorded 2026-09-26 (second round)

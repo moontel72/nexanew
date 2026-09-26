@@ -68,6 +68,48 @@ The Super Admin dashboard has KPI tiles and quick actions, but no cross-tenant o
 
 ---
 
+## 1.4 Group 9 — Marketing & Growth (new, owner-confirmed 2026-09-26)
+
+**Owner's ruling:** the Marketing hierarchy deserves **its own Group**, not a corner of an existing one.
+Reasons that hold up on inspection:
+
+1. It has **four surfaces** (below) — no existing group's shape fits it.
+2. It markets **every** group (cross-group) — so it cannot belong to Group 3 or 4.
+3. It carries its own **payroll + commission** model.
+4. The owner already intends a **separate server** for it — a new group gives the separation plan a clean
+   starting point rather than a fifth special case inside an existing server.
+
+### The four surfaces
+
+| # (to allocate) | Surface | Notes |
+|---|---|---|
+| — | **Marketing Sub-Admin** | one, appointed by the Super Admin — same pattern as the other verticals |
+| — | **District Marketing Administrator** | **4–5**, one per district |
+| — | **District Marketing Manager** | one per district, under its administrator |
+| — | **Marketing Agent** | many, under each manager |
+
+**Group 9 = its own frontend + backend (schema) + database, and its own server later.**
+Run its **LOCK** exactly like `PANEL-SUBDOMAIN-LINKING-PLAYBOOK.md` describes for the other groups.
+
+### What makes it more than a panel — and why it needs its own design step (C1b)
+
+| Feature (owner) | Design consequence |
+|---|---|
+| **Every level has its own APP** | four new surfaces in the §11 registry, each with a build target and a subdomain |
+| **The Manager onboards clients** — registers the bus-fleet / factory accounts, uploads their documents, hands them their panel | this is also the **commission attribution** model: *whoever created the account earns it*. Needs an explicit `created_by` / attribution link on the company + subscription records |
+| **A course per panel/app inside the Marketing panel** — video + screenshots | needs a content store (assets + a small CMS), not code-only |
+| **Compensation per person, 3 modes:** salary only · salary + commission · commission only | per-agent compensation mode on the model, and the commission path **must reuse the idempotent split engine** (`PANEL-SEPARATION-PLAN.md` §10.5) — **no second ledger** |
+| **"Include the world's marketing approaches"** | the design step must pick a concrete, finite set (referral, partner/reseller, commission tiers, district targets, campaigns) rather than an open-ended list |
+
+### Open questions for C1b
+
+1. Commission per **sale**, per **signed-up company**, or per **subscription renewal**?
+2. Is a "district" a row in the existing **`districts`** table?
+3. Does this hierarchy sit **under** the Group-Incharge model or **beside** it?
+4. Do the four surfaces share one login identity with different roles, or four separate ones?
+
+---
+
 ## 2. Target model
 
 ```

@@ -36,7 +36,7 @@ evidence. **Read this plan first; consult that file for depth, not for decisions
   across every admin panel and app.
 - Work lands in **phases**, so already-tested panels do not crash.
 
-### The 8 groups *(Group 8 added 2026-09-24 — see §11)*
+### The 9 groups *(Group 8 added 2026-09-24; Group 9 added 2026-09-26 — see §11)*
 
 | Group | Contents | Current folders |
 |---|---|---|
@@ -48,6 +48,7 @@ evidence. **Read this plan first; consult that file for depth, not for decisions
 | **6 — Cricket** | Todd Studio + Cricket Manager + Todd Broadcaster (field cameras) + Public Viewer screen | `lib/features/cricket/`, `lib/main_cricket_*.dart`, `media-engine/` |
 | **7 — Vehicle Security** | Nothing exists yet | — |
 | **8 — Trust & Safety** | **NEW (2026-09-24, §11)** — Jaali / Asli / Naqli note panel (**#25**). Future home for trust/verification surfaces | — |
+| **9 — Marketing & Growth** | **NEW (2026-09-26)** — a 4-level field hierarchy (Marketing Sub-Admin → District Marketing Administrator ×4–5 → District Marketing Manager → Marketing Agent) that markets **every** group. Each level has its **own app**. Managers also **onboard clients** (register bus-fleet/factory accounts, upload documents, train them) which is how commission is attributed. Per-agent compensation: salary · salary+commission · commission-only. **Detail: `docs/handoff/GROUP-INCHARGE-MODEL.md` §1.4.** Its own frontend + backend + database, own server later | — |
 
 > Group 8 is a **surface group**; whether it also becomes a separate server/department is decided in
 > Phase 8. §5's server strategy still says "7" because it counts current departments.
