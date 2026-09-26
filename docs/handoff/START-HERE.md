@@ -125,7 +125,84 @@ hierarchy sit under the Group-Incharge model or beside it?
 
 ---
 
-## 6. What the long session of 2026-09-24 → 26 produced
+## 6. ⚠️ Known live bug — Super Admin login returns 401 (diagnosed 2026-09-26)
+
+**Reported:** an `AdminUser` row exists (`email: tahawan72@gmail.com`, `role: super_admin`,
+`status: active`) yet `POST /api/v1/auth/login` always returns **401 "Invalid credentials"**.
+
+### The diagnosis — this is NOT a password problem
+
+There are **two different login endpoints**, reading **two different tables**:
+
+| Endpoint | Controller | Reads | Used by |
+|---|---|---|---|
+| `POST /api/v1/auth/login` | `GlobalAuthController` | **`identity_claims` → `global_identities`** (the §10.1 identity spine) | the Flutter **Super Admin** screen (`AdminAuthRepository:159`) **and** the Sub-Admin screen (`SubAdminBloc:53`) |
+| `POST /api/v1/admin/login` | `AdminAuthController` | **`admin_users`** | nothing in the Flutter app (a legacy/API-only path) |
+
+`GlobalAuthController@login` resolves like this:
+
+```php
+$claim = IdentityClaim::where('claim_type', $claimType)
+    ->where('claim_value', $normalized)
+    ->where('is_revoked', false)->first();
+
+if (!$claim) {                      // <-- this is the 401 the owner sees
+    return response()->json(['status' => 'error', 'message' => 'Invalid credentials.'], 401);
+}
+$identity = GlobalIdentity::find($claim->global_identity_id);
+...
+if (!$identity->verifyPassword($password)) { ... 401 ... }
+```
+
+**So:** a row in `admin_users` is invisible to `/api/v1/auth/login`. With no matching `identity_claims`
+row, the request fails at `claim_not_found` **before the password is ever checked** — which is why
+**resetting the password cannot fix this**, and why the reported symptom is a hard, constant 401.
+
+### Confirm it in one query
+
+```bash
+sudo -u postgres psql -d nexasystem_db -c "
+  SELECT 'identity_claims' AS t, count(*) FROM identity_claims WHERE claim_value ILIKE '%tahawan72%'
+  UNION ALL
+  SELECT 'global_identities', count(*) FROM global_identities
+    WHERE display_name ILIKE '%tahawan%' OR identity_token ILIKE '%tahawan%'
+  UNION ALL
+  SELECT 'admin_users', count(*) FROM admin_users WHERE email = 'tahawan72@gmail.com';"
+```
+
+Expected: `admin_users = 1`, and `identity_claims = 0`, `global_identities = 0`. That is the whole bug.
+
+### The fix — two options, and they are NOT equivalent
+
+| Option | What | Verdict |
+|---|---|---|
+| **A — put the admin in the identity spine** (create `global_identities` + `identity_claims` + the `tenant_accounts` bridge, exactly as `MasterAdminSeeder` does) | the account then exists where the unified login looks | ⭐ **Correct.** The token carries spine claims, so `TokenVersionGuard` / `IdentityStatusGate` / feature grants keep working |
+| **B — point the Super Admin screen at `/api/v1/admin/login`** | a one-line client change; it reads `admin_users` | ❌ **Do not.** The token would lack spine claims, and every §10.10 middleware that expects them breaks |
+
+**Recommended, concretely:** the existing **`MasterAdminSeeder`** already does option A correctly
+(`GlobalIdentity(identity_type='admin')` + phone/email claims + `master_admin_assignments` +
+`TenantAccount` bridge) and now takes its password from `NEXATRACE_MASTER_ADMIN_PASSWORD`.
+Its email is the constant `MASTER_ADMIN_EMAIL = 'admin@nexatrace.com'` — so either use that account, or
+change the constant to the owner's address before seeding.
+
+**Still owed to the owner:** an Artisan command
+`php artisan admin:reset-password <email> <password>` that reports **which table holds the account** and
+sets the password in the right place (spine **and** `admin_users`) instead of silently doing nothing.
+Until then, `PHASE-0A-CREDENTIAL-REMEDIATION.md` §3.6.1 handles the `admin_users` half.
+
+---
+
+## 7. Owner's decisions recorded 2026-09-26 (second round)
+
+| Topic | Decision |
+|---|---|
+| **The 3 legacy `company_admin` rows** (`armi@`, `aziz@`, `khan@gmail.com`) | **Delete them.** The owner confirms they are test data, not needed, and can be recreated. Still: check `companies` for rows that reference them first |
+| **Marketing hierarchy** | **Its own top-level Group** — its own frontend + backend + database, and its own server later. See §5 (four surfaces). **Plus** the Marketing *Manager* panel should do **client onboarding** (register the bus-fleet / factory accounts, upload their documents, hand them their panel) — because that is how the manager earns commission |
+| **Marketing courses** | Each Marketing panel must carry **how-to-use material for every panel/app** — video and screenshots — so a manager can train the client they onboarded |
+| **Compensation** | Per-agent mode: *salary only* · *salary + commission* · *commission only*. Commission must reuse the **idempotent split engine** (`PANEL-SEPARATION-PLAN.md` §10.5) — no second ledger. Include the full set of real-world marketing approaches |
+| **Scope reminder** | *"for now we are not doing much internal coding"* — priority 3 is **login + dashboard entry only** |
+
+## 8. What the long session of 2026-09-24 → 26 produced
 
 | Commit | What | Isolation baseline |
 |---|---|---|
