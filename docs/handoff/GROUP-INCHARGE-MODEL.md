@@ -91,6 +91,66 @@ Reasons that hold up on inspection:
 **Group 9 = its own frontend + backend (schema) + database, and its own server later.**
 Run its **LOCK** exactly like `PANEL-SUBDOMAIN-LINKING-PLAYBOOK.md` describes for the other groups.
 
+### The commission model — owner's detailed spec (2026-09-26)
+
+**Who decides:** the **Subscription sub-admin** (`financial_auditor`) fixes each group's monthly plan. The
+**Marketing sub-admin** then decides how that plan's money is split. So the split is *derived from* the
+subscription plan, not invented separately.
+
+**Four parties always share one payment:** the **Marketing Agent**, its **Marketing Manager**, the
+**Marketing Administrator** above it, and **TraceOdd** (the company). The owner's worked example — a
+factory on **PKR 10,000/month** whose first year decays toward the company:
+
+| Period | TraceOdd | Marketing Agent | Marketing Manager | Marketing Administrator |
+|---|---|---|---|---|
+| **Month 1** (the agent's signup) | **0 %** | **70 %** | **20 %** | **10 %** |
+| **Month 2** | **50 %** | **35 %** | **10 %** | **5 %** |
+| **Months 3–12** (rest of year 1) | **90 %** | **5 %** | **3 %** | **2 %** |
+
+Key properties this implies:
+
+- The split is **time-tiered** — it changes by month-of-tenure, not by a single fixed percentage.
+- The **agent earns most in month 1** (the acquisition month), which is also *how* the manager and the
+  administrator earn — via the agents under them. That is the owner's stated design.
+- **TraceOdd takes 0 % in month 1** — the whole first payment funds acquisition.
+- The shares must be **configurable**, not hard-coded: the marketing sub-admin sets "who gets how much",
+  per tier.
+- The rates are the marketing sub-admin's to choose within the plan — hence this belongs in
+  configuration, and the **idempotent split engine** (`PANEL-SEPARATION-PLAN.md` §10.5) must be the
+  executor so an interrupted payout cannot double-pay.
+
+### Compensation mode — per person, decided at approval
+
+For **each** of the three field roles (Administrator, Manager, Agent), the mode is chosen from a
+**dropdown**, and the backend applies the matching logic:
+
+| Mode | Behaviour |
+|---|---|
+| **Salary only** | fixed monthly payout; commission is not accrued |
+| **Commission only** | no fixed payout; earns from the split above |
+| **Salary + commission** | both |
+
+The mode is set at **approval** time and must be re-editable by the marketing sub-admin. An agent with no
+commission mode must **not** be silently given one, and vice versa.
+
+### Coverage — the sub-admin chooses the district count
+
+The marketing sub-admin decides **how many districts one administrator covers** — from a single district,
+to a handful (the owner's example: *Sargodha, Khushab, Jhang, Chakwal* under one), or the whole country.
+So *administrator → district* is **many-to-one**, not a fixed 1-to-1.
+
+And: **the districts an administrator is incharge of determine what that administrator's panel shows** —
+the **managers and agents of exactly those districts** flow into the administrator's panel. This makes the
+administrator's panel a scoped roll-up, not a global list.
+
+### Manager accounts — two paths
+
+1. **Created by the sub-admin**, or
+2. **Applied for online**, with **approval by the sub-admin**.
+
+Both paths converge on the same record; approval is the gate. (Same pattern applies to administrators and
+agents.)
+
 ### What makes it more than a panel — and why it needs its own design step (C1b)
 
 | Feature (owner) | Design consequence |
@@ -103,10 +163,14 @@ Run its **LOCK** exactly like `PANEL-SUBDOMAIN-LINKING-PLAYBOOK.md` describes fo
 
 ### Open questions for C1b
 
-1. Commission per **sale**, per **signed-up company**, or per **subscription renewal**?
+1. Commission per **sale**, per **signed-up company**, or per **subscription renewal**? *(The owner's
+example implies **per renewal** — month 2 and months 3–12 are still paid on the same factory.)*
 2. Is a "district" a row in the existing **`districts`** table?
 3. Does this hierarchy sit **under** the Group-Incharge model or **beside** it?
 4. Do the four surfaces share one login identity with different roles, or four separate ones?
+5. Who edits the **split percentages** — the marketing sub-admin only, or the Super Admin too?
+6. What happens to an agent's month-1 share if the client **stops paying from month 3**? (Clawback, or
+   simply nothing further accrues?)
 
 ---
 

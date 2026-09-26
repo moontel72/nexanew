@@ -190,7 +190,61 @@ change the constant to the owner's address before seeding.
 sets the password in the right place (spine **and** `admin_users`) instead of silently doing nothing.
 Until then, `PHASE-0A-CREDENTIAL-REMEDIATION.md` §3.6.1 handles the `admin_users` half.
 
-### The concrete fix (owner chose Option A, 2026-09-26) — `php -l` verified
+### The concrete fix (owner chose Option A, 2026-09-26)
+
+Confirmed on the live server: `identity_claims = 0`, `global_identities = 0`, `admin_users = 1`. The fix
+is to put that admin into the spine.
+
+> **⚠️ Use the CURRENT script, not the inline one further down.** The inline copy below was the first
+> attempt and hit database column errors on the live server. The maintained, **defensive** version is
+> version-controlled at **`.scripts/make-admin-spine.php`** — `php -l` clean. It differs in four ways:
+>
+> 1. **Prints the live column list** for `admin_users`, `global_identities`, `identity_claims`,
+>    `tenant_accounts` and `master_admin_assignments` **first** — so a mismatch between the migrations
+>    and the deployed database is visible instead of silent.
+> 2. Wraps every step in a guard that **reports the real exception and continues** (one bad column can
+>    no longer abort the run).
+> 3. Also **syncs `admin_users`** (`role='super_admin'`, `status='active'`) so the legacy
+>    `/api/v1/admin/login` works too.
+> 4. Ends with a **verification block that mirrors `GlobalAuthController@login`** exactly (claim found →
+>    identity → password ok).
+>
+> **The FK column is confirmed correct:** `identity_claims.global_identity_id` → `global_identities.id`
+> (`2026_06_03_000500_create_identity_claims.php:36,48`). So if the live database rejects it, the
+> deployed table differs from the migrations — and step 1's column dump is what proves it.
+
+**First, inspect the live schema** (this is the answer to "which column is it really?"):
+
+```bash
+sudo -u postgres psql -d nexasystem_db -c "\d global_identities"
+sudo -u postgres psql -d nexasystem_db -c "\d identity_claims"
+sudo -u postgres psql -d nexasystem_db -c "\d master_admin_assignments"
+sudo -u postgres psql -d nexasystem_db -c "\d tenant_accounts"
+```
+
+Or, one query for every column name at once:
+
+```bash
+sudo -u postgres psql -d nexasystem_db -c "
+  SELECT table_name, column_name, data_type, is_nullable
+  FROM information_schema.columns
+  WHERE table_name IN ('global_identities','identity_claims','admin_users','master_admin_assignments','tenant_accounts')
+  ORDER BY table_name, ordinal_position;"
+```
+
+**Then run the script** — copy the file from `.scripts/make-admin-spine.php` to the server and run:
+
+```bash
+cd /var/www/traceodd/admin-panel
+# copy .scripts/make-admin-spine.php here (scp, or paste it into nano)
+sudo -u www-data php make-admin-spine.php tahawan72@gmail.com
+rm -f make-admin-spine.php
+```
+
+**Send me the script's full output** if anything says `FAIL` — the first block prints every column, so
+the cause will be visible in the output.
+
+**Superseded — the original inline script, kept only for the record.**
 
 Confirmed on the live server: `identity_claims = 0`, `global_identities = 0`, `admin_users = 1`. This
 script puts that admin into the spine — it is the seeder's logic, but takes **any** email and reads the
