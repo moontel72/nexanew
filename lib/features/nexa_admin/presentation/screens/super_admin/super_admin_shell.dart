@@ -122,22 +122,6 @@ class SuperAdminShell extends StatelessWidget {
         ],
       ),
       AdminSidebarSection(
-        title: 'Goods Fleet',
-        color: Color(0xFFDC2626),
-        items: [
-          AdminSidebarItem(
-            label: 'View Goods Companies',
-            icon: Icons.local_shipping,
-            route: '/goods-companies',
-          ),
-          AdminSidebarItem(
-            label: 'Add Goods Company',
-            icon: Icons.add_business,
-            route: '/goods-companies/add',
-          ),
-        ],
-      ),
-      AdminSidebarSection(
         title: 'Subscriptions',
         color: Color(0xFFDB2777),
         items: [
@@ -237,9 +221,6 @@ class SuperAdminShell extends StatelessWidget {
     if (location.startsWith('/sub-admins')) return 'Sub-Admin Management';
     if (location.startsWith('/companies/register')) return 'Create New Factory';
     if (location.startsWith('/companies')) return 'Factory Management';
-    if (location.startsWith('/goods-companies/add')) return 'Add Goods Company';
-    if (location.startsWith('/goods-companies'))
-      return 'Goods Logistics Companies';
     if (location.startsWith('/plans/create')) return 'Create New Plan';
     if (location.startsWith('/plans')) return 'Subscription Plans';
     if (location.startsWith('/billing/invoices')) return 'Platform Invoices';
@@ -271,12 +252,6 @@ class SuperAdminShell extends StatelessWidget {
     }
     if (location.startsWith('/companies')) {
       return const ['Factories', 'View All Factories'];
-    }
-    if (location.startsWith('/goods-companies/add')) {
-      return const ['Goods Fleet', 'Add Goods Company'];
-    }
-    if (location.startsWith('/goods-companies')) {
-      return const ['Goods Fleet', 'View Goods Companies'];
     }
     if (location.startsWith('/plans/create')) {
       return const ['Subscriptions', 'Create New Plan'];

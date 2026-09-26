@@ -18,10 +18,6 @@ import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/p
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/companies/companies_list_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/companies/register_company_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/companies/company_detail_screen.dart';
-import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/companies/add_bus_company_screen.dart';
-import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/companies/bus_companies_list_screen.dart';
-import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/companies/add_goods_company_screen.dart';
-import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/companies/goods_companies_list_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_company_login_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_company_login_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_list_screen.dart';
@@ -693,34 +689,6 @@ class AppRouter {
           ],
         ),
         GoRoute(
-          path: '/bus-companies',
-          name: 'bus_companies',
-          builder: (context, state) =>
-              const BusCompaniesListScreen(inShell: true),
-          routes: [
-            GoRoute(
-              path: 'add',
-              name: 'bus_company_add',
-              builder: (context, state) =>
-                  const AddBusCompanyScreen(inShell: true),
-            ),
-          ],
-        ),
-        GoRoute(
-          path: '/goods-companies',
-          name: 'goods_companies',
-          builder: (context, state) =>
-              const GoodsCompaniesListScreen(inShell: true),
-          routes: [
-            GoRoute(
-              path: 'add',
-              name: 'goods_company_add',
-              builder: (context, state) =>
-                  const AddGoodsCompanyScreen(inShell: true),
-            ),
-          ],
-        ),
-        GoRoute(
           path: '/plans',
           name: 'plans',
           builder: (context, state) => const PlansListScreen(inShell: true),
@@ -1131,16 +1099,9 @@ class AppRouter {
   void goToTransportFraud(BuildContext context) =>
       context.go('/transport/fraud');
 
-  void goToBusCompanies(BuildContext context) => context.go('/bus-companies');
-  void goToAddBusCompany(BuildContext context) =>
-      context.go('/bus-companies/add');
   void goToBusCompanyLogin(BuildContext context) =>
       context.go('/bus-fleet/login');
 
-  void goToGoodsCompanies(BuildContext context) =>
-      context.go('/goods-companies');
-  void goToAddGoodsCompany(BuildContext context) =>
-      context.go('/goods-companies/add');
   void goToGoodsCompanyLogin(BuildContext context) =>
       context.go('/goods-fleet/login');
 

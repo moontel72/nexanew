@@ -1096,22 +1096,6 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.directions_bus),
-                  title: const Text('Bus Fleet Companies'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.read<AppRouter>().goToBusCompanies(context);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.local_shipping),
-                  title: const Text('Goods Logistics Companies'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.read<AppRouter>().goToGoodsCompanies(context);
-                  },
-                ),
-                ListTile(
                   leading: const Icon(Icons.payments),
                   title: const Text('Plans'),
                   onTap: () {
