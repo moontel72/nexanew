@@ -491,10 +491,31 @@ and `features/auth` — rename one.
 > `{id}/restore`. Its dashboard has the *Add Bus Company* action and the registered-companies list inline.
 > So the Super Admin screens are a **strict subset duplicate** — nothing is lost by removing them.
 >
-> **Removal steps (not yet done):** delete the 4 routes and the 4 screen files above; then confirm nothing
-> links to them (`companies_list_screen.dart` and the super-admin sidebar still need a final look — the
-> nav search in this session did not complete); then check whether `CompanyRegisterBloc` is used only by
-> the two deleted *add* screens.
+> **Removal steps — nav-link check is now COMPLETE (2026-09-26).** Every entry point is known:
+>
+> | Where | What | Action |
+> |---|---|---|
+> | `app_router.dart:695-705` | `GoRoute` `/bus-companies` + `/bus-companies/add` | remove |
+> | `app_router.dart:709-719` | `GoRoute` `/goods-companies` + `/goods-companies/add` | remove |
+> | `app_router.dart` imports (6) | the four screens + `bus_company_login_screen` / `goods_company_login_screen` | remove the four **screen** imports |
+> | `app_router.dart:1132-1143` | `goToBusCompanies`, `goToAddBusCompany`, `goToGoodsCompanies`, `goToAddGoodsCompany` | remove (the two `Add*` helpers have **no callers**; the other two are called only from the dashboard) |
+> | `super_admin_shell.dart:128-137` | sidebar items *"View Goods Companies"* + *"Add Goods Company"* | remove |
+> | `super_admin_shell.dart:233-243` | `_titleForLocation` branches for `/goods-companies*` | remove |
+> | `super_admin_shell.dart:273-280` | breadcrumb branches for `/goods-companies*` | remove |
+> | `super_admin/dashboard_screen.dart:1101-1112` | two quick-action `onTap`s calling `goToBusCompanies` / `goToGoodsCompanies` | remove (or repoint — see below) |
+> | 4 screen files | `bus_companies_list_screen`, `add_bus_company_screen`, `goods_companies_list_screen`, `add_goods_company_screen` | **delete** |
+>
+> **Safe execution order** (each step leaves a consistent tree, so a stop mid-way never breaks the app):
+> 1. remove the **entry points** (sidebar items, title/breadcrumb branches, dashboard onTaps) —
+>    the routes stay, but nothing links to them;
+> 2. remove the **routes, imports and helpers** — the screens become unreferenced but still valid Dart;
+> 3. **delete** the four screen files;
+> 4. `dart analyze <each changed file>`, then the isolation guard, then commit.
+>
+> ⚠️ **Do not remove the routes while the sidebar/dashboard links still exist** — `go_router` throws on
+> navigation to an unknown route, so that order produces a visible crash instead of a tidy removal.
+>
+> **Also check** whether `CompanyRegisterBloc` is used only by the two deleted *add* screens.
 >
 > **Data note:** `admin_users` holds an `admin@nexatrace.local` (super_admin) plus **three
 > `company_admin` rows** (`armi@gmail.com` "Organization", `aziz@gmail.com` "Awan Express Admin",
