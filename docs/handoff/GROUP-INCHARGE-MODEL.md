@@ -238,6 +238,123 @@ Super Admin  →  Group Sub-Admin  →  Group Admin  →  group staff
 
 ---
 
+## 2b. C0 — the design: group → vertical → who creates what **[delivered 2026-09-26]**
+
+The owner's C0 question was: **for each group, which vertical governs it, and which accounts does that
+vertical create?** This section is the answer. It is design first; the additive registry code landed in
+C1 (summary in §2b.5).
+
+### 2b.1 The registry — every group and its incharge
+
+| Group (`PANEL-SEPARATION-PLAN.md` §1) | Vertical code | Display name | Panel exists? |
+|---|---|---|---|
+| **1 Platform** (Super Admin) | *(none — the Super Admin is not a vertical)* | — | ✅ |
+| **2 B2B Marketplace** | `commercial_marketplace` | Sub-Admin 3 — Commercial Marketplace | ✅ |
+| **3 Factory** | **`factory`** | Sub-Admin 6 — Factory | ✅ (admin panel live) |
+| **4 Bus Fleet** | `bus_transit` | Sub-Admin 1 — Bus Transit | ✅ |
+| **5 Goods / Truck** | `goods_logistics` | Sub-Admin 2 — Goods & Logistics | ✅ |
+| **6 Cricket** | `cricket_ops` | Sub-Admin 5 — Cricket Tournament Operations | ✅ |
+| **7 Vehicle Security** (IoT) | **`vehicle_security`** | Sub-Admin 7 — Vehicle Security (IoT) | ❌ **stub** |
+| **8 Trust & Safety** (notes) | **`trust_safety`** | Sub-Admin 8 — Trust & Safety | ❌ **stub** |
+| **9 Marketing & Growth** | *(own group, own design)* | — | ❌ **C1b** |
+| *cross-cutting — the money* | `financial_auditor` | Sub-Admin 4 — Financial & Subscription Auditor | ✅ |
+
+Three things to read from that table:
+
+1. **`factory` is a real vertical, not a stub.** It is the gap the owner found (§1.1): Group 3's admin
+   panel already exists — only its incharge did not.
+2. **`vehicle_security` / `trust_safety` are stubs on purpose.** Group 7 (#24) and Group 8 (#25) have no
+   panel yet (both are *0 work* in the registry). Their vertical rows exist so their incharges are created
+   **with the rest** — the owner's ruling in §5 — and so C1 never has to be redone when those panels land.
+3. **Group 9 is deliberately not a vertical here.** Marketing is its own top-level programme (C1b, §1.4):
+   four surfaces, its own frontend/backend/database, its own server later.
+
+### 2b.2 The creation matrix — who creates which account
+
+Target, from §2: **Super Admin → Group Sub-Admin → Group Admin → group staff.** §1.2 has the verified
+*current* state; this is what each vertical must end up owning.
+
+| Vertical | Creates / approves | Must **not** create |
+|---|---|---|
+| `factory` | **Factory Admin** accounts for its group (C2) | Factory staff — the Factory Admin does that (store keeper, driver) |
+| `bus_transit` | Bus company + its admin | Bus fleet staff |
+| `goods_logistics` | Goods / truck company + its admin | — |
+| `commercial_marketplace` | Factories, resellers, shop keepers *(today the Super Admin does — C3 removes it)* | — |
+| `cricket_ops` | Cricket Manager accounts | — |
+| `vehicle_security` | *(stub — nothing until Group 7's panel exists)* | — |
+| `trust_safety` | *(stub — nothing until Group 8's panel exists)* | — |
+| `financial_auditor` | **No operational accounts.** It owns the money: `plans/**` + `billing/**` for **every** group | Operational accounts of any group |
+
+### 2b.3 What `financial_auditor` owning `plans/**` + `billing/**` means concretely
+
+The owner's ruling (§5 Q1): the financial auditor **creates, controls and changes the subscription plans
+of every group**, and **controls and creates the invoices of every group's users**. The endpoints that are
+"the money" both live in the admin group of `backend/routes/api.php`:
+
+| Area | Prefix today | Controllers |
+|---|---|---|
+| **Plans** | `/api/v1/admin/plans/*` | `Admin\AdminPlanController` |
+| **Billing / invoices** | `/api/v1/admin/billing/invoices*`, `/billing/payments*`, `/billing/refunds*`, `/billing/companies/*`, `/billing/credits*` | `Admin\AdminBillingControllerNew`, `Admin\AdminInvoiceController`, `Admin\AdminBillingController` |
+
+C1 registers that ownership **in the grant model**: feature codes `plans.*` and `billing.*` under
+`financial_auditor`, added to the vertical's `default_feature_bundle_codes`.
+
+> **⚠️ Ownership is metadata until Phase 6 enforces it.** Verified: `AdminMiddleware` admits **any**
+> `sub_admin_assignments` row (`AdminMiddleware.php:66-70`) and `SubAdminMiddleware` never checks *which*
+> vertical (§D3). So **every** sub-admin can already call `plans/*` and `billing/*` — that is the isolation
+> gap, not a grant. Closing it is the route-to-feature map in `PANEL-SEPARATION-PLAN.md` §10 Q2, attached to
+> every panel route group — **Phase 6**, as planned. Nothing in C1 pretends otherwise.
+>
+> **Corollary — the Financial Auditor's screens.** `plans` / `billing` are Flutter routes in the **Super
+> Admin** shell today (`/plans`, `/plans/create`, `/billing/invoices`). A sub-admin cannot reach them yet,
+> because the router guard requires `isAuthenticatedCache` (super-admin) and a sub-admin authenticates into
+> `isSubAdminAuthenticatedCache`. Moving those screens to the Financial Auditor's own panel — and teaching
+> the guard about per-vertical reach — is **Phase 6** work, not C1.
+
+### 2b.4 Open items this design does not settle (they are the owner's)
+
+| # | Question | Recommended default, if the owner wants one |
+|---|---|---|
+| a | Does a Sub-Admin **create** group accounts outright, or create and the **Super Admin approves**? (§5.1a) | **Create outright, audited** — provisioning the group is the sub-admin's job and the audit chain records it; an approval step adds a second human to every signup |
+| b | After C3, does the Super Admin keep **read** access to the company registries? (§5.1b) | **Read-only** — the owner's own rule from §3: *inspect everything, mutate nothing* |
+| c | Confirm `financial_auditor` reads **billing data only** across groups, not operational data (§5.1c) | **Billing only** — its bundle is `plans.*` + `billing.*`; operational grants stay with each group's vertical |
+
+None of these blocks C1 (purely additive registry data). They **do** gate C3–C5.
+
+### 2b.5 What C1 delivered
+
+Additive, idempotent, and mirroring the `CricketFeatureRegistrySeeder` pattern:
+
+| Piece | Detail |
+|---|---|
+| `backend/database/seeders/SubAdminVerticalExpansionSeeder.php` | **new.** Registers `factory`, `vehicle_security`, `trust_safety`; adds `plans.*` + `billing.*` to `financial_auditor`'s bundle (a **union**, so seed order cannot regress it); registers the new feature codes |
+| `backend/database/seeders/DatabaseSeeder.php` | runs the new seeder after `FeatureRegistrySeeder` + `CricketFeatureRegistrySeeder` |
+| `.github/workflows/deploy.yml` | runs `php artisan db:seed --class=SubAdminVerticalExpansionSeeder --force` on every deploy, exactly like the cricket seeder — **otherwise the verticals would exist in code and nowhere else** |
+| `backend/app/Http/Controllers/Admin/SubAdminController.php` | vertical validation switched from a **hardcoded** `in:` list to the **registry table**, and an unknown vertical on *update* now returns **422** instead of silently doing nothing — the "roles dynamic, not hardcoded" requirement (`PANEL-SEPARATION-PLAN.md` §2 D3) |
+| `add_sub_admin_screen.dart` / `sub_admin_list_screen.dart` | the 3 new verticals added to the label / icon / colour maps, so the Super Admin can appoint them and they render. The *change-vertical* dialog now derives its list from `_verticalLabels` — its old hardcoded copy had already drifted (it was missing `cricket_ops`) |
+
+Still owned by Phase 6: per-vertical dashboard scoping in Flutter, request-time grant enforcement, and the
+route-to-feature map.
+
+> **A new vertical lands on the *shared* sub-admin dashboard today.** `sub_admin_dashboard.dart` scopes only
+> `cricket_ops`; every other vertical falls through to the bus console (`§D3`). That is pre-existing and
+> unchanged by C1 — but it means appointing a `factory` incharge right now shows the bus dashboard, not a
+> factory one. Fixing it is the Phase 6 UI work, and it is the reason C1 deliberately did **not** invent
+> per-vertical dashboards.
+
+### 2b.6 One wildcard caveat found while writing C1
+
+The new factory codes are `factory.admin.provision` and `factory.registry.view`. `commercial_marketplace`'s
+baseline bundle already contains the wildcard **`factory.*`** (`FeatureRegistrySeeder`), so that wildcard
+*also* covers both new codes.
+
+Harmless today (nothing is enforced), but it must be settled **before** Phase 6 turns bundles into
+permissions — otherwise the B2B incharge would silently hold factory-admin provisioning. The fix is to
+narrow `commercial_marketplace` to the prefixes it really owns (listing / reseller / shop / marketplace)
+when its scope is finalised. Recorded here so the Phase 6 author sees it.
+
+---
+
 ## 3. ⚠️ The one part that needs real design — Super Admin "enters" a Sub-Admin dashboard
 
 The owner's words: *"click karne se wohi kisi bhi sub-admin ke dashboard me daakhil ho kar dekhe"*.
@@ -284,8 +401,8 @@ Minimum requirements before it ships:
 |---|---|---|
 | **1** | **A** — A1 ✅ done · A2 ✅ (no action needed) · A3 ✅ done (`3b072d09`) | none — safe |
 | **2** | **B** — B1 ✅ **done 2026-09-26** (factory auth domain split, `§17.9` step 1) | closes the cross-domain token leak |
-| **3** | **C0** — design, with the owner's answers folded in | none |
-| **4** | **C1** — add the missing verticals, and expand `financial_auditor` to own `plans/**` + `billing/**` | needs C0 |
+| **3** | **C0** — design, with the owner's answers folded in | ✅ **done 2026-09-26 — §2b** |
+| **4** | **C1** — add the missing verticals, and expand `financial_auditor` to own `plans/**` + `billing/**` | ✅ **done 2026-09-26 — §2b.5** |
 | **5** | **C2 → C3 → C4 → C5** | C5 last, and only with the audit chain |
 
 Small, safe phases first. Nothing in Phase A or B touches the authority model, so they can land while
@@ -311,8 +428,8 @@ the owner tests the panels.
 
 | # | Step | Notes |
 |---|---|---|
-| **C0** | **Design doc**: group → vertical → which accounts that vertical creates | Extends this file; no code |
-| **C1** | **Add the missing verticals** — `factory`, and stubs for `vehicle_security` / `trust_safety` — to `sub_admin_verticals` (seeder + `SubAdminController` validation) | Mirrors the existing 5 |
+| **C0** | **Design doc**: group → vertical → which accounts that vertical creates | ✅ **done 2026-09-26 — §2b.** Registry, creation matrix, what `plans/**` + `billing/**` ownership means, and the 3 open owner items (a/b/c) recorded in §2b.4 |
+| **C1** | **Add the missing verticals** — `factory`, and stubs for `vehicle_security` / `trust_safety` — to `sub_admin_verticals` (seeder + `SubAdminController` validation) | ✅ **done 2026-09-26 — §2b.5.** Additive seeder + deploy step + DB-driven validation; `financial_auditor`'s `plans.*` / `billing.*` codes and bundle entries registered |
 | **C2** | **Factory account creation moves to the Factory Sub-Admin.** Backend endpoints (mirror the `bus-companies` CRUD pattern) + the Sub-Admin UI | Removes the Super Admin's `/companies/register` path for factory **admins** |
 | **C3** | **Remove group-account creation from the Super Admin** for every group (Factory now; confirm B2B/Reseller). Super Admin keeps only *platform* accounts (sub-admins, plans, billing, registries as read-only) | This is the owner's core requirement |
 | **C4** | **Super Admin observation view** — per-group activity feed + payment records/graphs, read-only | Delivers most of the intent safely |
@@ -335,11 +452,14 @@ the owner tests the panels.
 
 ### 5.1 Still open after this round
 
+All three are now written up **with a recommended default** in §2b.4, so the owner can answer by
+confirming or overriding; none of them blocks C1.
+
 | # | Item |
 |---|---|
-| a | Sub-Admin **creates** accounts outright, or creates and the Super Admin **approves**? (Q3) |
-| b | After C3, does the Super Admin keep **read** access to the company registries? (Q4) |
-| c | `financial_auditor` — confirm it reads **billing data only** across groups, not operational data |
+| a | Sub-Admin **creates** accounts outright, or creates and the Super Admin **approves**? (Q3) → §2b.4 |
+| b | After C3, does the Super Admin keep **read** access to the company registries? (Q4) → §2b.4 |
+| c | `financial_auditor` — confirm it reads **billing data only** across groups, not operational data → §2b.4 |
 
 ---
 
@@ -348,3 +468,4 @@ the owner tests the panels.
 | Date | Change |
 |---|---|
 | 2026-09-26 | Created from the owner's directive. Gap analysis verified against `SubAdminSeeder`, `SubAdminController`, `super_admin_shell.dart` and the `SubAdminBloc` endpoint list. Phased roadmap and the impersonation safety requirements recorded. |
+| 2026-09-26 | **C0 delivered (§2b)** — group→vertical registry, the creation matrix, what `plans/**` + `billing/**` ownership means, the 3 open owner items with recommended defaults, and the wildcard-hygiene caveat (§2b.6). **C1 delivered (§2b.5)** — `SubAdminVerticalExpansionSeeder` (`factory` / `vehicle_security` / `trust_safety` + `financial_auditor`'s plans/billing codes), registered in `DatabaseSeeder` and `deploy.yml`, plus DB-driven vertical validation in `SubAdminController` and the two Super Admin screens. |

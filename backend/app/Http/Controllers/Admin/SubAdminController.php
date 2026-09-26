@@ -58,14 +58,17 @@ class SubAdminController extends Controller
             'email'    => ['required', 'email', 'max:255'],
             'phone'    => ['nullable', 'string', 'max:30'],
             'cnic'     => ['nullable', 'string', 'max:30'],
-            'vertical' => ['required', 'string', 'in:bus_transit,goods_logistics,commercial_marketplace,financial_auditor,cricket_ops'],
+            // Validity is checked against the registry table below, NOT a hardcoded list — so a new
+            // vertical (e.g. `factory`) needs no edit here. Owner's requirement: PANEL-SEPARATION-PLAN.md
+            // section 2 D3 ("make the Sub-Admin roles DYNAMIC, not hardcoded").
+            'vertical' => ['required', 'string', 'max:50'],
             'password' => ['required', 'string', 'min:8'],
         ]);
 
         // 1. Find the vertical
         $vertical = DB::table('sub_admin_verticals')->where('code', $validated['vertical'])->first();
         if (!$vertical) {
-            return response()->json(['message' => 'Invalid vertical'], 422);
+            return response()->json(['message' => "Unknown vertical: {$validated['vertical']}"], 422);
         }
 
         // 2. Create GlobalIdentity
@@ -192,7 +195,8 @@ class SubAdminController extends Controller
             'name'     => ['sometimes', 'string', 'max:160'],
             'email'    => ['sometimes', 'email', 'max:255'],
             'phone'    => ['nullable', 'string', 'max:30'],
-            'vertical' => ['sometimes', 'string', 'in:bus_transit,goods_logistics,commercial_marketplace,financial_auditor,cricket_ops'],
+            // Checked against the registry table below — see store() for why this is not a hardcoded list.
+            'vertical' => ['sometimes', 'string', 'max:50'],
             'password' => ['sometimes', 'string', 'min:8'],
         ]);
 
@@ -229,24 +233,29 @@ class SubAdminController extends Controller
         // Change vertical assignment
         if (isset($validated['vertical'])) {
             $vertical = DB::table('sub_admin_verticals')->where('code', $validated['vertical'])->first();
-            if ($vertical) {
-                // Revoke current assignment
-                DB::table('sub_admin_assignments')
-                    ->where('global_identity_id', $id)
-                    ->whereNull('revoked_at')
-                    ->update(['revoked_at' => now()]);
 
-                // Create new assignment
-                DB::table('sub_admin_assignments')->insert([
-                    'id'                           => (string) Str::orderedUuid(),
-                    'global_identity_id'           => $id,
-                    'vertical_id'                  => $vertical->id,
-                    'appointed_by_master_admin_id' => $identity->id,
-                    'appointed_at'                 => now(),
-                    'created_at'                   => now(),
-                    'updated_at'                   => now(),
-                ]);
+            // Fail loudly on an unknown code. Previously this fell through a silent `if ($vertical)` and
+            // returned "updated" while changing nothing — a silent failure of the kind A1 was about.
+            if (!$vertical) {
+                return response()->json(['message' => "Unknown vertical: {$validated['vertical']}"], 422);
             }
+
+            // Revoke current assignment
+            DB::table('sub_admin_assignments')
+                ->where('global_identity_id', $id)
+                ->whereNull('revoked_at')
+                ->update(['revoked_at' => now()]);
+
+            // Create new assignment
+            DB::table('sub_admin_assignments')->insert([
+                'id'                           => (string) Str::orderedUuid(),
+                'global_identity_id'           => $id,
+                'vertical_id'                  => $vertical->id,
+                'appointed_by_master_admin_id' => $identity->id,
+                'appointed_at'                 => now(),
+                'created_at'                   => now(),
+                'updated_at'                   => now(),
+            ]);
         }
 
         return response()->json(['success' => true, 'message' => 'Sub-admin updated']);

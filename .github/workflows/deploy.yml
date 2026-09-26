@@ -241,6 +241,7 @@ jobs:
 
             php artisan migrate --force
             php artisan db:seed --class=CricketFeatureRegistrySeeder --force
+            php artisan db:seed --class=SubAdminVerticalExpansionSeeder --force
             php artisan optimize:clear
             php artisan optimize
             php artisan storage:link 2>/dev/null || true

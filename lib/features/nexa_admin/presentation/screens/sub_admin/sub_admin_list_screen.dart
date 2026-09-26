@@ -20,6 +20,9 @@ class SubAdminListScreen extends StatelessWidget {
     'commercial_marketplace': Color(0xFF2563EB),
     'financial_auditor': Color(0xFFD97706),
     'cricket_ops': Color(0xFF10B981),
+    'factory': Color(0xFF0284C7),
+    'vehicle_security': Color(0xFF0D9488),
+    'trust_safety': Color(0xFF9333EA),
   };
   static const _verticalLabels = {
     'bus_transit': 'Bus Transit Manager',
@@ -27,6 +30,9 @@ class SubAdminListScreen extends StatelessWidget {
     'commercial_marketplace': 'Commercial Marketplace Manager',
     'financial_auditor': 'Financial & Subscription Auditor',
     'cricket_ops': 'Cricket Operations Manager',
+    'factory': 'Factory Manager',
+    'vehicle_security': 'Vehicle Security Manager (IoT)',
+    'trust_safety': 'Trust & Safety Manager',
   };
   static const _verticalIcons = {
     'bus_transit': Icons.directions_bus_rounded,
@@ -34,6 +40,9 @@ class SubAdminListScreen extends StatelessWidget {
     'commercial_marketplace': Icons.storefront_rounded,
     'financial_auditor': Icons.account_balance_rounded,
     'cricket_ops': Icons.sports_cricket,
+    'factory': Icons.precision_manufacturing_rounded,
+    'vehicle_security': Icons.directions_car_rounded,
+    'trust_safety': Icons.verified_user_rounded,
   };
 
   Color _color(String? v) => _verticalColors[v] ?? AppColors.gray500;
@@ -468,25 +477,21 @@ class SubAdminListScreen extends StatelessWidget {
       builder: (dctx) => StatefulBuilder(
         builder: (_, setDs) => AlertDialog(
           title: const Text('Change Vertical'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final v in [
-                {'code': 'bus_transit', 'label': 'Bus Transit'},
-                {'code': 'goods_logistics', 'label': 'Goods & Logistics'},
-                {
-                  'code': 'commercial_marketplace',
-                  'label': 'Commercial Marketplace',
-                },
-                {'code': 'financial_auditor', 'label': 'Financial Auditor'},
-              ])
-                RadioListTile<String>(
-                  title: Text(v['label'] as String),
-                  value: v['code'] as String,
-                  groupValue: selected,
-                  onChanged: (v) => setDs(() => selected = v!),
-                ),
-            ],
+          content: RadioGroup<String>(
+            groupValue: selected,
+            onChanged: (v) => setDs(() => selected = v!),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Derived from _verticalLabels — a hardcoded copy of this list had already drifted
+                // (it was missing cricket_ops). One source, so a new vertical appears here for free.
+                for (final entry in SubAdminListScreen._verticalLabels.entries)
+                  RadioListTile<String>(
+                    title: Text(entry.value),
+                    value: entry.key,
+                  ),
+              ],
+            ),
           ),
           actions: [
             TextButton(

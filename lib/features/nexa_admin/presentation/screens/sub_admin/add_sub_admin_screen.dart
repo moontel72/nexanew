@@ -45,6 +45,26 @@ class AddSubAdminScreen extends StatelessWidget {
       'desc':
           'Live cricket streaming, tournament setup, scorekeeping, sponsors & manager provisioning',
     },
+    // Group 3 — Factory. Vertical registered in C1 (GROUP-INCHARGE-MODEL.md §2b.1).
+    {
+      'code': 'factory',
+      'label': 'Factory Manager',
+      'icon': Icons.precision_manufacturing_rounded,
+      'desc': 'Approves the factory admin accounts of the Factory group',
+    },
+    // Group 7 / Group 8 — stubs: the vertical exists, the panel does not yet (C0 §2b.1).
+    {
+      'code': 'vehicle_security',
+      'label': 'Vehicle Security Manager (IoT)',
+      'icon': Icons.directions_car_rounded,
+      'desc': 'IoT vehicle tracking & immobilization — panel not built yet',
+    },
+    {
+      'code': 'trust_safety',
+      'label': 'Trust & Safety Manager',
+      'icon': Icons.verified_user_rounded,
+      'desc': 'Banknote authentication & trust surfaces — panel not built yet',
+    },
   ];
   static const _verticalColors = {
     'bus_transit': Color(0xFF7C3AED),
@@ -52,6 +72,9 @@ class AddSubAdminScreen extends StatelessWidget {
     'commercial_marketplace': Color(0xFF2563EB),
     'financial_auditor': Color(0xFFD97706),
     'cricket_ops': Color(0xFF10B981),
+    'factory': Color(0xFF0284C7),
+    'vehicle_security': Color(0xFF0D9488),
+    'trust_safety': Color(0xFF9333EA),
   };
 
   @override
@@ -166,7 +189,7 @@ class _AddSubAdminViewState extends State<_AddSubAdminView> {
                   ),
                   const Gap(6),
                   const Text(
-                    'Assign a sub-admin to manage one of the five ecosystem verticals.',
+                    'Assign a sub-admin to manage one of the ecosystem verticals.',
                     style: TextStyle(
                       fontSize: 13,
                       color: AppColors.textSecondary,
