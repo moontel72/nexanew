@@ -50,6 +50,11 @@ class _DashboardViewState extends State<_DashboardView> {
   String _vertical = '';
   bool _verticalLoaded = false;
 
+  /// Scroll target for the "View Companies" / "View Accounts" quick actions.
+  /// Those buttons used to be silent no-ops (`() {}`), so clicking them did
+  /// nothing at all — the list lives inline further down this same ListView.
+  final GlobalKey _listSectionKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -63,6 +68,53 @@ class _DashboardViewState extends State<_DashboardView> {
       _verticalLoaded = true;
     });
   }
+
+  /// Bring the inline list section into view (wired to the quick actions).
+  void _revealListSection() {
+    final target = _listSectionKey.currentContext;
+    if (target == null) return;
+    Scrollable.ensureVisible(
+      target,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+      alignment: 0.05,
+    );
+  }
+
+  Widget _listEmptyBox(String message) => Container(
+    padding: const EdgeInsets.all(32),
+    decoration: BoxDecoration(
+      color: const Color(0xFF1B3A4B),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Center(
+      child: Text(message, style: const TextStyle(color: Colors.white54)),
+    ),
+  );
+
+  /// Shown when the list request itself failed. Without this, an API error
+  /// looked exactly like "no records yet" — which is how a 403/500 masqueraded
+  /// as an empty list.
+  Widget _listErrorBox(String message) => Container(
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: const Color(0xFF4C1D1D),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFFDC2626)),
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.error_outline, color: Color(0xFFFCA5A5), size: 20),
+        const Gap(10),
+        Expanded(
+          child: Text(
+            message,
+            style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 13),
+          ),
+        ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -435,7 +487,10 @@ class _DashboardViewState extends State<_DashboardView> {
               'Add Bus Company',
               () => _showAddBusCompanySheet(ctx, bloc),
             ),
-            _actionBtn(Icons.list_alt, 'View Companies', () {}),
+            _actionBtn(Icons.list_alt, 'View Companies', () {
+              bloc.add(const FetchBusCompanies());
+              _revealListSection();
+            }),
             _actionBtn(
               Icons.airline_seat_recline_normal,
               'View Layout Presets',
@@ -448,6 +503,7 @@ class _DashboardViewState extends State<_DashboardView> {
 
         // Bus Companies Section
         Row(
+          key: _listSectionKey,
           children: [
             const Expanded(
               child: Text(
@@ -474,20 +530,10 @@ class _DashboardViewState extends State<_DashboardView> {
           ],
         ),
         const Gap(8),
-        if (state.busCompanies.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1B3A4B),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Center(
-              child: Text(
-                'No bus companies registered yet.',
-                style: TextStyle(color: Colors.white54),
-              ),
-            ),
-          )
+        if (state.busListError != null)
+          _listErrorBox('Could not load bus companies: ${state.busListError}')
+        else if (state.busCompanies.isEmpty)
+          _listEmptyBox('No bus companies registered yet.')
         else
           ...state.busCompanies.map((c) => _busCompanyCard(ctx, bloc, c)),
       ],
@@ -1144,7 +1190,10 @@ class _DashboardViewState extends State<_DashboardView> {
               'Add Factory Company',
               () => _showAddFactoryCompanySheet(ctx, bloc),
             ),
-            _actionBtn(Icons.list_alt, 'View Companies', () {}),
+            _actionBtn(Icons.list_alt, 'View Companies', () {
+              bloc.add(const FetchFactoryCompanies());
+              _revealListSection();
+            }),
             _actionBtn(Icons.receipt_long, 'Reports', () {}),
           ],
         ),
@@ -1152,6 +1201,7 @@ class _DashboardViewState extends State<_DashboardView> {
 
         // Factory Companies Section
         Row(
+          key: _listSectionKey,
           children: [
             const Expanded(
               child: Text(
@@ -1178,20 +1228,12 @@ class _DashboardViewState extends State<_DashboardView> {
           ],
         ),
         const Gap(8),
-        if (state.factoryCompanies.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1B3A4B),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Center(
-              child: Text(
-                'No factory companies registered yet.',
-                style: TextStyle(color: Colors.white54),
-              ),
-            ),
+        if (state.factoryListError != null)
+          _listErrorBox(
+            'Could not load factory companies: ${state.factoryListError}',
           )
+        else if (state.factoryCompanies.isEmpty)
+          _listEmptyBox('No factory companies registered yet.')
         else
           ...state.factoryCompanies.map(
             (c) => _factoryCompanyCard(ctx, bloc, c),
@@ -1824,7 +1866,10 @@ class _DashboardViewState extends State<_DashboardView> {
               'Add Reseller Account',
               () => _showAddResellerAccountSheet(ctx, bloc),
             ),
-            _actionBtn(Icons.list_alt, 'View Accounts', () {}),
+            _actionBtn(Icons.list_alt, 'View Accounts', () {
+              bloc.add(const FetchResellerAccounts());
+              _revealListSection();
+            }),
             _actionBtn(Icons.receipt_long, 'Reports', () {}),
           ],
         ),
@@ -1832,6 +1877,7 @@ class _DashboardViewState extends State<_DashboardView> {
 
         // Reseller Accounts Section
         Row(
+          key: _listSectionKey,
           children: [
             const Expanded(
               child: Text(
@@ -1858,20 +1904,12 @@ class _DashboardViewState extends State<_DashboardView> {
           ],
         ),
         const Gap(8),
-        if (state.resellerAccounts.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1B3A4B),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Center(
-              child: Text(
-                'No reseller accounts registered yet.',
-                style: TextStyle(color: Colors.white54),
-              ),
-            ),
+        if (state.resellerListError != null)
+          _listErrorBox(
+            'Could not load reseller accounts: ${state.resellerListError}',
           )
+        else if (state.resellerAccounts.isEmpty)
+          _listEmptyBox('No reseller accounts registered yet.')
         else
           ...state.resellerAccounts.map(
             (c) => _resellerAccountCard(ctx, bloc, c),

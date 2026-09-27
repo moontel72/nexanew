@@ -100,10 +100,13 @@ class SubAdminListScreen extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            const Expanded(
+                            Expanded(
                               child: Text(
-                                'Quad Sub-Admin Hierarchy',
-                                style: TextStyle(
+                                // Count derives from the shared registry — the old
+                                // hardcoded "Quad ..." said 4 while eight exist.
+                                '${SubAdminVerticals.all.length} Verticals — '
+                                'Sub-Admin Hierarchy',
+                                style: const TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.textPrimary,
