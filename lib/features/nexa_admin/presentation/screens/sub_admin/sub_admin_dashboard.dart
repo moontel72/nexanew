@@ -55,6 +55,10 @@ class _DashboardViewState extends State<_DashboardView> {
   /// nothing at all — the list lives inline further down this same ListView.
   final GlobalKey _listSectionKey = GlobalKey();
 
+  /// First child of whichever vertical dashboard is showing — used by the
+  /// sidebar's "Dashboard" item to scroll back to the top.
+  final GlobalKey _dashboardTopKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -78,6 +82,19 @@ class _DashboardViewState extends State<_DashboardView> {
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeInOut,
       alignment: 0.05,
+    );
+  }
+
+  /// Scroll the dashboard content back to the top — wired to the sidebar's
+  /// "Dashboard" item, which used to be a silent no-op (`() {}`).
+  void _scrollToTop() {
+    final target = _dashboardTopKey.currentContext;
+    if (target == null) return;
+    Scrollable.ensureVisible(
+      target,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+      alignment: 0,
     );
   }
 
@@ -135,7 +152,13 @@ class _DashboardViewState extends State<_DashboardView> {
           backgroundColor: const Color(0xFF0C1D2C),
           body: Row(
             children: [
-              if (wide) _Sidebar(bloc: bloc, state: state, vertical: _vertical),
+              if (wide)
+                _Sidebar(
+                  bloc: bloc,
+                  state: state,
+                  vertical: _vertical,
+                  onDashboardTap: _scrollToTop,
+                ),
               Expanded(child: _content(ctx, bloc, state, wide)),
             ],
           ),
@@ -321,6 +344,7 @@ class _DashboardViewState extends State<_DashboardView> {
       children: [
         // Header
         Container(
+          key: _dashboardTopKey,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -443,6 +467,7 @@ class _DashboardViewState extends State<_DashboardView> {
       children: [
         // KPI Cards
         Row(
+          key: _dashboardTopKey,
           children: [
             _kpiCard(
               'Tenants',
@@ -496,7 +521,11 @@ class _DashboardViewState extends State<_DashboardView> {
               'View Layout Presets',
               () => _openPresetsList(ctx),
             ),
-            _actionBtn(Icons.receipt_long, 'Reports', () {}),
+            // A 'Reports' action used to sit here with an empty `() {}` onTap, so
+            // it did nothing when clicked. Reports/billing belong to the
+            // financial_auditor vertical (C0 §2b.3), not the bus sub-admin's, so
+            // it is removed rather than left dead. Re-add a WIRED one only if it
+            // is actually given a destination.
           ],
         ),
         const Gap(24),
@@ -1146,6 +1175,7 @@ class _DashboardViewState extends State<_DashboardView> {
       children: [
         // KPI Cards
         Row(
+          key: _dashboardTopKey,
           children: [
             _kpiCard(
               'Tenants',
@@ -1194,7 +1224,10 @@ class _DashboardViewState extends State<_DashboardView> {
               bloc.add(const FetchFactoryCompanies());
               _revealListSection();
             }),
-            _actionBtn(Icons.receipt_long, 'Reports', () {}),
+            // A 'Reports' action used to sit here with an empty `() {}` onTap, so
+            // it did nothing when clicked. Reports/billing belong to the
+            // financial_auditor vertical (C0 §2b.3), not the factory sub-admin's,
+            // so it is removed rather than left dead.
           ],
         ),
         const Gap(24),
@@ -1822,6 +1855,7 @@ class _DashboardViewState extends State<_DashboardView> {
       children: [
         // KPI Cards
         Row(
+          key: _dashboardTopKey,
           children: [
             _kpiCard(
               'Resellers',
@@ -1870,7 +1904,10 @@ class _DashboardViewState extends State<_DashboardView> {
               bloc.add(const FetchResellerAccounts());
               _revealListSection();
             }),
-            _actionBtn(Icons.receipt_long, 'Reports', () {}),
+            // A 'Reports' action used to sit here with an empty `() {}` onTap, so
+            // it did nothing when clicked. Reports/billing belong to the
+            // financial_auditor vertical (C0 §2b.3), not the marketplace
+            // sub-admin's, so it is removed rather than left dead.
           ],
         ),
         const Gap(24),
@@ -2848,10 +2885,12 @@ class _Sidebar extends StatelessWidget {
   final SubAdminBloc bloc;
   final SubAdminState state;
   final String vertical;
+  final VoidCallback onDashboardTap;
   const _Sidebar({
     required this.bloc,
     required this.state,
     required this.vertical,
+    required this.onDashboardTap,
   });
 
   /// Build sidebar items dynamically based on the sub-admin's vertical.
@@ -2875,14 +2914,14 @@ class _Sidebar extends StatelessWidget {
     // are bus-only and make no sense in those panels, so they are excluded.
     if (vertical == 'factory' || vertical == 'commercial_marketplace') {
       return [
-        // Intentionally a no-op: this sidebar is only shown while the dashboard
-        // is already open.
+        // Scrolls the dashboard content back to the top. This used to be a
+        // silent no-op (`() {}`), so clicking it did nothing at all.
         Missile3DButton(
           label: 'Dashboard',
           icon: Icons.dashboard,
           color: SubAdminVerticals.color(vertical),
           height: 64,
-          onTap: () {},
+          onTap: onDashboardTap,
         ),
         Missile3DButton(
           label: 'Refresh Data',
@@ -2896,14 +2935,14 @@ class _Sidebar extends StatelessWidget {
     // Default: the original bus / goods / marketplace workspace, which is the
     // only dashboard with seat-template and layout-preset tooling.
     return [
-      // Intentionally a no-op: this sidebar is only shown while the dashboard is already open.
-      // (Was a silent dead entry — now it says why, so the next reader does not "fix" it.)
+      // Scrolls the dashboard content back to the top. This used to be a silent
+      // no-op (`() {}`), so clicking it did nothing at all.
       Missile3DButton(
         label: 'Dashboard',
         icon: Icons.dashboard,
         color: const Color(0xFF7C3AED),
         height: 64,
-        onTap: () {},
+        onTap: onDashboardTap,
       ),
       // NOTE: a 'Bus Companies' button used to sit here with an empty onTap. Removed 2026-09-26
       // (A3): the bus-company management is inline in this same dashboard, so the entry was a dead
