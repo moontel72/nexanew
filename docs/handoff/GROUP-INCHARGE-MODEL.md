@@ -414,27 +414,99 @@ now removed — and its **registry** is left in place, read-only, per the owner'
 | **4 dead files** — `register_company_screen.dart`, `company_register_bloc.dart`, `company_register_event.dart`, `company_register_state.dart` | the register bloc was instantiated only by that screen (it is in no provider list), so all four are orphaned at once. Note their `part`/`part of` relationship: the event/state files cannot outlive the bloc file |
 | **`CompanyManagementRepository.createCompanyFromMap`** | called by nothing else once the register bloc goes (verified by grep) |
 
-**Deliberately NOT removed — and why:**
+**Kept on purpose — and one of these was the *agent's* call, not the owner's:**
 
-- **The companies registry** (`/companies` → `CompaniesListScreen`, `CompanyDetailScreen`) stays. It is the
-  Super Admin's **read-only** view, per (b).
-- **`AdminCompanyController@store`** and the `POST /api/v1/admin/companies` route stay. Nothing in the
-  Flutter app calls them any more, but removing a backend route that other callers may still use is not
-  C3's job, and it is the kind of change that needs its own verification.
-- **`/resellers/add`** stays. The roadmap says *"Factory now; **confirm** B2B/Reseller"* — and the honest
-  reason is that **no sub-admin replacement exists for resellers yet**. Removing that path today would leave
-  no way to create a reseller at all. B2B/Reseller needs its own C2-shaped step first (scoped endpoints +
-  sub-admin UI), and **that is not yet planned as its own row** — recorded as a gap below.
+- **The companies registry** (`/companies` → `CompaniesListScreen`, `CompanyDetailScreen`) stays.
+  > ⚠️ **Provenance, stated plainly:** keeping it was **the agent's own judgment**, not an owner decision.
+  > The owner's (b) answer covers it *after the fact*, but the choice was made while writing C3 and written
+  > down as if it followed from (b). It is flagged here so the owner can override it. If the owner wants the
+  > Super Admin to lose the company registry entirely, say so and it is a small follow-up.
+- **`/resellers/add`** stays, because **no sub-admin replacement exists for resellers yet** — removing it
+  today would leave no way to create a reseller at all. Its own C2-shaped step is needed first (**C2b**).
 
-> **Gap found while doing C3:** the roadmap has no row for *"B2B/Reseller creation moves to the
-> `commercial_marketplace` Sub-Admin"*. C3 can only be completed for Factory until that exists. Suggest
-> calling it **C2b** and running it before the Super Admin's reseller path is touched.
+**Open items C3 leaves behind — recorded so they are not forgotten.**
+
+1. **`AdminCompanyController@store` + `POST /api/v1/admin/companies`** — nothing in the Flutter app calls
+   them any more, but the route is still live. **Work still to do:** decide whether to remove it, and if so
+   verify no other caller first (it is the generic company-create endpoint, so it may be used by scripts or
+   by a future panel). *Do not remove it blind.*
+2. **The registry screens are not actually read-only yet.** (b) says *read-only*, but the Super Admin's
+   `CompanyDetailScreen` still exposes status / verification / plan-assignment actions, and the reseller
+   list screen still exposes edit / suspend / approve / delete. C3 removed the factory **creation** path
+   only. Making the registries genuinely read-only is its own step — suggest calling it **C3b**.
+3. **B2B / Reseller / Shop Keeper** — the owner confirmed these belong to their own group with their own
+   Sub-Admin (`commercial_marketplace`). **C2b delivered the reseller half — see §2b.9.** What exists now:
+   | Surface | Creation path | Status |
+   |---|---|---|
+   | **Resellers** (#5) | Super Admin's `/resellers/add` **removed**; the `commercial_marketplace` Sub-Admin creates them via `admin/reseller-accounts/*` | ✅ **C2b done** |
+   | **Shop Keeper** (#6) | **None anywhere.** No backend route, no Flutter screen — the app is *0 work* in the registry. There is nothing to "move"; building it is new Group-2 feature work | ⬜ not started |
+   | **B2B Marketplace** (#4) | **No account-creation path** — §1.2's verified table lists none | ⬜ not started |
+
+   So C2b is **only** the reseller half. Shop Keeper/B2B get their own builds when Group 2 is actually
+   built — C2b must not pretend to cover them.
+
+> **Note on the reseller model:** `resellers` has **no** `created_by`/metadata column (unlike `companies`),
+> so C2b needed a small additive migration — **shipped** as
+> `2026_09_27_000001_add_created_by_sub_admin_id_to_resellers.php` (`created_by_sub_admin_id`, nullable +
+> indexed). The deploy already runs `php artisan migrate --force`. Details in §2b.9.
 
 **Verification:** `dart analyze` on all four touched files — *No issues found!*; `node
 .scripts/check-panel-isolation.mjs` — green (28/28); a project-wide grep for the deleted file and class
 names returns nothing. The warnings that remain in the analysed package are all in files C3 never touched
 (`bus_fleet_dashboard_screen.dart`, `company_detail_screen.dart`, `invoice_status_badge.dart`,
 `all_tickets_screen.dart`) and are pre-existing.
+
+### 2b.9 What C2b delivered — reseller accounts move to the `commercial_marketplace` Sub-Admin
+
+The owner confirmed **B2B, Reseller and Shop Keeper belong to their own group with their own Sub-Admin**
+(`commercial_marketplace`). C2b is the C2-shaped step for that group, and it includes the removal — so the
+Super Admin is now out of reseller creation as well.
+
+| Piece | Detail |
+|---|---|
+| `backend/database/migrations/2026_09_27_000001_add_created_by_sub_admin_id_to_resellers.php` | **new.** Adds the scoping key. `resellers` has **no metadata column** (unlike `companies`), so a real column is the only honest place. **Nullable on purpose**: every existing reseller was created by the Super Admin, so `NULL` means "platform-created" — a backfill would be a lie |
+| `backend/app/Http/Controllers/Admin/SubAdminResellerController.php` | **new.** `index` / `store` / `show` / `update` / `updateStatus` / `destroy` / `restore`, scoped to `created_by_sub_admin_id`. Foreign id → **404** |
+| `backend/app/Models/Reseller.php` | `created_by_sub_admin_id` added to `$fillable` — without it `create()` would silently drop the scoping key |
+| `backend/routes/api.php` | `admin/reseller-accounts/*` — 7 routes. The Super Admin's `admin/resellers/*` routes **stay**: that is its read-only registry per (b) |
+| `sub_admin_event.dart` / `_state.dart` / `_bloc.dart` / `sub_admin_dashboard.dart` | `FetchResellerAccounts`, `CreateResellerAccount`, `UpdateResellerAccountStatus`, `EditResellerAccount`, `DeleteResellerAccount`, `RestoreResellerAccount` + `_resellerDashboard` / `_resellerAccountCard` / add + edit sheets, wired as `case 'commercial_marketplace'` |
+
+**Behaviour notes worth knowing:**
+
+- `purchase_approved` is set **true** at creation. That mirrors `AdminResellerController@store` ("Admin-vouched,
+  no proof needed") and matches the owner's answer (a) — the Sub-Admin creates **and approves** its own
+  group's accounts outright.
+- **Status semantics mirror the Super Admin exactly**: `suspended` carries `suspended_at` + `suspended_reason`,
+  any other status clears them (same as `AdminResellerController@toggleSuspend`). Allowed: `active`, `inactive`,
+  `suspended`.
+- `Reseller` uses `SoftDeletes`, so `destroy` is a **real soft delete** and `restore` uses `onlyTrashed()` —
+  different from `Company`, which has no `SoftDeletes` at all (C2 §2b.7 point 4).
+- No proof / approve-purchase endpoints on the sub-admin side — those exist because the Super Admin path
+  could not vouch; the sub-admin's whole job is to vouch.
+
+**Removed from the Super Admin (the removal half):**
+
+| Removed | Where |
+|---|---|
+| The **"Register Reseller" / `/resellers/add`** sidebar item | `super_admin_shell.dart` — the reseller section keeps only *View All Resellers* |
+| The **`/resellers/add`** `GoRoute` + import | `app_router.dart` (route name `reseller_add`) |
+| The **`goToAddReseller`** helper | `app_router.dart` — grep confirmed no other caller |
+| The **Add Reseller** toolbar button | `reseller_management_list_screen.dart`; the empty state now says *"Resellers are created by the Commercial Marketplace Sub-Admin"* |
+| **1 dead file** — `register_reseller_screen.dart` | its only entry point was the removed route |
+
+**Not removed, on purpose:** the reseller **list** screen and every other action it offers (edit, suspend,
+approve/revoke purchase, view proof, delete, export). Those are the (b) *read-only* question, which is
+**C3b**, not C2b — see the open items in §2b.8.
+
+**Left UI-unreachable, not deleted** (the analyzer reports nothing because the chain is still internally
+wired): `CreateReseller` + `ResellerManagementBloc._onCreate`, `ResellerManagementRepository.createReseller`,
+`ResellerManagementRemoteDatasource.createReseller`, `ApiEndpoints.adminCreateReseller`. They go when the
+reseller registry becomes read-only (C3b) and its management UI is trimmed for real.
+
+**Verification:** `php -l` clean on the controller, model, routes and migration; `dart analyze` clean on every
+touched Dart file plus the whole sub-admin bloc/screens set — the only remaining warning is the pre-existing
+`dead_code` at `sub_admin_dashboard.dart` (`hasFront` read before it is assigned, in the presets list, a
+region no C2b change touches); `node .scripts/check-panel-isolation.mjs` green (28/28); grep for
+`register_reseller_screen` / `/resellers/add` in `lib/` returns nothing.
 
 ---
 
@@ -514,7 +586,9 @@ the owner tests the panels.
 | **C0** | **Design doc**: group → vertical → which accounts that vertical creates | ✅ **done 2026-09-26 — §2b.** Registry, creation matrix, what `plans/**` + `billing/**` ownership means, and the 3 open owner items (a/b/c) recorded in §2b.4 |
 | **C1** | **Add the missing verticals** — `factory`, and stubs for `vehicle_security` / `trust_safety` — to `sub_admin_verticals` (seeder + `SubAdminController` validation) | ✅ **done 2026-09-26 — §2b.5.** Additive seeder + deploy step + DB-driven validation; `financial_auditor`'s `plans.*` / `billing.*` codes and bundle entries registered |
 | **C2** | **Factory account creation moves to the Factory Sub-Admin.** Backend endpoints (mirror the `bus-companies` CRUD pattern) + the Sub-Admin UI | ✅ **done 2026-09-26 — §2b.7.** Scoped `admin/factory-companies/*` + Factory Sub-Admin UI. The Super Admin's `/companies/register` path is left in place until **C3** |
-| **C3** | **Remove group-account creation from the Super Admin** for every group (Factory now; confirm B2B/Reseller). Super Admin keeps only *platform* accounts (sub-admins, plans, billing, registries as read-only) | ✅ **done for Factory 2026-09-26 — §2b.8.** The `/companies/register` path + its 4 orphaned files are gone; the registry stays read-only. ⚠️ **B2B/Reseller cannot be done yet** — no sub-admin replacement exists (proposed **C2b**) |
+| **C3** | **Remove group-account creation from the Super Admin** for every group (Factory now; confirm B2B/Reseller). Super Admin keeps only *platform* accounts (sub-admins, plans, billing, registries as read-only) | ✅ **Factory done 2026-09-26 — §2b.8.** ⚠️ B2B/Reseller needed its own replacement first — see **C2b** |
+| **C2b** | **Reseller account creation moves to the `commercial_marketplace` Sub-Admin** (the C2-shaped step the roadmap was missing). Owner confirmed B2B / Reseller / Shop Keeper are their own group with their own Sub-Admin | ✅ **done 2026-09-26 — §2b.9.** Scoped `admin/reseller-accounts/*` + `created_by_sub_admin_id` migration + the Sub-Admin UI; the Super Admin's `/resellers/add` path is removed. ⚠️ **Shop Keeper has no creation path anywhere** (app is *0 work*) — nothing to move; building it is Group-2 feature work |
+| **C3b** | **Make the registries genuinely read-only** for the Super Admin — strip the mutating actions still exposed on the company / reseller registry screens (status, verification, plan-assign, edit, suspend, approve, delete) | Proposed while doing C3/C2b. (b) says *read-only*, but C3/C2b only removed **creation** paths. Not started |
 | **C4** | **Super Admin observation view** — per-group activity feed + payment records/graphs, read-only | Delivers most of the intent safely |
 | **C5** | **Audited "enter sub-admin view"** — the §3 requirements above | Build only after C4, and only with the audit chain in place |
 
@@ -552,4 +626,5 @@ All three are answered in full in §2b.4 (with what (b) actually covers, since i
 | 2026-09-26 | Created from the owner's directive. Gap analysis verified against `SubAdminSeeder`, `SubAdminController`, `super_admin_shell.dart` and the `SubAdminBloc` endpoint list. Phased roadmap and the impersonation safety requirements recorded. |
 | 2026-09-26 | **C0 delivered (§2b)** — group→vertical registry, the creation matrix, what `plans/**` + `billing/**` ownership means, the 3 open owner items with recommended defaults, and the wildcard-hygiene caveat (§2b.6). **C1 delivered (§2b.5)** — `SubAdminVerticalExpansionSeeder` (`factory` / `vehicle_security` / `trust_safety` + `financial_auditor`'s plans/billing codes), registered in `DatabaseSeeder` and `deploy.yml`, plus DB-driven vertical validation in `SubAdminController` and the two Super Admin screens. |
 | 2026-09-26 | **C2 delivered (§2b.7)** — `SubAdminFactoryCompanyController` + `admin/factory-companies/*` routes, scoped to the creating sub-admin; Factory Sub-Admin UI (`_factoryDashboard` + add/edit sheets + status card) in the shared Sub-Admin panel. Super Admin's `/companies/register` untouched until C3. |
-| 2026-09-26 | **Owner answered (a)/(b)/(c)** (§2b.4): sub-admins create outright (audited); the Super Admin keeps **read-only** registries and may *look inside* a sub-admin's panel without changing anything (that is C4+C5, not built); `financial_auditor` stays **billing-only**. **C3 delivered for Factory (§2b.8)** — the Super Admin's `/companies/register` path and its 4 orphaned files removed; registry kept read-only. B2B/Reseller flagged as needing **C2b** first. |
+| 2026-09-26 | **Owner answered (a)/(b)/(c)** (§2b.4): sub-admins create outright (audited); the Super Admin keeps **read-only** registries and may *look inside* a sub-admin's panel without changing anything (that is C4+C5, not built); `financial_auditor` stays **billing-only**. **C3 delivered for Factory (§2b.8)** — the Super Admin's `/companies/register` path and its 4 orphaned files removed; registry kept read-only (an **agent** call, flagged as such). B2B/Reseller flagged as needing **C2b** first. |
+| 2026-09-26 | **C2b delivered (§2b.9)** — reseller creation moved to the `commercial_marketplace` Sub-Admin: new `SubAdminResellerController` + `admin/reseller-accounts/*` routes + the `created_by_sub_admin_id` migration (and `Reseller::$fillable`), the Sub-Admin reseller UI, and the Super Admin's `/resellers/add` path + `register_reseller_screen.dart` removed. **C3b** proposed (make the registries genuinely read-only). |

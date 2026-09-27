@@ -169,9 +169,10 @@ class _DashboardViewState extends State<_DashboardView> {
         return _cricketDashboard(ctx, bloc, state);
       case 'factory':
         return _factoryDashboard(ctx, bloc, state);
+      case 'commercial_marketplace':
+        return _resellerDashboard(ctx, bloc, state);
       case 'bus_transit':
       case 'goods_logistics':
-      case 'commercial_marketplace':
       case 'financial_auditor':
       default:
         return _busDashboard(ctx, bloc, state);
@@ -1655,6 +1656,632 @@ class _DashboardViewState extends State<_DashboardView> {
                             }
                             bloc.add(
                               EditFactoryCompany(companyId: id, data: data),
+                            );
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1F5E6B),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: state.actionLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Save Changes',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Reseller Sub-Admin Dashboard (commercial_marketplace, C2b) ──
+  /// Only provisions and manages reseller accounts (GROUP-INCHARGE-MODEL.md §2b).
+  Widget _resellerDashboard(
+    BuildContext ctx,
+    SubAdminBloc bloc,
+    SubAdminState state,
+  ) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        // KPI Cards
+        Row(
+          children: [
+            _kpiCard(
+              'Resellers',
+              '${state.resellerAccounts.length}',
+              Icons.storefront,
+              const Color(0xFF7C3AED),
+            ),
+            const Gap(12),
+            _kpiCard(
+              'Features',
+              '${state.activeFeatures.length}',
+              Icons.grid_view,
+              const Color(0xFF2563EB),
+            ),
+            const Gap(12),
+            _kpiCard(
+              'Revenue',
+              '\$${state.monthlyRevenue.toStringAsFixed(0)}',
+              Icons.trending_up,
+              const Color(0xFF059669),
+            ),
+          ],
+        ),
+        const Gap(24),
+
+        // Quick Actions
+        const Text(
+          'Quick Actions',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const Gap(12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _actionBtn(
+              Icons.add_business,
+              'Add Reseller Account',
+              () => _showAddResellerAccountSheet(ctx, bloc),
+            ),
+            _actionBtn(Icons.list_alt, 'View Accounts', () {}),
+            _actionBtn(Icons.receipt_long, 'Reports', () {}),
+          ],
+        ),
+        const Gap(24),
+
+        // Reseller Accounts Section
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Registered Reseller Accounts',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => bloc.add(const FetchResellerAccounts()),
+              icon: const Icon(
+                Icons.refresh,
+                size: 16,
+                color: Color(0xFFBDD8DB),
+              ),
+              label: const Text(
+                'Refresh',
+                style: TextStyle(color: Color(0xFFBDD8DB)),
+              ),
+            ),
+          ],
+        ),
+        const Gap(8),
+        if (state.resellerAccounts.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1B3A4B),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Center(
+              child: Text(
+                'No reseller accounts registered yet.',
+                style: TextStyle(color: Colors.white54),
+              ),
+            ),
+          )
+        else
+          ...state.resellerAccounts.map(
+            (c) => _resellerAccountCard(ctx, bloc, c),
+          ),
+      ],
+    );
+  }
+
+  // ── Reseller Account Card ──
+  Widget _resellerAccountCard(
+    BuildContext ctx,
+    SubAdminBloc bloc,
+    Map<String, dynamic> c,
+  ) {
+    final businessName = c['business_name']?.toString() ?? 'Unknown';
+    final personName = c['name']?.toString() ?? '';
+    final city = c['city']?.toString() ?? '';
+    final registrationNo = c['registration_no']?.toString() ?? '';
+    final status = c['status']?.toString() ?? 'active';
+    final id = c['id']?.toString() ?? '';
+    final statusColor = _statusColor(status);
+    final statusLabel = _statusLabel(status);
+
+    return Card(
+      color: const Color(0xFF1B3A4B),
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: statusColor,
+                  child: Text(
+                    businessName.isNotEmpty
+                        ? businessName[0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const Gap(12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        businessName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (personName.isNotEmpty)
+                        Text(
+                          personName,
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 11,
+                          ),
+                        ),
+                      if (city.isNotEmpty)
+                        Text(
+                          city,
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 11,
+                          ),
+                        ),
+                      if (registrationNo.isNotEmpty)
+                        Text(
+                          'Reg: $registrationNo',
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 11,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: Colors.white54),
+                  color: const Color(0xFF1B3A4B),
+                  onSelected: (action) {
+                    switch (action) {
+                      case 'active':
+                        bloc.add(
+                          UpdateResellerAccountStatus(
+                            accountId: id,
+                            newStatus: 'active',
+                          ),
+                        );
+                        break;
+                      case 'inactive':
+                        bloc.add(
+                          UpdateResellerAccountStatus(
+                            accountId: id,
+                            newStatus: 'inactive',
+                          ),
+                        );
+                        break;
+                      case 'suspended':
+                        bloc.add(
+                          UpdateResellerAccountStatus(
+                            accountId: id,
+                            newStatus: 'suspended',
+                          ),
+                        );
+                        break;
+                      case 'edit':
+                        _showEditResellerAccountSheet(ctx, bloc, c);
+                        break;
+                      case 'restore':
+                        bloc.add(RestoreResellerAccount(id));
+                        break;
+                      case 'delete':
+                        showDialog(
+                          context: ctx,
+                          builder: (dctx) => AlertDialog(
+                            title: const Text('Delete Account?'),
+                            content: Text('This will archive $businessName.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dctx),
+                                child: const Text('Cancel'),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.error,
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(dctx);
+                                  bloc.add(DeleteResellerAccount(id));
+                                },
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        );
+                        break;
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(
+                      value: 'active',
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.check_circle,
+                          color: Color(0xFF059669),
+                        ),
+                        title: Text('Active'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'inactive',
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.pause_circle,
+                          color: Color(0xFFD97706),
+                        ),
+                        title: Text('Inactive'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'suspended',
+                      child: ListTile(
+                        leading: Icon(Icons.block, color: AppColors.warning),
+                        title: Text('Suspend'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: ListTile(
+                        leading: Icon(Icons.edit, color: Color(0xFF1F5E6B)),
+                        title: Text('Update'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'restore',
+                      child: ListTile(
+                        leading: Icon(Icons.restore, color: Color(0xFF059669)),
+                        title: Text('Restore'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: ListTile(
+                        leading: Icon(Icons.delete, color: AppColors.error),
+                        title: Text('Delete'),
+                        dense: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Add Reseller Account Bottom Sheet ──
+  void _showAddResellerAccountSheet(BuildContext context, SubAdminBloc bloc) {
+    final nameCtrl = TextEditingController();
+    final businessCtrl = TextEditingController();
+    final regCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final passwordCtrl = TextEditingController();
+    final cityCtrl = TextEditingController();
+    final addressCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1B3A4B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => BlocProvider.value(
+        value: bloc,
+        child: BlocConsumer<SubAdminBloc, SubAdminState>(
+          listener: (lctx, state) {
+            if (state.resellerFormSuccess != null) {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.resellerFormSuccess!),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            }
+          },
+          builder: (lctx, state) => Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(lctx).viewInsets.bottom + 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Add Reseller Account',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Gap(16),
+                  _sheetField('Full Name', nameCtrl),
+                  const Gap(10),
+                  _sheetField('Business Name', businessCtrl),
+                  const Gap(10),
+                  _sheetField('Registration No.', regCtrl),
+                  const Gap(10),
+                  _sheetField('Email', emailCtrl, TextInputType.emailAddress),
+                  const Gap(10),
+                  _sheetField('Phone', phoneCtrl, TextInputType.phone),
+                  const Gap(10),
+                  _sheetField(
+                    'Password',
+                    passwordCtrl,
+                    TextInputType.visiblePassword,
+                  ),
+                  const Gap(10),
+                  _sheetField('City', cityCtrl),
+                  const Gap(10),
+                  _sheetField('Address (optional)', addressCtrl),
+                  if (state.resellerFormError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        state.resellerFormError!,
+                        style: const TextStyle(
+                          color: AppColors.error,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  const Gap(16),
+                  ElevatedButton(
+                    onPressed: state.resellerFormLoading
+                        ? null
+                        : () {
+                            bloc.add(
+                              CreateResellerAccount(
+                                name: nameCtrl.text.trim(),
+                                businessName: businessCtrl.text.trim(),
+                                registrationNo: regCtrl.text.trim(),
+                                email: emailCtrl.text.trim(),
+                                phone: phoneCtrl.text.trim(),
+                                password: passwordCtrl.text,
+                                city: cityCtrl.text.trim(),
+                                address: addressCtrl.text.trim(),
+                              ),
+                            );
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1F5E6B),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: state.resellerFormLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Create Account',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Edit Reseller Account Bottom Sheet ──
+  void _showEditResellerAccountSheet(
+    BuildContext context,
+    SubAdminBloc bloc,
+    Map<String, dynamic> account,
+  ) {
+    final id = account['id']?.toString() ?? '';
+    final nameCtrl = TextEditingController(
+      text: account['name']?.toString() ?? '',
+    );
+    final businessCtrl = TextEditingController(
+      text: account['business_name']?.toString() ?? '',
+    );
+    final regCtrl = TextEditingController(
+      text: account['registration_no']?.toString() ?? '',
+    );
+    final emailCtrl = TextEditingController(
+      text: account['email']?.toString() ?? '',
+    );
+    final phoneCtrl = TextEditingController(
+      text: account['phone']?.toString() ?? '',
+    );
+    final passwordCtrl = TextEditingController();
+    final cityCtrl = TextEditingController(
+      text: account['city']?.toString() ?? '',
+    );
+    final addressCtrl = TextEditingController(
+      text: account['address']?.toString() ?? '',
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1B3A4B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => BlocProvider.value(
+        value: bloc,
+        child: BlocConsumer<SubAdminBloc, SubAdminState>(
+          listener: (lctx, state) {
+            if (state.actionSuccess != null) {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.actionSuccess!),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            }
+          },
+          builder: (lctx, state) => Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(lctx).viewInsets.bottom + 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Edit Reseller Account',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Gap(16),
+                  _sheetField('Full Name', nameCtrl),
+                  const Gap(10),
+                  _sheetField('Business Name', businessCtrl),
+                  const Gap(10),
+                  _sheetField('Registration No.', regCtrl),
+                  const Gap(10),
+                  _sheetField('Email', emailCtrl, TextInputType.emailAddress),
+                  const Gap(10),
+                  _sheetField('Phone', phoneCtrl, TextInputType.phone),
+                  const Gap(10),
+                  _sheetField(
+                    'New Password (leave blank to keep existing)',
+                    passwordCtrl,
+                    TextInputType.visiblePassword,
+                  ),
+                  const Gap(10),
+                  _sheetField('City', cityCtrl),
+                  const Gap(10),
+                  _sheetField('Address', addressCtrl),
+                  if (state.actionError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        state.actionError!,
+                        style: const TextStyle(
+                          color: AppColors.error,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  const Gap(16),
+                  ElevatedButton(
+                    onPressed: state.actionLoading
+                        ? null
+                        : () {
+                            final data = <String, dynamic>{
+                              'name': nameCtrl.text.trim(),
+                              'business_name': businessCtrl.text.trim(),
+                              'registration_no': regCtrl.text.trim(),
+                              'email': emailCtrl.text.trim(),
+                              'phone': phoneCtrl.text.trim(),
+                              'city': cityCtrl.text.trim(),
+                              'address': addressCtrl.text.trim(),
+                            };
+                            final pwd = passwordCtrl.text;
+                            if (pwd.isNotEmpty) {
+                              data['password'] = pwd;
+                            }
+                            bloc.add(
+                              EditResellerAccount(accountId: id, data: data),
                             );
                           },
                     style: ElevatedButton.styleFrom(

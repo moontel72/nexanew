@@ -65,7 +65,6 @@ import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/t
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/transport/fraud_prevention_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/transport/drivers_admin_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/reseller_management/reseller_management_list_screen.dart';
-import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/reseller_management/register_reseller_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/site_content/site_content_screen.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/factory_login_screen.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/factory_dashboard.dart';
@@ -735,14 +734,6 @@ class AppRouter {
           name: 'resellers',
           builder: (context, state) =>
               const ResellerManagementListScreen(inShell: true),
-          routes: [
-            GoRoute(
-              path: 'add',
-              name: 'reseller_add',
-              builder: (context, state) =>
-                  const RegisterResellerScreen(inShell: true),
-            ),
-          ],
         ),
         GoRoute(
           path: '/sub-admins',
@@ -1079,7 +1070,6 @@ class AppRouter {
     // context.go('/companies/$companyId/edit', extra: companyData);
   }
   void goToResellers(BuildContext context) => context.go("/resellers");
-  void goToAddReseller(BuildContext context) => context.go("/resellers/add");
 
   void goToInvoices(BuildContext context) => context.go('/billing/invoices');
   void goToTransportWallet(BuildContext context) =>

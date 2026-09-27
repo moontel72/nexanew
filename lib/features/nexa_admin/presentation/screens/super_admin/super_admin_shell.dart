@@ -165,11 +165,9 @@ class SuperAdminShell extends StatelessWidget {
             icon: Icons.storefront,
             route: '/resellers',
           ),
-          AdminSidebarItem(
-            label: 'Register Reseller',
-            icon: Icons.person_add_alt,
-            route: '/resellers/add',
-          ),
+          // 'Register Reseller' was here. Removed 2026-09-26 (C2b): resellers are now created by
+          // the commercial_marketplace Sub-Admin (GROUP-INCHARGE-MODEL.md §2b.8 / C2b), and the Super
+          // Admin keeps the registry as READ-ONLY — 'View All Resellers' above.
         ],
       ),
       AdminSidebarSection(
@@ -213,7 +211,6 @@ class SuperAdminShell extends StatelessWidget {
   }
 
   String _titleForLocation(String location) {
-    if (location.startsWith('/resellers/add')) return 'Register Reseller';
     if (location.startsWith('/resellers')) return 'Reseller Management';
     if (location.startsWith('/sub-admins/add')) return 'Add Sub-Admin';
     if (location.startsWith('/sub-admins')) return 'Sub-Admin Management';
@@ -232,9 +229,6 @@ class SuperAdminShell extends StatelessWidget {
   }
 
   List<String> _breadcrumbsForLocation(String location) {
-    if (location.startsWith('/resellers/add')) {
-      return const ['Resellers', 'Register Reseller'];
-    }
     if (location.startsWith('/resellers')) {
       return const ['Resellers', 'View All Resellers'];
     }

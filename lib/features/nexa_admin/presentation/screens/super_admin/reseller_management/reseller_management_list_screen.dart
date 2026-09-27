@@ -1,7 +1,6 @@
 ﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/reseller_management/reseller_management_bloc.dart';
@@ -483,13 +482,6 @@ class _ResellerManagementListScreenState
       appBar: CustomAppBar(
         title: 'Reseller Management',
         showBackButton: !widget.inShell,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add, color: Colors.white),
-            tooltip: 'Add Reseller',
-            onPressed: () => context.go('/resellers/add'),
-          ),
-        ],
       ),
       body: BlocListener<ResellerManagementBloc, ResellerManagementState>(
         listener: (_, state) {
@@ -606,9 +598,17 @@ class _ResellerManagementListScreenState
                           if (_initialised &&
                               state.resellers.isEmpty &&
                               state.status != ResellerLoadStatus.loading) {
-                            return const EmptyState(
+                            final hasFilters =
+                                _search.isNotEmpty ||
+                                _statusFilter != null ||
+                                _cityFilter != null;
+                            return EmptyState(
                               title: 'No Resellers',
-                              description: 'No resellers match your filters.',
+                              // No create action: resellers are created by the
+                              // commercial_marketplace Sub-Admin (C2b).
+                              description: hasFilters
+                                  ? 'No resellers match your filters.'
+                                  : 'Resellers are created by the Commercial Marketplace Sub-Admin',
                               icon: Icons.people_outline,
                             );
                           }

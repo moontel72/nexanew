@@ -193,6 +193,76 @@ class RestoreFactoryCompany extends SubAdminEvent {
   List<Object?> get props => [companyId];
 }
 
+// ── Reseller Account Management (inside dashboard) — C2b ──
+class CreateResellerAccount extends SubAdminEvent {
+  final String name,
+      businessName,
+      registrationNo,
+      email,
+      phone,
+      password,
+      city,
+      address;
+  const CreateResellerAccount({
+    required this.name,
+    required this.businessName,
+    required this.registrationNo,
+    required this.email,
+    required this.phone,
+    required this.password,
+    required this.city,
+    this.address = '',
+  });
+  @override
+  List<Object?> get props => [
+    name,
+    businessName,
+    registrationNo,
+    email,
+    phone,
+    password,
+    city,
+    address,
+  ];
+}
+
+class FetchResellerAccounts extends SubAdminEvent {
+  const FetchResellerAccounts();
+}
+
+class UpdateResellerAccountStatus extends SubAdminEvent {
+  final String accountId;
+  final String newStatus; // active, inactive, suspended
+  const UpdateResellerAccountStatus({
+    required this.accountId,
+    required this.newStatus,
+  });
+  @override
+  List<Object?> get props => [accountId, newStatus];
+}
+
+class EditResellerAccount extends SubAdminEvent {
+  final String accountId;
+  final Map<String, dynamic> data;
+  const EditResellerAccount({required this.accountId, required this.data});
+  @override
+  List<Object?> get props => [accountId, data];
+}
+
+class DeleteResellerAccount extends SubAdminEvent {
+  final String accountId;
+  const DeleteResellerAccount(this.accountId);
+  @override
+  List<Object?> get props => [accountId];
+}
+
+class RestoreResellerAccount extends SubAdminEvent {
+  final String accountId;
+  const RestoreResellerAccount(this.accountId);
+  @override
+  List<Object?> get props => [accountId];
+}
+
 // ── Sub-Admin Management (list + add screens) ──
 class FetchSubAdmins extends SubAdminEvent {
   const FetchSubAdmins();

@@ -33,6 +33,8 @@ class Reseller extends Authenticatable
         'business_proof_url',
         'business_proof_title',
         'business_proof_uploaded_at',
+        // Group-Incharge C2b — which Sub-Admin created this account (NULL = platform-created).
+        'created_by_sub_admin_id',
     ];
 
     protected $hidden = ['password'];

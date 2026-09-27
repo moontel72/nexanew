@@ -524,6 +524,19 @@ $registerRoutes = function (): void {
             Route::patch("resellers/{id}/approve-purchase", [\App\Http\Controllers\Admin\AdminResellerController::class, "approvePurchase"]);
             Route::patch("resellers/{id}/reject-purchase", [\App\Http\Controllers\Admin\AdminResellerController::class, "rejectPurchase"]);
             Route::get("resellers/{id}/proof", [\App\Http\Controllers\Admin\AdminResellerController::class, "viewProof"]);
+
+            /// Reseller Account Management (commercial_marketplace Sub-Admin jurisdiction — C2b)
+            /// Scoped to the caller's OWN resellers (resellers.created_by_sub_admin_id). The Super Admin's
+            /// `resellers` routes above stay: they are its read-only registry (GROUP-INCHARGE §2b.4 (b)).
+            Route::prefix("reseller-accounts")->group(function (): void {
+                Route::get("", [\App\Http\Controllers\Admin\SubAdminResellerController::class, "index"]);
+                Route::post("create", [\App\Http\Controllers\Admin\SubAdminResellerController::class, "store"]);
+                Route::get("{id}", [\App\Http\Controllers\Admin\SubAdminResellerController::class, "show"]);
+                Route::put("{id}", [\App\Http\Controllers\Admin\SubAdminResellerController::class, "update"]);
+                Route::delete("{id}", [\App\Http\Controllers\Admin\SubAdminResellerController::class, "destroy"]);
+                Route::patch("{id}/status", [\App\Http\Controllers\Admin\SubAdminResellerController::class, "updateStatus"]);
+                Route::patch("{id}/restore", [\App\Http\Controllers\Admin\SubAdminResellerController::class, "restore"]);
+            });
         });
 
     // ──────────────────────────────────────────────────────────────

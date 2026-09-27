@@ -41,6 +41,16 @@ class SubAdminState extends Equatable {
   final bool factoryListLoading;
   final String? factoryListError;
 
+  // ── Reseller Account Form ──
+  final bool resellerFormLoading;
+  final String? resellerFormError;
+  final String? resellerFormSuccess;
+
+  // ── Reseller Account List ──
+  final List<Map<String, dynamic>> resellerAccounts;
+  final bool resellerListLoading;
+  final String? resellerListError;
+
   // ── Sub-Admin Management (list screen) ──
   final List<Map<String, dynamic>> subAdmins;
   final bool subAdminListLoading;
@@ -78,6 +88,12 @@ class SubAdminState extends Equatable {
     this.factoryCompanies = const [],
     this.factoryListLoading = false,
     this.factoryListError,
+    this.resellerFormLoading = false,
+    this.resellerFormError,
+    this.resellerFormSuccess,
+    this.resellerAccounts = const [],
+    this.resellerListLoading = false,
+    this.resellerListError,
     this.subAdmins = const [],
     this.subAdminListLoading = false,
     this.subAdminListError,
@@ -111,6 +127,12 @@ class SubAdminState extends Equatable {
     List<Map<String, dynamic>>? factoryCompanies,
     bool? factoryListLoading,
     String? factoryListError,
+    bool? resellerFormLoading,
+    String? resellerFormError,
+    String? resellerFormSuccess,
+    List<Map<String, dynamic>>? resellerAccounts,
+    bool? resellerListLoading,
+    String? resellerListError,
     List<Map<String, dynamic>>? subAdmins,
     bool? subAdminListLoading,
     String? subAdminListError,
@@ -143,6 +165,12 @@ class SubAdminState extends Equatable {
     factoryCompanies: factoryCompanies ?? this.factoryCompanies,
     factoryListLoading: factoryListLoading ?? this.factoryListLoading,
     factoryListError: factoryListError,
+    resellerFormLoading: resellerFormLoading ?? this.resellerFormLoading,
+    resellerFormError: resellerFormError,
+    resellerFormSuccess: resellerFormSuccess,
+    resellerAccounts: resellerAccounts ?? this.resellerAccounts,
+    resellerListLoading: resellerListLoading ?? this.resellerListLoading,
+    resellerListError: resellerListError,
     subAdmins: subAdmins ?? this.subAdmins,
     subAdminListLoading: subAdminListLoading ?? this.subAdminListLoading,
     subAdminListError: subAdminListError,
@@ -177,6 +205,12 @@ class SubAdminState extends Equatable {
     factoryCompanies,
     factoryListLoading,
     factoryListError,
+    resellerFormLoading,
+    resellerFormError,
+    resellerFormSuccess,
+    resellerAccounts,
+    resellerListLoading,
+    resellerListError,
     subAdmins,
     subAdminListLoading,
     subAdminListError,

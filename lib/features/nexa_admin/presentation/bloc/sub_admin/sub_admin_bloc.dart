@@ -30,6 +30,12 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
     on<ResetFactoryCompanyPassword>(_onResetFactoryCoPwd);
     on<DeleteFactoryCompany>(_onDelFactoryCo);
     on<RestoreFactoryCompany>(_onRestoreFactoryCo);
+    on<CreateResellerAccount>(_onCreateResellerAccount);
+    on<FetchResellerAccounts>(_onFetchResellerAccounts);
+    on<UpdateResellerAccountStatus>(_onUpdateResellerAccountStatus);
+    on<EditResellerAccount>(_onEditResellerAccount);
+    on<DeleteResellerAccount>(_onDeleteResellerAccount);
+    on<RestoreResellerAccount>(_onRestoreResellerAccount);
     on<FetchSubAdmins>(_onFetchAdmins);
     on<CreateSubAdmin>(_onCreateAdmin);
     on<ToggleStudioAccess>(_onToggleStudio);
@@ -132,6 +138,11 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
     // GROUP-INCHARGE-MODEL.md §2b/§4).
     if ((p.getString('sub_admin_vertical') ?? '') == 'factory') {
       add(const FetchFactoryCompanies());
+    }
+    // Reseller vertical additionally loads its own list (step C2b,
+    // GROUP-INCHARGE-MODEL.md §2b).
+    if ((p.getString('sub_admin_vertical') ?? '') == 'commercial_marketplace') {
+      add(const FetchResellerAccounts());
     }
   }
 
@@ -554,6 +565,173 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
         state.copyWith(actionLoading: false, actionSuccess: 'Company restored'),
       );
       add(const FetchFactoryCompanies());
+    } catch (ex) {
+      emit(state.copyWith(actionLoading: false, actionError: ex.toString()));
+    }
+  }
+
+  // ═══════════════ Reseller Account Management (C2b) ═══════════════
+
+  Future<void> _onCreateResellerAccount(
+    CreateResellerAccount e,
+    Emitter<SubAdminState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        resellerFormLoading: true,
+        resellerFormError: null,
+        resellerFormSuccess: null,
+      ),
+    );
+    try {
+      await _api.post(
+        '${ApiConfig.apiBaseUrl}/admin/reseller-accounts/create',
+        data: {
+          'name': e.name,
+          'business_name': e.businessName,
+          'registration_no': e.registrationNo,
+          'email': e.email,
+          'phone': e.phone,
+          'password': e.password,
+          'city': e.city,
+          if (e.address.isNotEmpty) 'address': e.address,
+        },
+      );
+      emit(
+        state.copyWith(
+          resellerFormLoading: false,
+          resellerFormSuccess: 'Account created',
+        ),
+      );
+      add(const FetchResellerAccounts());
+    } catch (ex) {
+      emit(
+        state.copyWith(
+          resellerFormLoading: false,
+          resellerFormError: ex.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onFetchResellerAccounts(
+    FetchResellerAccounts e,
+    Emitter<SubAdminState> emit,
+  ) async {
+    emit(state.copyWith(resellerListLoading: true));
+    try {
+      final r = await _api.get(
+        '${ApiConfig.apiBaseUrl}/admin/reseller-accounts',
+      );
+      final d = r?['data'];
+      final List<Map<String, dynamic>> list = d is List
+          ? d.cast<Map<String, dynamic>>()
+          : (d is Map
+                ? (d['resellers'] as List?)?.cast<Map<String, dynamic>>() ??
+                      (d['accounts'] as List?)?.cast<Map<String, dynamic>>() ??
+                      (d['data'] as List?)?.cast<Map<String, dynamic>>() ??
+                      []
+                : []);
+      emit(state.copyWith(resellerAccounts: list, resellerListLoading: false));
+    } catch (ex) {
+      emit(
+        state.copyWith(
+          resellerListLoading: false,
+          resellerListError: ex.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onUpdateResellerAccountStatus(
+    UpdateResellerAccountStatus e,
+    Emitter<SubAdminState> emit,
+  ) async {
+    emit(state.copyWith(actionLoading: true));
+    try {
+      await _api.patch(
+        '${ApiConfig.apiBaseUrl}/admin/reseller-accounts/${e.accountId}/status',
+        data: {'status': e.newStatus},
+      );
+      emit(
+        state.copyWith(
+          actionLoading: false,
+          actionSuccess: 'Status set to ${e.newStatus}',
+        ),
+      );
+      add(const FetchResellerAccounts());
+    } catch (ex) {
+      emit(state.copyWith(actionLoading: false, actionError: ex.toString()));
+    }
+  }
+
+  Future<void> _onEditResellerAccount(
+    EditResellerAccount e,
+    Emitter<SubAdminState> emit,
+  ) async {
+    emit(state.copyWith(actionLoading: true));
+    try {
+      // Map frontend field names to backend field names.
+      final body = <String, dynamic>{};
+      if (e.data['name'] != null) body['name'] = e.data['name'];
+      if (e.data['business_name'] != null)
+        body['business_name'] = e.data['business_name'];
+      if (e.data['registration_no'] != null)
+        body['registration_no'] = e.data['registration_no'];
+      if (e.data['email'] != null) body['email'] = e.data['email'];
+      if (e.data['phone'] != null) body['phone'] = e.data['phone'];
+      if (e.data['city'] != null) body['city'] = e.data['city'];
+      if (e.data['address'] != null) body['address'] = e.data['address'];
+      // Only include password if non-empty (otherwise backend keeps existing).
+      if (e.data['password'] != null &&
+          (e.data['password'] as String).isNotEmpty) {
+        body['password'] = e.data['password'];
+      }
+
+      await _api.put(
+        '${ApiConfig.apiBaseUrl}/admin/reseller-accounts/${e.accountId}',
+        data: body,
+      );
+      emit(
+        state.copyWith(actionLoading: false, actionSuccess: 'Account updated'),
+      );
+      add(const FetchResellerAccounts());
+    } catch (ex) {
+      emit(state.copyWith(actionLoading: false, actionError: ex.toString()));
+    }
+  }
+
+  Future<void> _onDeleteResellerAccount(
+    DeleteResellerAccount e,
+    Emitter<SubAdminState> emit,
+  ) async {
+    emit(state.copyWith(actionLoading: true));
+    try {
+      await _api.delete(
+        '${ApiConfig.apiBaseUrl}/admin/reseller-accounts/${e.accountId}',
+      );
+      emit(
+        state.copyWith(actionLoading: false, actionSuccess: 'Account deleted'),
+      );
+      add(const FetchResellerAccounts());
+    } catch (ex) {
+      emit(state.copyWith(actionLoading: false, actionError: ex.toString()));
+    }
+  }
+
+  Future<void> _onRestoreResellerAccount(
+    RestoreResellerAccount e,
+    Emitter<SubAdminState> emit,
+  ) async {
+    emit(state.copyWith(actionLoading: true));
+    try {
+      await _api.patch(
+        '${ApiConfig.apiBaseUrl}/admin/reseller-accounts/${e.accountId}/restore',
+      );
+      emit(
+        state.copyWith(actionLoading: false, actionSuccess: 'Account restored'),
+      );
+      add(const FetchResellerAccounts());
     } catch (ex) {
       emit(state.copyWith(actionLoading: false, actionError: ex.toString()));
     }
