@@ -424,6 +424,37 @@ it also means Flutter's own cache-busting is off. Check the deployed bundle and 
 
 ---
 
+## 6c. FIXED — the Sub-Admin's factory list was empty while the API returned `200`
+
+**Symptom:** the Factory Sub-Admin created a factory successfully, the Super Admin's `/companies` showed
+it, but the Sub-Admin's own list stayed empty. Server evidence: `GET /api/v1/admin/factory-companies` →
+**200** with `{"success":true,"data":[]}`, and the token was the right sub-admin (Zahid,
+`global_identity_id = a2d85a17-2a9f-4e78-8842-432d45ee5008`).
+
+**Root cause:** the C2 controller scoped the list with a **JSON path**:
+`where('metadata->>created_by_sub_admin_id', $id)`. That predicate returns the row in **psql** but produced
+an **empty result inside Laravel** — so the API answered 200 with no rows, and the UI (which only renders
+`state.factoryCompanies`) showed an empty list and **hid the truth**. The Super Admin's list worked because it
+applies **no such filter** at all — the owner spotted exactly that.
+
+**Fix (2026-09-27):**
+
+| Piece | Change |
+|---|---|
+| `2026_09_27_000002_add_created_by_sub_admin_id_to_companies.php` | **new** — a real indexed `created_by_sub_admin_id` column on `companies`, **backfilled** from the metadata key the first version wrote (with a uuid-regex guard) |
+| `Company::$fillable` | the column added — without it `create()` silently drops it (the same trap as `Reseller`) |
+| `SubAdminFactoryCompanyController` | `ownedQuery()` is now a plain `where('created_by_sub_admin_id', $id)`; `store` writes the column as well as the metadata (metadata kept for the creator's **name** and audit) |
+
+**Lesson recorded:** for scoping, use a **real indexed column** — the same decision `SubAdminResellerController`
+had already made. A JSON-path filter that "looks right" and passes `psql` can still silently return nothing
+through Eloquent.
+
+**Still to improve (not yet done):** the Sub-Admin dashboards render **no error** when their list request
+fails — `factoryListError` / `resellerListError` are set but never displayed, so any future failure again
+looks like "no data" instead of an error. That is a UI bug in its own right.
+
+---
+
 ## 7. Owner's decisions recorded 2026-09-26 (second round)
 
 | Topic | Decision |

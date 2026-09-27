@@ -119,6 +119,9 @@ class SubAdminFactoryCompanyController extends Controller
                 'timezone'                     => 'Asia/Karachi',
                 'language'                     => 'en',
                 'currency'                     => 'PKR',
+                // The authoritative scoping key — a real indexed column (2026_09_27_000002).
+                'created_by_sub_admin_id'      => $subAdminId,
+                // Kept for audit/display (the creator's NAME is not a column).
                 'metadata'                     => [
                     'created_by_sub_admin_id'   => $subAdminId,
                     'created_by_sub_admin_name' => $subAdminName,
@@ -351,13 +354,18 @@ class SubAdminFactoryCompanyController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Scoping — the isolation rule. `companies` has no parent column, so the creator is recorded in
-    // `metadata.created_by_sub_admin_id` at creation and matched here with the Postgres `->>` operator.
+    // Scoping — the isolation rule.
+    //
+    // A real indexed COLUMN, not a JSON path. The first version filtered with
+    // `where('metadata->>created_by_sub_admin_id', $id)`, which returned an EMPTY list in Laravel even
+    // though the identical predicate returns the row in psql (and the Super Admin's unfiltered list
+    // shows the same company). A plain column equality is the proven pattern — the same one
+    // SubAdminResellerController uses. NULL means platform-created.
     // ─────────────────────────────────────────────────────────────────────────
 
     private function ownedQuery(?string $subAdminId)
     {
-        return Company::query()->where('metadata->>created_by_sub_admin_id', $subAdminId);
+        return Company::query()->where('created_by_sub_admin_id', $subAdminId);
     }
 
     private function findOwned(Request $request, string $id): ?Company

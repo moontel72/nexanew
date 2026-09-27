@@ -53,6 +53,8 @@ class Company extends Model
         "credit_review_date",
         "credit_limit_notes",
         "credit_metadata",
+        // Group-Incharge C2 — which Sub-Admin created this company (NULL = platform-created).
+        "created_by_sub_admin_id",
     ];
 
     protected $casts = [
