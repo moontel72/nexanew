@@ -133,7 +133,9 @@ class AdminSidebar extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 16,
-                        backgroundColor: AppColors.secondary.withValues(alpha: 0.2),
+                        backgroundColor: AppColors.secondary.withValues(
+                          alpha: 0.2,
+                        ),
                         child: const Icon(
                           Icons.admin_panel_settings,
                           size: 18,
@@ -225,7 +227,9 @@ class _PencilTile extends StatelessWidget {
             height: 44,
             margin: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
-              color: selected ? color.withValues(alpha: 0.2) : Colors.transparent,
+              color: selected
+                  ? color.withValues(alpha: 0.2)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -246,7 +250,13 @@ class _PencilTile extends StatelessWidget {
             label: item.label,
             icon: item.icon,
             color: color,
-            onTap: () {},
+            // This used to be a literal no-op `onTap: () {}`, so EVERY sidebar entry that has
+            // children was dead: it could not navigate, and its children only render when one of
+            // them is already the current route (`if (isExpanded)`) - which could never happen.
+            // That is why, in the Factory panel, only Dashboard and Orders (the two items without
+            // children) were clickable. Navigating to the item's own route is the fix: the parent
+            // route IS its list screen, and being on it makes the sub-entries appear.
+            onTap: item.route != null ? () => context.go(item.route!) : () {},
             height: 72,
           ),
           if (isExpanded)
