@@ -42,6 +42,37 @@
   },
 
   // ==========================================================================
+  // YAML language server — SchemaStore fetch band.
+  //
+  // `.github/workflows/*.yml` par yaml-language-server GitHub Actions ka schema
+  // SchemaStore (schemastore.org) se download karta hai. Is machine par woh
+  // fetch fail hota hai, is liye content bilkul valid hone ke bawajood har
+  // workflow file par "Unable to load schema" aata hai (6/6 files — chhe woh
+  // bhi jo kabhi touch nahi hui; yani error files ka nahi, network ka hai).
+  // Verify: `python -c "import yaml"` sab 6 ko OK keh raha hai aur `git status
+  // .github` bilkul clean hai.
+  //
+  // `schemaStore.enable: false` remote catalog download rok deta hai; YAML
+  // syntax validation barqarar rehti hai. Trade-off: workflow YAML ka
+  // schema-based autocomplete/validation band ho jata hai.
+  //
+  // Agar kisi doosre machine par internet theek hai aur wahan workflow schema
+  // chahiye, to yeh block USER settings mein move kar lein
+  // (Zed -> Settings -> Open User Settings) — yeh machine-specific workaround hai.
+  // ==========================================================================
+  "lsp": {
+    "yaml-language-server": {
+      "settings": {
+        "yaml": {
+          "schemaStore": {
+            "enable": false
+          }
+        }
+      }
+    }
+  },
+
+  // ==========================================================================
   "file_scan_exclusions": [
     "...",
 
