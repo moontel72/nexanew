@@ -4,12 +4,20 @@
 // Version: 2.0 - Comprehensive structure with all endpoints
 // Includes backward compatibility for existing code
 
+import 'package:trace_odd/core/config/api_config.dart';
+
 class ApiEndpoints {
-  // Base URL - should be loaded from environment variables
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://135.181.46.27/api/v1',
-  );
+  // Base URL — resolved at RUNTIME, exactly like ApiConfig / Environment:
+  // same-origin on web, --dart-define=API_BASE_URL override, IP fallback for native.
+  //
+  // It used to be `const String.fromEnvironment('API_BASE_URL', defaultValue:
+  // 'http://135.181.46.27/api/v1')`. Because the main web bundle is built WITHOUT a
+  // --dart-define, every caller got the hardcoded HTTP IP — so once the panels were served
+  // over HTTPS the browser blocked the calls as MIXED CONTENT. That is why the Super Admin
+  // company list and the Sub-Admin lists failed with "failed to fetch" / "Unexpected error"
+  // on admin.traceodd.com. All members below are relative paths, so this is the single
+  // place that needed to change.
+  static String get baseUrl => ApiConfig.apiBaseUrl;
 
   // ==================== AUTHENTICATION ENDPOINTS ====================
   static const String login = '/auth/login';

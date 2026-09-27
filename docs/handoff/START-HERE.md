@@ -364,6 +364,66 @@ rm -f make-admin-spine.php
 
 ---
 
+## 6b. Live issues found while testing (2026-09-26/27) — one fixed, two open
+
+Reported from the live server right after C2b deployed. Three **separate** causes; do not confuse them.
+
+### ✅ FIXED — every panel called the API over plain HTTP (`Mixed Content`)
+
+**Symptom:** `admin.traceodd.com/companies` showed *"Unexpected error: failed to fetch"*, and no factory
+appeared in either panel.
+
+**Cause:** there were **three** base-URL sources, and only one was correct:
+
+| Source | Value | Verdict |
+|---|---|---|
+| `core/config/environment.dart` → `ApiConfig.apiBaseUrl` | same-origin on web, `--dart-define` override, IP fallback | ✅ correct |
+| `core/constants/api_endpoints.dart` → `ApiEndpoints.baseUrl` | **`String.fromEnvironment('API_BASE_URL', defaultValue: 'http://135.181.46.27/api/v1')`** | ❌ the web bundle is built **without** the define → hardcoded **HTTP** |
+| `core/constants/app_constants.dart` + `core/navigation/panel_routes.dart` | hardcoded `http://135.181.46.27` | ❌ same trap |
+
+The admin panel's Dio client (`app_providers.dart`) and `api_client.dart` both use `ApiEndpoints.baseUrl`,
+so every call went to `http://135.181.46.27/...` — and an HTTPS page may not fetch that. The browser blocked
+it (`Mixed Content … the content must be served over HTTPS`), which is why the lists looked *empty* rather
+than erroring in the app.
+
+**Fix:** all three now resolve at **runtime** through `ApiConfig.apiBaseUrl` (same-origin on web). The
+sub-admin panel's calls already used `ApiConfig`, which is why its analytics request reached the server —
+that is how the two symptoms stayed separate.
+
+### ⏳ OPEN — `GET /api/v1/admin/analytics/dashboard` returns **500**
+
+Not caused by C0–C2b. It is `AnalyticsService` (Module 1D, marked *"additive"*), and the route itself is
+fine — the admin group's `analytics` block is only **mis-indented**, so it really is
+`admin/analytics/dashboard`.
+
+**Get the real exception** (the only reliable way — the code alone is ambiguous):
+
+```bash
+sudo tail -n 100 /var/www/traceodd/admin-panel/storage/logs/laravel.log
+```
+
+Two suspects, in order:
+
+1. **`AnalyticsService.php:233`** — `DB::getPdo()->getAttribute(\PDO::ATTR_CONNECTION_STATUS)`. That attribute
+   is a **MySQL** feature; the pgsql driver commonly answers with `SQLSTATE[IM001] Driver does not support
+   this function`. It is the only use of it in the whole backend, and it is on this exact path.
+2. `base_codes.generated_at` — read at `computeRealtimeDashboard():216` and `computeHealthScore():231,234`.
+   If that column is absent, the query itself is the 500.
+
+Do **not** blind-fix: one line in the log names the culprit.
+
+### ⏳ OPEN — service worker served as `text/html`
+
+```
+Failed to register a ServiceWorker … 'flutter_service_worker.js' … unsupported MIME type ('text/html')
+```
+
+nginx fell through to `try_files … /index.html` for that path, so `flutter_service_worker.js` is **missing
+from the deployed directory** (or a `location` block for it is absent). Cosmetic — the app still runs — but
+it also means Flutter's own cache-busting is off. Check the deployed bundle and `.nginx/*.conf`.
+
+---
+
 ## 7. Owner's decisions recorded 2026-09-26 (second round)
 
 | Topic | Decision |

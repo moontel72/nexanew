@@ -2,13 +2,17 @@
 // App Constants for NexaTrace System
 // This file contains application-wide constants
 
+import 'package:trace_odd/core/config/api_config.dart';
+
 class AppConstants {
   // App Info
   static const String appName = 'NexaTrace';
   static const String appVersion = '1.0.0';
 
   // API Configuration
-  static const String baseUrl = 'http://135.181.46.27/api/v1';
+  // Runtime-resolved (same-origin on web) — a hardcoded HTTP IP here breaks every call on an
+  // HTTPS host as MIXED CONTENT. Use ApiConfig.apiBaseUrl for new code.
+  static String get baseUrl => ApiConfig.apiBaseUrl;
   static const int apiTimeout = 30000; // 30 seconds
 
   // Pagination

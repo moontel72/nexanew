@@ -9,6 +9,8 @@
 // and the Dio interceptor's token scoping.
 
 import 'package:flutter/foundation.dart';
+import 'package:trace_odd/core/config/api_config.dart';
+import 'package:trace_odd/core/config/environment.dart';
 
 // ─────────────────────────────────────────────────────────────
 // Panel Enumeration
@@ -188,11 +190,15 @@ enum UserPanel {
 class PanelRouteConfig {
   PanelRouteConfig._();
 
-  /// Backend server base URL (Hetzner dedicated).
-  static const String baseUrl = 'http://135.181.46.27';
+  /// Backend server base URL.
+  ///
+  /// Runtime-resolved (same-origin on web, `--dart-define=API_BASE_URL` override, IP fallback for
+  /// native) — see `core/config/environment.dart`. This used to be a compile-time const holding the
+  /// HTTP IP, which broke every call on an HTTPS host as MIXED CONTENT.
+  static String get baseUrl => Environment.apiBaseUrl;
 
   /// Full API base URL with version.
-  static const String apiBaseUrl = '$baseUrl/api/v1';
+  static String get apiBaseUrl => ApiConfig.apiBaseUrl;
 
   /// Timeout values (milliseconds).
   static const int connectTimeoutMs = 30000;
