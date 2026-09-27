@@ -114,11 +114,9 @@ class SuperAdminShell extends StatelessWidget {
             icon: Icons.apartment,
             route: '/companies',
           ),
-          AdminSidebarItem(
-            label: 'Create New Factory',
-            icon: Icons.add_business,
-            route: '/companies/register',
-          ),
+          // 'Create New Factory' was here. Removed 2026-09-26 (C3): factory admins are now
+          // created by the Factory Sub-Admin (GROUP-INCHARGE-MODEL.md §2b.7), and the Super Admin
+          // keeps the registry as READ-ONLY — 'View All Factories' above.
         ],
       ),
       AdminSidebarSection(
@@ -219,7 +217,6 @@ class SuperAdminShell extends StatelessWidget {
     if (location.startsWith('/resellers')) return 'Reseller Management';
     if (location.startsWith('/sub-admins/add')) return 'Add Sub-Admin';
     if (location.startsWith('/sub-admins')) return 'Sub-Admin Management';
-    if (location.startsWith('/companies/register')) return 'Create New Factory';
     if (location.startsWith('/companies')) return 'Factory Management';
     if (location.startsWith('/plans/create')) return 'Create New Plan';
     if (location.startsWith('/plans')) return 'Subscription Plans';
@@ -246,9 +243,6 @@ class SuperAdminShell extends StatelessWidget {
     }
     if (location.startsWith('/sub-admins')) {
       return const ['Sub Admins', 'View All Sub-Admins'];
-    }
-    if (location.startsWith('/companies/register')) {
-      return const ['Factories', 'Create New Factory'];
     }
     if (location.startsWith('/companies')) {
       return const ['Factories', 'View All Factories'];

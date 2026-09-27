@@ -16,7 +16,6 @@ import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/b
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/plans/plans_list_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/plans/create_plan_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/companies/companies_list_screen.dart';
-import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/companies/register_company_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/companies/company_detail_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_company_login_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_company_login_screen.dart';
@@ -674,12 +673,6 @@ class AppRouter {
           builder: (context, state) => const CompaniesListScreen(inShell: true),
           routes: [
             GoRoute(
-              path: 'register',
-              name: 'company_register',
-              builder: (context, state) =>
-                  const RegisterCompanyScreen(inShell: true),
-            ),
-            GoRoute(
               path: ':id',
               name: 'company_detail',
               builder: (context, state) {
@@ -1063,8 +1056,6 @@ class AppRouter {
   void goToDashboard(BuildContext context) => context.go('/dashboard');
   void goToPlans(BuildContext context) => context.go('/plans');
   void goToCompanies(BuildContext context) => context.go('/companies');
-  void goToRegisterCompany(BuildContext context) =>
-      context.go('/companies/register');
   void goToCompanyDetail(BuildContext context, String companyId) =>
       context.go('/companies/$companyId');
   void goToFactoryLogin(BuildContext context) => context.go('/factory/login');

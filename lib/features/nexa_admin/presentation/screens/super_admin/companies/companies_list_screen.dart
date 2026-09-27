@@ -6,7 +6,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
-import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 import 'package:trace_odd/shared/widgets/cards/company_card.dart';
 import 'package:trace_odd/shared/widgets/empty_states/empty_state_widget.dart';
 import 'package:trace_odd/shared/widgets/error_state/error_state_widget.dart';
@@ -120,9 +119,9 @@ class _CompaniesListScreenState extends State<CompaniesListScreen> {
     context.read<AppRouter>().goToCompanyDetail(context, company.id);
   }
 
-  void _onRegisterCompany() {
-    context.read<AppRouter>().goToRegisterCompany(context);
-  }
+  // _onRegisterCompany was removed 2026-09-26 (C3): the Super Admin no longer creates factories.
+  // Factory admins are created by the Factory Sub-Admin (GROUP-INCHARGE-MODEL.md §2b.7), so this
+  // registry is READ-ONLY.
 
   void _onExportCompanies() {
     context.read<CompanyManagementBloc>().add(
@@ -177,44 +176,10 @@ class _CompaniesListScreenState extends State<CompaniesListScreen> {
             ),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isNarrow = constraints.maxWidth < 520;
-
-                final search = custom_search.SearchBar(
-                  controller: _searchController,
-                  hintText: 'Search companies...',
-                  onSearchChanged: _onSearchChanged,
-                );
-
-                final register = PrimaryButton(
-                  onPressed: _onRegisterCompany,
-                  text: 'Register',
-                  icon: Icons.add_business,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 16.w,
-                    vertical: 12.h,
-                  ),
-                );
-
-                if (isNarrow) {
-                  return Column(
-                    children: [
-                      search,
-                      Gap(12.h),
-                      SizedBox(width: double.infinity, child: register),
-                    ],
-                  );
-                }
-
-                return Row(
-                  children: [
-                    Expanded(child: search),
-                    Gap(12.w),
-                    register,
-                  ],
-                );
-              },
+            child: custom_search.SearchBar(
+              controller: _searchController,
+              hintText: 'Search companies...',
+              onSearchChanged: _onSearchChanged,
             ),
           ),
           BlocBuilder<CompanyManagementBloc, CompanyManagementState>(
@@ -462,14 +427,10 @@ class _CompaniesListScreenState extends State<CompaniesListScreen> {
               return EmptyState(
                 icon: Icons.business,
                 title: 'No Companies Found',
+                // No create action: this registry is read-only for the Super Admin (C3).
                 description: _currentSearch.isNotEmpty
                     ? 'No companies match your search criteria'
-                    : 'Register your first company to get started',
-                actionButton: PrimaryButton(
-                  text: 'Register Company',
-                  onPressed: _onRegisterCompany,
-                  width: 220,
-                ),
+                    : 'Factories are created by the Factory Sub-Admin',
               );
             }
 

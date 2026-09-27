@@ -311,15 +311,21 @@ C1 registers that ownership **in the grant model**: feature codes `plans.*` and 
 > `isSubAdminAuthenticatedCache`. Moving those screens to the Financial Auditor's own panel — and teaching
 > the guard about per-vertical reach — is **Phase 6** work, not C1.
 
-### 2b.4 Open items this design does not settle (they are the owner's)
+### 2b.4 The three open items — **answered by the owner, 2026-09-26**
 
-| # | Question | Recommended default, if the owner wants one |
+| # | Question | Owner's decision |
 |---|---|---|
-| a | Does a Sub-Admin **create** group accounts outright, or create and the **Super Admin approves**? (§5.1a) | **Create outright, audited** — provisioning the group is the sub-admin's job and the audit chain records it; an approval step adds a second human to every signup |
-| b | After C3, does the Super Admin keep **read** access to the company registries? (§5.1b) | **Read-only** — the owner's own rule from §3: *inspect everything, mutate nothing* |
-| c | Confirm `financial_auditor` reads **billing data only** across groups, not operational data (§5.1c) | **Billing only** — its bundle is `plans.*` + `billing.*`; operational grants stay with each group's vertical |
+| a | Does a Sub-Admin **create** group accounts outright, or create and the **Super Admin approves**? (§5.1a) | **Creates outright, audited.** No second approver: provisioning the group is the sub-admin's own job, and the audit chain is the record. *(Confirmed: "a = main khud karoon ga, yes".)* |
+| b | After C3, does the Super Admin keep **read** access to the company registries? (§5.1b) | **Read-only.** Split this into what it actually covers — see the note below, because the answer covers **two** different surfaces. |
+| c | Confirm `financial_auditor` reads **billing data only** across groups, not operational data (§5.1c) | **Billing only.** Its bundle is `plans.*` + `billing.*`; operational grants stay with each group's vertical. See §1.1 (it is "Sub-Admin 4 — Financial & Subscription Auditor", the cross-cutting money vertical). |
 
-None of these blocks C1 (purely additive registry data). They **do** gate C3–C5.
+> **(b) is two surfaces, not one — and both are "inspect everything, mutate nothing":**
+>
+> 1. **The Super Admin's own registry screens** (`/companies`, and the other group registries). These stay,
+>    but they are **read-only** after C3 — the *create* action is gone. This is the part C3 touches today.
+> 2. **The "enter a sub-admin's panel and watch" view.** The owner's reading is exactly right: the Super
+>    Admin may **look inside any sub-admin's dashboard** but **change nothing**. That is **C4 + C5**
+>    (§3) — **not built yet**, and §1.3 records that nothing of it exists today.
 
 ### 2b.5 What C1 delivered
 
@@ -336,11 +342,11 @@ Additive, idempotent, and mirroring the `CricketFeatureRegistrySeeder` pattern:
 Still owned by Phase 6: per-vertical dashboard scoping in Flutter, request-time grant enforcement, and the
 route-to-feature map.
 
-> **A new vertical lands on the *shared* sub-admin dashboard today.** `sub_admin_dashboard.dart` scopes only
-> `cricket_ops`; every other vertical falls through to the bus console (`§D3`). That is pre-existing and
-> unchanged by C1 — but it means appointing a `factory` incharge right now shows the bus dashboard, not a
-> factory one. Fixing it is the Phase 6 UI work, and it is the reason C1 deliberately did **not** invent
-> per-vertical dashboards.
+> **A vertical with no dashboard of its own lands on the *shared* bus console.** `sub_admin_dashboard.dart`
+> scopes `cricket_ops` and (since C2) `factory`; every other vertical falls through to `_busDashboard`
+> (`§D3`). So appointing a `factory` incharge now gets the **factory** dashboard (§2b.7) — but a
+> `vehicle_security` or `trust_safety` incharge still gets the bus console, which is exactly why those two
+> are stubs and why per-vertical scoping is Phase 6 work.
 
 ### 2b.6 One wildcard caveat found while writing C1
 
@@ -391,6 +397,44 @@ cannot keep a working admin login.
 **Still not here (Phase 6, by design):** vertical enforcement. `admin/factory-companies/*` sits behind the
 `admin` middleware, which admits any active sub-admin — exactly as `bus-companies` does today. Only the
 *scoping* is new; confining a vertical to its own endpoints is the route-to-feature map (§2b.3).
+
+### 2b.8 What C3 delivered — the Super Admin no longer creates factories
+
+C3 is the owner's core requirement: *"take the Super Admin panel out of every group's account
+creation."* The factory replacement already exists (C2), so the Super Admin's factory **creation** path is
+now removed — and its **registry** is left in place, read-only, per the owner's (b) answer.
+
+| Removed | Where |
+|---|---|
+| The **"Create New Factory"** sidebar item | `super_admin_shell.dart` — its *Factories* section now holds only *View All Factories* |
+| The **`/companies/register`** `GoRoute` + its import | `app_router.dart` |
+| The **`goToRegisterCompany`** helper | `app_router.dart` |
+| The **Register / Register Company** buttons (toolbar and empty state) | `companies_list_screen.dart` — the empty state now says *"Factories are created by the Factory Sub-Admin"* |
+| The title + breadcrumb branches for `/companies/register` | `super_admin_shell.dart` — a stale branch here shows the wrong page title |
+| **4 dead files** — `register_company_screen.dart`, `company_register_bloc.dart`, `company_register_event.dart`, `company_register_state.dart` | the register bloc was instantiated only by that screen (it is in no provider list), so all four are orphaned at once. Note their `part`/`part of` relationship: the event/state files cannot outlive the bloc file |
+| **`CompanyManagementRepository.createCompanyFromMap`** | called by nothing else once the register bloc goes (verified by grep) |
+
+**Deliberately NOT removed — and why:**
+
+- **The companies registry** (`/companies` → `CompaniesListScreen`, `CompanyDetailScreen`) stays. It is the
+  Super Admin's **read-only** view, per (b).
+- **`AdminCompanyController@store`** and the `POST /api/v1/admin/companies` route stay. Nothing in the
+  Flutter app calls them any more, but removing a backend route that other callers may still use is not
+  C3's job, and it is the kind of change that needs its own verification.
+- **`/resellers/add`** stays. The roadmap says *"Factory now; **confirm** B2B/Reseller"* — and the honest
+  reason is that **no sub-admin replacement exists for resellers yet**. Removing that path today would leave
+  no way to create a reseller at all. B2B/Reseller needs its own C2-shaped step first (scoped endpoints +
+  sub-admin UI), and **that is not yet planned as its own row** — recorded as a gap below.
+
+> **Gap found while doing C3:** the roadmap has no row for *"B2B/Reseller creation moves to the
+> `commercial_marketplace` Sub-Admin"*. C3 can only be completed for Factory until that exists. Suggest
+> calling it **C2b** and running it before the Super Admin's reseller path is touched.
+
+**Verification:** `dart analyze` on all four touched files — *No issues found!*; `node
+.scripts/check-panel-isolation.mjs` — green (28/28); a project-wide grep for the deleted file and class
+names returns nothing. The warnings that remain in the analysed package are all in files C3 never touched
+(`bus_fleet_dashboard_screen.dart`, `company_detail_screen.dart`, `invoice_status_badge.dart`,
+`all_tickets_screen.dart`) and are pre-existing.
 
 ---
 
@@ -452,7 +496,7 @@ the owner tests the panels.
 | # | Item | Why now |
 |---|---|---|
 | **A1** | **Remove the double-hash footgun.** `AdminUser::setPasswordAttribute` (and `GlobalIdentity`'s) currently re-hash anything given to them, so passing an already-hashed value silently breaks login. Guard with `Hash::isHashed()` — Laravel's own `hashed` cast behaviour | The owner hit exactly this trap; one line prevents a lockout |
-| **A2** | ✅ **Checked 2026-09-26 — no action needed.** `CompanyRegisterBloc` is used by `super_admin/companies/register_company_screen.dart`, which was **not** deleted (it is the generic factory registry at `/companies/register`, and §6 keeps it as platform). So it is **not orphaned** — leave it | Finishes the duplicate removal |
+| **A2** | ✅ **Checked 2026-09-26 — and now superseded by C3.** `CompanyRegisterBloc` was used only by `super_admin/companies/register_company_screen.dart`. At A2's time that screen was kept, so the bloc was not orphaned. **C3 removed the screen and the bloc** (plus its event/state parts) — see §2b.8 | Finished at C3 |
 | **A3** | ✅ **Done (`3b072d09`).** The dead `Missile3DButton(label: 'Bus Companies', onTap: () {})` was **removed** from `sub_admin_dashboard.dart` (its replacement is a comment saying why), because bus-company management is already inline in the same dashboard | Dead button in a live panel — resolved |
 
 **Verify:** `dart analyze <changed files>` + `node .scripts/check-panel-isolation.mjs` green.
@@ -470,7 +514,7 @@ the owner tests the panels.
 | **C0** | **Design doc**: group → vertical → which accounts that vertical creates | ✅ **done 2026-09-26 — §2b.** Registry, creation matrix, what `plans/**` + `billing/**` ownership means, and the 3 open owner items (a/b/c) recorded in §2b.4 |
 | **C1** | **Add the missing verticals** — `factory`, and stubs for `vehicle_security` / `trust_safety` — to `sub_admin_verticals` (seeder + `SubAdminController` validation) | ✅ **done 2026-09-26 — §2b.5.** Additive seeder + deploy step + DB-driven validation; `financial_auditor`'s `plans.*` / `billing.*` codes and bundle entries registered |
 | **C2** | **Factory account creation moves to the Factory Sub-Admin.** Backend endpoints (mirror the `bus-companies` CRUD pattern) + the Sub-Admin UI | ✅ **done 2026-09-26 — §2b.7.** Scoped `admin/factory-companies/*` + Factory Sub-Admin UI. The Super Admin's `/companies/register` path is left in place until **C3** |
-| **C3** | **Remove group-account creation from the Super Admin** for every group (Factory now; confirm B2B/Reseller). Super Admin keeps only *platform* accounts (sub-admins, plans, billing, registries as read-only) | This is the owner's core requirement |
+| **C3** | **Remove group-account creation from the Super Admin** for every group (Factory now; confirm B2B/Reseller). Super Admin keeps only *platform* accounts (sub-admins, plans, billing, registries as read-only) | ✅ **done for Factory 2026-09-26 — §2b.8.** The `/companies/register` path + its 4 orphaned files are gone; the registry stays read-only. ⚠️ **B2B/Reseller cannot be done yet** — no sub-admin replacement exists (proposed **C2b**) |
 | **C4** | **Super Admin observation view** — per-group activity feed + payment records/graphs, read-only | Delivers most of the intent safely |
 | **C5** | **Audited "enter sub-admin view"** — the §3 requirements above | Build only after C4, and only with the audit chain in place |
 
@@ -483,22 +527,21 @@ the owner tests the panels.
 | 1 | `financial_auditor` scope | **Not cross-cutting by accident — it is the biggest sub-admin role.** Creates/controls/changes the subscription plans of **every** group and the invoices of **every** group's users. See §1.1 |
 | 2 | Groups 7 (Vehicle Security) / 8 (Trust & Safety) | **Work on them per their phase** — their incharges are created with the rest in C1, not ahead of their panels |
 | 3 | Who approves a group's admin accounts | **Still open** — the owner said *"create, approved etc"*. Fold into **C0** |
-| 4 | Super Admin keeps read access to company registries? | **Still open** — folded into **C0 / C3** |
+| 4 | Super Admin keeps read access to company registries? | ✅ **Answered — read-only** (§2b.4), plus *look-inside-without-changing* for sub-admin panels (C4+C5). Done for Factory in **C3** |
 | 5 | Impersonation design | ✅ **Agreed, with one refinement:** every button stays **clickable for inspection**, but mutating buttons are **locked**, and the real block is server-side. See §3 |
 
 **Also agreed:** build the **read-only group activity + payments view first** (C4), and the
 "enter dashboard" click-through (C5) **last**, with the audit chain.
 
-### 5.1 Still open after this round
+### 5.1 Closed — all three answered 2026-09-26
 
-All three are now written up **with a recommended default** in §2b.4, so the owner can answer by
-confirming or overriding; none of them blocks C1.
+All three are answered in full in §2b.4 (with what (b) actually covers, since it is **two** surfaces):
 
-| # | Item |
-|---|---|
-| a | Sub-Admin **creates** accounts outright, or creates and the Super Admin **approves**? (Q3) → §2b.4 |
-| b | After C3, does the Super Admin keep **read** access to the company registries? (Q4) → §2b.4 |
-| c | `financial_auditor` — confirm it reads **billing data only** across groups, not operational data → §2b.4 |
+| # | Item | Answer |
+|---|---|---|
+| a | Sub-Admin **creates** accounts outright, or creates and the Super Admin **approves**? (Q3) | ✅ **Creates outright, audited** |
+| b | After C3, does the Super Admin keep **read** access to the company registries? (Q4) | ✅ **Read-only** — and it may also *look inside* any sub-admin's panel without changing anything (that is **C4+C5**, §3, not built yet) |
+| c | `financial_auditor` — billing data only across groups, not operational data? | ✅ **Billing only** |
 
 ---
 
@@ -509,3 +552,4 @@ confirming or overriding; none of them blocks C1.
 | 2026-09-26 | Created from the owner's directive. Gap analysis verified against `SubAdminSeeder`, `SubAdminController`, `super_admin_shell.dart` and the `SubAdminBloc` endpoint list. Phased roadmap and the impersonation safety requirements recorded. |
 | 2026-09-26 | **C0 delivered (§2b)** — group→vertical registry, the creation matrix, what `plans/**` + `billing/**` ownership means, the 3 open owner items with recommended defaults, and the wildcard-hygiene caveat (§2b.6). **C1 delivered (§2b.5)** — `SubAdminVerticalExpansionSeeder` (`factory` / `vehicle_security` / `trust_safety` + `financial_auditor`'s plans/billing codes), registered in `DatabaseSeeder` and `deploy.yml`, plus DB-driven vertical validation in `SubAdminController` and the two Super Admin screens. |
 | 2026-09-26 | **C2 delivered (§2b.7)** — `SubAdminFactoryCompanyController` + `admin/factory-companies/*` routes, scoped to the creating sub-admin; Factory Sub-Admin UI (`_factoryDashboard` + add/edit sheets + status card) in the shared Sub-Admin panel. Super Admin's `/companies/register` untouched until C3. |
+| 2026-09-26 | **Owner answered (a)/(b)/(c)** (§2b.4): sub-admins create outright (audited); the Super Admin keeps **read-only** registries and may *look inside* a sub-admin's panel without changing anything (that is C4+C5, not built); `financial_auditor` stays **billing-only**. **C3 delivered for Factory (§2b.8)** — the Super Admin's `/companies/register` path and its 4 orphaned files removed; registry kept read-only. B2B/Reseller flagged as needing **C2b** first. |

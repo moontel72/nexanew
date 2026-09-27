@@ -163,58 +163,6 @@ class CompanyManagementRepository {
     }
   }
 
-  Future<Company> createCompanyFromMap(Map<String, dynamic> companyData) {
-    return createCompany(
-      name: companyData['name']?.toString() ?? '',
-      businessRegistrationNumber:
-          companyData['business_registration_number']?.toString() ??
-          companyData['registration_number']?.toString() ??
-          '',
-      taxId: companyData['tax_id']?.toString(),
-      companyType:
-          companyData['company_type']?.toString() ??
-          companyData['type']?.toString() ??
-          '',
-      industryType:
-          companyData['industry_type']?.toString() ??
-          companyData['industry']?.toString() ??
-          '',
-      email: companyData['email']?.toString() ?? '',
-      phone: companyData['phone']?.toString(),
-      website: companyData['website']?.toString(),
-      country: companyData['country']?.toString() ?? '',
-      city: companyData['city']?.toString() ?? '',
-      address: companyData['address']?.toString(),
-      postalCode: companyData['postal_code']?.toString(),
-      contactPersonName:
-          companyData['contact_person_name']?.toString() ??
-          (companyData['contact_person'] is Map
-              ? (companyData['contact_person'] as Map)['name']?.toString()
-              : null) ??
-          '',
-      contactPersonEmail:
-          companyData['contact_person_email']?.toString() ??
-          (companyData['contact_person'] is Map
-              ? (companyData['contact_person'] as Map)['email']?.toString()
-              : null) ??
-          '',
-      contactPersonPhone:
-          companyData['contact_person_phone']?.toString() ??
-          (companyData['contact_person'] is Map
-              ? (companyData['contact_person'] as Map)['phone']?.toString()
-              : null) ??
-          '',
-      contactPersonPosition: companyData['contact_person_position']?.toString(),
-      timezone: companyData['timezone']?.toString(),
-      language: companyData['language']?.toString(),
-      currency: companyData['currency']?.toString(),
-      planId: companyData['plan_id']?.toString(),
-      billingCycle: companyData['billing_cycle']?.toString(),
-      adminNotes: companyData['admin_notes']?.toString(),
-      password: companyData['password']?.toString(),
-    );
-  }
-
   Future<Company> updateCompany({
     required String id,
     String? name,
