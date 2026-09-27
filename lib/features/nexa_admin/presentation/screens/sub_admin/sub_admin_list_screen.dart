@@ -119,10 +119,13 @@ class SubAdminListScreen extends StatelessWidget {
                           ],
                         ),
                         const Gap(4),
-                        const Text(
-                          'Four verticals: Bus Transit · Goods & Logistics · '
-                          'Commercial Marketplace · Financial Auditor',
-                          style: TextStyle(
+                        Text(
+                          // Count comes from the shared registry, so this caption
+                          // cannot go stale again (it used to hardcode "Four
+                          // verticals" while eight existed).
+                          '${SubAdminVerticals.all.length} verticals — '
+                          'each sub-admin manages exactly one.',
+                          style: const TextStyle(
                             fontSize: 13,
                             color: AppColors.textSecondary,
                           ),

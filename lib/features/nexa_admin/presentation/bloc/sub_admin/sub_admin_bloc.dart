@@ -136,16 +136,22 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
     final name = p.getString('sub_admin_name') ?? 'Sub-Admin';
     emit(state.copyWith(subAdminName: name));
     add(const LoadDashboardMetrics());
-    add(const FetchBusCompanies());
-    // Factory vertical additionally loads its own list (step C2,
-    // GROUP-INCHARGE-MODEL.md §2b/§4).
-    if ((p.getString('sub_admin_vertical') ?? '') == 'factory') {
+    // Load only the list this vertical's dashboard actually renders. The bus
+    // list used to be fetched for EVERY vertical — a needless API call for
+    // factory / marketplace, whose dashboards never show it.
+    final vertical = p.getString('sub_admin_vertical') ?? '';
+    if (vertical == 'factory') {
+      // Factory panel (C2, GROUP-INCHARGE-MODEL.md §2b/§4).
       add(const FetchFactoryCompanies());
-    }
-    // Reseller vertical additionally loads its own list (step C2b,
-    // GROUP-INCHARGE-MODEL.md §2b).
-    if ((p.getString('sub_admin_vertical') ?? '') == 'commercial_marketplace') {
+    } else if (vertical == 'commercial_marketplace') {
+      // Marketplace panel (C2b, GROUP-INCHARGE-MODEL.md §2b).
       add(const FetchResellerAccounts());
+    } else if (vertical == 'cricket_ops') {
+      // The cricket dashboard loads its own managers on demand.
+    } else {
+      // bus_transit / goods_logistics / financial_auditor share the bus
+      // dashboard, which lists bus companies.
+      add(const FetchBusCompanies());
     }
   }
 
