@@ -83,10 +83,13 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
           'sub_admin_name',
           (data['display_name'] ?? 'Sub-Admin').toString(),
         );
+        // Only the resolved vertical code is meaningful here. Falling back to
+        // `identity_type` (always 'sub_admin' for this endpoint) stored a value
+        // that matched no vertical, so the dashboard silently fell through to
+        // the bus default — see resolveSubAdminVertical() in the backend.
         await prefs.setString(
           'sub_admin_vertical',
-          (data['sub_admin_vertical'] ?? data['identity_type'] ?? '')
-              .toString(),
+          (data['sub_admin_vertical'] ?? '').toString(),
         );
         await prefs.setString(
           'sub_admin_email',

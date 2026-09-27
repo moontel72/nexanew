@@ -6,76 +6,16 @@ import 'package:go_router/go_router.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_bloc.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_event.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_state.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_verticals.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
 class AddSubAdminScreen extends StatelessWidget {
   final bool inShell;
   const AddSubAdminScreen({super.key, this.inShell = false});
 
-  static const _verticals = [
-    {
-      'code': 'bus_transit',
-      'label': 'Bus Transit Manager',
-      'icon': Icons.directions_bus_rounded,
-      'desc':
-          'Public transport ecosystem: bus owners, routes, seat layouts, ticketing',
-    },
-    {
-      'code': 'goods_logistics',
-      'label': 'Goods & Logistics Manager',
-      'icon': Icons.local_shipping_rounded,
-      'desc': 'Truck fleet, freight auctions, factory drivers, store keepers',
-    },
-    {
-      'code': 'commercial_marketplace',
-      'label': 'Commercial Marketplace Manager',
-      'icon': Icons.storefront_rounded,
-      'desc': 'B2B marketplace, anti-counterfeit, factories, resellers, shops',
-    },
-    {
-      'code': 'financial_auditor',
-      'label': 'Financial & Subscription Auditor',
-      'icon': Icons.account_balance_rounded,
-      'desc': 'Cross-vertical subscriptions, commissions, penalties, disputes',
-    },
-    {
-      'code': 'cricket_ops',
-      'label': 'Cricket Operations Manager',
-      'icon': Icons.sports_cricket,
-      'desc':
-          'Live cricket streaming, tournament setup, scorekeeping, sponsors & manager provisioning',
-    },
-    // Group 3 — Factory. Vertical registered in C1 (GROUP-INCHARGE-MODEL.md §2b.1).
-    {
-      'code': 'factory',
-      'label': 'Factory Manager',
-      'icon': Icons.precision_manufacturing_rounded,
-      'desc': 'Approves the factory admin accounts of the Factory group',
-    },
-    // Group 7 / Group 8 — stubs: the vertical exists, the panel does not yet (C0 §2b.1).
-    {
-      'code': 'vehicle_security',
-      'label': 'Vehicle Security Manager (IoT)',
-      'icon': Icons.directions_car_rounded,
-      'desc': 'IoT vehicle tracking & immobilization — panel not built yet',
-    },
-    {
-      'code': 'trust_safety',
-      'label': 'Trust & Safety Manager',
-      'icon': Icons.verified_user_rounded,
-      'desc': 'Banknote authentication & trust surfaces — panel not built yet',
-    },
-  ];
-  static const _verticalColors = {
-    'bus_transit': Color(0xFF7C3AED),
-    'goods_logistics': Color(0xFFDB2777),
-    'commercial_marketplace': Color(0xFF2563EB),
-    'financial_auditor': Color(0xFFD97706),
-    'cricket_ops': Color(0xFF10B981),
-    'factory': Color(0xFF0284C7),
-    'vehicle_security': Color(0xFF0D9488),
-    'trust_safety': Color(0xFF9333EA),
-  };
+  // The vertical registry (code / label / icon / colour / description) lives in
+  // sub_admin_verticals.dart — one source shared with the management list and
+  // the dashboard sidebar, so a new vertical appears everywhere at once.
 
   @override
   Widget build(BuildContext context) {
@@ -115,9 +55,7 @@ class _AddSubAdminViewState extends State<_AddSubAdminView> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedColor =
-        AddSubAdminScreen._verticalColors[_selectedVertical] ??
-        AppColors.primary;
+    final selectedColor = SubAdminVerticals.color(_selectedVertical);
 
     return BlocConsumer<SubAdminBloc, SubAdminState>(
       listener: (ctx, state) {
@@ -201,7 +139,7 @@ class _AddSubAdminViewState extends State<_AddSubAdminView> {
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                   ),
                   const Gap(10),
-                  ...AddSubAdminScreen._verticals.map(
+                  ...SubAdminVerticals.all.map(
                     (v) => _verticalOption(v, selectedColor),
                   ),
                   const Gap(24),
@@ -367,10 +305,10 @@ class _AddSubAdminViewState extends State<_AddSubAdminView> {
     );
   }
 
-  Widget _verticalOption(Map<String, dynamic> v, Color selectedColor) {
-    final code = v['code'] as String;
+  Widget _verticalOption(SubAdminVertical v, Color selectedColor) {
+    final code = v.code;
     final isSelected = _selectedVertical == code;
-    final color = AddSubAdminScreen._verticalColors[code] ?? AppColors.primary;
+    final color = SubAdminVerticals.color(code);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       elevation: isSelected ? 2 : 0,
@@ -395,7 +333,7 @@ class _AddSubAdminViewState extends State<_AddSubAdminView> {
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(v['icon'] as IconData, color: color, size: 20),
+                child: Icon(v.icon, color: color, size: 20),
               ),
               const Gap(12),
               Expanded(
@@ -403,7 +341,7 @@ class _AddSubAdminViewState extends State<_AddSubAdminView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      v['label'] as String,
+                      v.label,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -411,7 +349,7 @@ class _AddSubAdminViewState extends State<_AddSubAdminView> {
                       ),
                     ),
                     Text(
-                      v['desc'] as String,
+                      v.description,
                       style: const TextStyle(
                         fontSize: 11,
                         color: AppColors.textSecondary,

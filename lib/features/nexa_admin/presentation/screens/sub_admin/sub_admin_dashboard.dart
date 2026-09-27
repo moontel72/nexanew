@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_bloc.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_event.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_state.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_verticals.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/buttons/missile_3d_button.dart';
 import 'package:trace_odd/core/services/api_service.dart';
@@ -99,7 +100,7 @@ class _DashboardViewState extends State<_DashboardView> {
   ) {
     return Column(
       children: [
-        _topBar(state, wide),
+        _topBar(state, wide, _vertical),
         Expanded(
           child: state.busListLoading
               ? const Center(
@@ -119,7 +120,8 @@ class _DashboardViewState extends State<_DashboardView> {
   }
 
   // ── Top Bar ──
-  Widget _topBar(SubAdminState state, bool wide) {
+  Widget _topBar(SubAdminState state, bool wide, String vertical) {
+    final verticalColor = SubAdminVerticals.color(vertical);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: const BoxDecoration(
@@ -150,6 +152,28 @@ class _DashboardViewState extends State<_DashboardView> {
               fontWeight: FontWeight.w600,
             ),
           ),
+          // Which vertical this session actually belongs to. Without it the
+          // header was identical for every sub-admin, so "wrong dashboard"
+          // reports were impossible to tell apart from a stale build.
+          if (vertical.isNotEmpty) ...[
+            const Gap(10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: verticalColor.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: verticalColor.withValues(alpha: 0.5)),
+              ),
+              child: Text(
+                SubAdminVerticals.label(vertical),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
           const Spacer(),
           Text(
             '${state.tenantCount} tenants · ${state.activeFeatures.length} features',
@@ -162,6 +186,12 @@ class _DashboardViewState extends State<_DashboardView> {
 
   // ── Dynamic Main View — delegates to vertical-specific dashboard ──
   Widget _mainView(BuildContext ctx, SubAdminBloc bloc, SubAdminState state) {
+    // No resolved vertical → do NOT guess. The switch's `default` is the bus
+    // dashboard, which is exactly how a mis-provisioned account appeared to
+    // "open as Bus-Transit". Say what is wrong instead of showing the wrong UI.
+    if (_vertical.isEmpty) {
+      return _missingVerticalView(bloc);
+    }
     // Dynamically select dashboard content based on stored vertical code.
     // New verticals only need a new builder method — no switch statement changes.
     switch (_vertical) {
@@ -177,6 +207,53 @@ class _DashboardViewState extends State<_DashboardView> {
       default:
         return _busDashboard(ctx, bloc, state);
     }
+  }
+
+  /// Shown when the account has no vertical on record: the login response's
+  /// `sub_admin_vertical` came back empty (no active `sub_admin_assignments` row
+  /// for this identity), so there is no dashboard to pick.
+  Widget _missingVerticalView(SubAdminBloc bloc) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.report_problem_outlined,
+              color: Color(0xFFF59E0B),
+              size: 48,
+            ),
+            const Gap(16),
+            const Text(
+              'No vertical assigned',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const Gap(8),
+            const Text(
+              'This sub-admin account has no active vertical assignment, so no '
+              'dashboard can be shown. Ask the Super Admin to set it in '
+              'Sub Admins → Change Vertical, then sign in again.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFFBDD8DB), fontSize: 13),
+            ),
+            const Gap(20),
+            TextButton.icon(
+              onPressed: () => bloc.add(const BootstrapDashboard()),
+              icon: const Icon(Icons.refresh, color: Color(0xFFBDD8DB)),
+              label: const Text(
+                'Retry',
+                style: TextStyle(color: Color(0xFFBDD8DB)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Cricket Sub-Admin Dashboard ──────────────────────
@@ -2740,8 +2817,7 @@ class _Sidebar extends StatelessWidget {
   });
 
   /// Build sidebar items dynamically based on the sub-admin's vertical.
-  /// Only `cricket_ops` gets a restricted sidebar; all other verticals
-  /// keep the existing bus/goods/marketplace navigation.
+  /// Each vertical only gets the shortcuts its own dashboard can actually use.
   List<Widget> _buildNavItems(BuildContext context) {
     if (vertical == 'cricket_ops') {
       // Cricket vertical: Sub-Admin only manages Cricket Operations
@@ -2756,7 +2832,31 @@ class _Sidebar extends StatelessWidget {
         ),
       ];
     }
-    // Default: existing bus/goods/marketplace sidebar
+    // Factory and Marketplace manage their accounts inline on their own
+    // dashboard (C2 / C2b) — the seat-template / layout-preset shortcuts below
+    // are bus-only and make no sense in those panels, so they are excluded.
+    if (vertical == 'factory' || vertical == 'commercial_marketplace') {
+      return [
+        // Intentionally a no-op: this sidebar is only shown while the dashboard
+        // is already open.
+        Missile3DButton(
+          label: 'Dashboard',
+          icon: Icons.dashboard,
+          color: SubAdminVerticals.color(vertical),
+          height: 64,
+          onTap: () {},
+        ),
+        Missile3DButton(
+          label: 'Refresh Data',
+          icon: Icons.refresh,
+          color: const Color(0xFF2563EB),
+          height: 56,
+          onTap: () => bloc.add(const BootstrapDashboard()),
+        ),
+      ];
+    }
+    // Default: the original bus / goods / marketplace workspace, which is the
+    // only dashboard with seat-template and layout-preset tooling.
     return [
       // Intentionally a no-op: this sidebar is only shown while the dashboard is already open.
       // (Was a silent dead entry — now it says why, so the next reader does not "fix" it.)
@@ -2883,9 +2983,11 @@ class _Sidebar extends StatelessWidget {
                           color: const Color(0xFF1F5E6B).withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: const Text(
-                          'SUB-ADMIN',
-                          style: TextStyle(
+                        child: Text(
+                          SubAdminVerticals.label(vertical).toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
                             color: Color(0xFFBDD8DB),
                             fontSize: 9,
                             letterSpacing: 0.5,

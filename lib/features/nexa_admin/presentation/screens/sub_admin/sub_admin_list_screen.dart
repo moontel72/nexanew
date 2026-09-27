@@ -8,46 +8,19 @@ import 'package:go_router/go_router.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_bloc.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_event.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_state.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_verticals.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
 class SubAdminListScreen extends StatelessWidget {
   final bool inShell;
   const SubAdminListScreen({super.key, this.inShell = false});
 
-  static const _verticalColors = {
-    'bus_transit': Color(0xFF7C3AED),
-    'goods_logistics': Color(0xFFDB2777),
-    'commercial_marketplace': Color(0xFF2563EB),
-    'financial_auditor': Color(0xFFD97706),
-    'cricket_ops': Color(0xFF10B981),
-    'factory': Color(0xFF0284C7),
-    'vehicle_security': Color(0xFF0D9488),
-    'trust_safety': Color(0xFF9333EA),
-  };
-  static const _verticalLabels = {
-    'bus_transit': 'Bus Transit Manager',
-    'goods_logistics': 'Goods & Logistics Manager',
-    'commercial_marketplace': 'Commercial Marketplace Manager',
-    'financial_auditor': 'Financial & Subscription Auditor',
-    'cricket_ops': 'Cricket Operations Manager',
-    'factory': 'Factory Manager',
-    'vehicle_security': 'Vehicle Security Manager (IoT)',
-    'trust_safety': 'Trust & Safety Manager',
-  };
-  static const _verticalIcons = {
-    'bus_transit': Icons.directions_bus_rounded,
-    'goods_logistics': Icons.local_shipping_rounded,
-    'commercial_marketplace': Icons.storefront_rounded,
-    'financial_auditor': Icons.account_balance_rounded,
-    'cricket_ops': Icons.sports_cricket,
-    'factory': Icons.precision_manufacturing_rounded,
-    'vehicle_security': Icons.directions_car_rounded,
-    'trust_safety': Icons.verified_user_rounded,
-  };
-
-  Color _color(String? v) => _verticalColors[v] ?? AppColors.gray500;
-  String _label(String? v) => _verticalLabels[v] ?? v ?? 'Unknown';
-  IconData _icon(String? v) => _verticalIcons[v] ?? Icons.admin_panel_settings;
+  // Vertical code → label / icon / colour lives in ONE place now
+  // (sub_admin_verticals.dart); these helpers only read it, so a new vertical
+  // shows up here without another copy to forget.
+  Color _color(String? v) => SubAdminVerticals.color(v);
+  String _label(String? v) => SubAdminVerticals.label(v);
+  IconData _icon(String? v) => SubAdminVerticals.icon(v);
 
   @override
   Widget build(BuildContext context) {
@@ -483,13 +456,10 @@ class SubAdminListScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Derived from _verticalLabels — a hardcoded copy of this list had already drifted
-                // (it was missing cricket_ops). One source, so a new vertical appears here for free.
-                for (final entry in SubAdminListScreen._verticalLabels.entries)
-                  RadioListTile<String>(
-                    title: Text(entry.value),
-                    value: entry.key,
-                  ),
+                // Derived from the shared registry — a hardcoded copy of this
+                // list had already drifted (it was missing cricket_ops).
+                for (final v in SubAdminVerticals.all)
+                  RadioListTile<String>(title: Text(v.label), value: v.code),
               ],
             ),
           ),
