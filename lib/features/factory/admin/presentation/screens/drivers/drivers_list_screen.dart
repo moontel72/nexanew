@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart' hide SearchBar;
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -18,6 +19,13 @@ class DriversListScreen extends StatefulWidget {
 class _DriversListScreenState extends State<DriversListScreen> {
   final _searchController = TextEditingController();
   String? _statusFilter;
+
+  /// Puts the error on the clipboard so the operator can paste it into a bug report.
+  ///
+  /// Not awaited on purpose: the copy needs no follow-up, and a SnackBarAction callback is not async.
+  void _copyError(String message) {
+    Clipboard.setData(ClipboardData(text: message));
+  }
 
   @override
   void initState() {
@@ -149,6 +157,11 @@ class _DriversListScreenState extends State<DriversListScreen> {
                   content: Text(state.errorMessage!),
                   backgroundColor: AppColors.error,
                   duration: const Duration(days: 1),
+                  action: SnackBarAction(
+                    label: 'Copy',
+                    textColor: Colors.white,
+                    onPressed: () => _copyError(state.errorMessage!),
+                  ),
                 ),
               );
             }
@@ -378,6 +391,11 @@ class _DriversListScreenState extends State<DriversListScreen> {
                 content: Text(state.errorMessage!),
                 backgroundColor: AppColors.error,
                 duration: const Duration(days: 1),
+                action: SnackBarAction(
+                  label: 'Copy',
+                  textColor: Colors.white,
+                  onPressed: () => _copyError(state.errorMessage!),
+                ),
               ),
             );
           }
