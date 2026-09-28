@@ -242,6 +242,15 @@ jobs:
             php artisan migrate --force
             php artisan db:seed --class=CricketFeatureRegistrySeeder --force
             php artisan db:seed --class=SubAdminVerticalExpansionSeeder --force
+
+            # MASTER-TASK-LIST item #9 - the marketplace upload flow. The factory's
+            # publish action now writes a storefront + a marketplace_product_listings
+            # row, but products that were flagged for the marketplace before the fix
+            # still have no listing. This re-syncs them, idempotently, and only for
+            # products whose marketplace_enabled is already true. A failure here must
+            # not fail the deploy, so the exit code is swallowed.
+            php artisan marketplace:publish-products || echo 'marketplace backfill skipped'
+
             php artisan optimize:clear
             php artisan optimize
             php artisan storage:link 2>/dev/null || true

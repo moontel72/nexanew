@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\CompanySubscription;
 use App\Models\Invoice;
 use App\Models\SubscriptionPlan;
+use App\Services\Marketplace\MarketplaceListingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -18,6 +19,10 @@ use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
+    public function __construct(
+        private MarketplaceListingService $marketplace
+    ) {}
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -130,6 +135,8 @@ class ProductController extends Controller
                 'metadata' => $product->metadata,
             ]);
 
+            $product = $this->syncMarketplaceListing($product);
+
             return response()->json(['success' => true, 'data' => $product], 201);
         } catch (\Throwable $e) {
             Log::error('ProductController: Failed to create product.', [
@@ -205,6 +212,8 @@ class ProductController extends Controller
 
             $product->fill($data)->save();
 
+            $product = $this->syncMarketplaceListing($product);
+
             Log::info('ProductController: Product updated.', [
                 'product_id' => $product->id,
                 'image_urls' => $product->image_urls,
@@ -264,10 +273,17 @@ class ProductController extends Controller
 
     /**
      * Toggle marketplace visibility for a product.
+     *
+     * This is the factory's "upload to marketplace" action: publishing creates the
+     * company's storefront (on its first upload) and a `marketplace_product_listings`
+     * row; unpublishing deactivates that listing. The company is read from the
+     * authenticated factory user, with the legacy header/query kept as a fallback.
      */
     public function toggleMarketplace(Request $request, string $id): JsonResponse
     {
-        $companyId = $request->header('X-Company-Id')
+        $user = $request->user();
+        $companyId = $user?->company_id
+            ?? $request->header('X-Company-Id')
             ?? $request->query('company_id');
 
         if (!$companyId) {
@@ -288,18 +304,35 @@ class ProductController extends Controller
             ], 404);
         }
 
-        // TODO: Re-enable price validation after testing
-        $enabled = $request->boolean('marketplace_enabled', !$product->marketplace_enabled);
-
-        // if ($enabled && !$product->unit_price && !$product->carton_price && !$product->wholesale_price) {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Cannot publish to marketplace: product has no price set. Please set at least one price (unit, carton, or wholesale).',
-        //     ], 422);
-        // }
+        // The Flutter client sends `enabled`; `marketplace_enabled` is accepted too.
+        // With neither present, the flag simply flips.
+        $enabled = $request->boolean(
+            'marketplace_enabled',
+            $request->boolean('enabled', !$product->marketplace_enabled)
+        );
 
         $product->marketplace_enabled = $enabled;
         $product->save();
+
+        try {
+            if ($enabled) {
+                $listing = $this->marketplace->publishProduct($product, $this->marketplaceOverrides($request));
+            } else {
+                $this->marketplace->unpublishProduct($product);
+                $listing = null;
+            }
+        } catch (\Throwable $e) {
+            Log::error('ProductController: marketplace toggle failed.', [
+                'product_id' => $product->id,
+                'enabled' => $enabled,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update the marketplace listing: ' . $e->getMessage(),
+            ], 500);
+        }
 
         return response()->json([
             'success' => true,
@@ -307,6 +340,7 @@ class ProductController extends Controller
                 ? 'Product listed on marketplace.'
                 : 'Product removed from marketplace.',
             'data' => $product->fresh(),
+            'marketplace_listing' => $listing,
         ]);
     }
 
@@ -763,6 +797,48 @@ class ProductController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * Optional fields a publish may carry beyond the product's own columns.
+     *
+     * @return array{available_quantity?: int, unit?: string}
+     */
+    private function marketplaceOverrides(Request $request): array
+    {
+        $overrides = [];
+
+        if ($request->filled('available_quantity')) {
+            $overrides['available_quantity'] = max(0, (int) $request->input('available_quantity'));
+        }
+
+        if ($request->filled('unit')) {
+            $overrides['unit'] = (string) $request->input('unit');
+        }
+
+        return $overrides;
+    }
+
+    /**
+     * Keep the marketplace listing in step with the product after create/update.
+     *
+     * A marketplace failure must not fail the product save: the product is the
+     * primary record, and the listing can always be re-synced — or backfilled by
+     * `php artisan marketplace:publish-products`.
+     */
+    private function syncMarketplaceListing(Product $product): Product
+    {
+        try {
+            $this->marketplace->syncProduct($product);
+        } catch (\Throwable $e) {
+            Log::error('ProductController: marketplace listing sync failed.', [
+                'product_id' => $product->id,
+                'marketplace_enabled' => (bool) $product->marketplace_enabled,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $product->fresh() ?? $product;
     }
 
     private function assertCompany(Request $request, Product $product): void

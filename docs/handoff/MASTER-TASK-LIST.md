@@ -4,7 +4,7 @@
 this file, and **continues from the first item that is not ✅** — nothing gets re-done and nothing gets
 skipped.
 
-**Last updated:** 2026-09-27 (end of the Group-Incharge session).
+**Last updated:** 2026-09-28 (marketplace upload flow — item #9 done).
 **Read with:** `START-HERE.md` (read order / live status), `GROUP-INCHARGE-MODEL.md` §2b (the design and
 the C-phase record), `PANEL-SEPARATION-PLAN.md` §17 (auth globals).
 
@@ -31,8 +31,8 @@ the C-phase record), `PANEL-SEPARATION-PLAN.md` §17 (auth globals).
 | 6 | Errors **stay + Copy** — **Sub-Admin** panel screens | ⏳ |
 | 7 | Errors **stay + Copy** — **Super Admin** screens | ⏳ |
 | 8 | Errors **stay + Copy** — other apps (reseller, shop keeper, cricket) | ⏳ |
-| 9 | **Marketplace upload flow**: product → `marketplace_product_listings`, and the company's **storefront is created on first upload** | ⏳ **START HERE** |
-| 10 | Publish the **6 existing factory products** (Maxi Electronic 2, Moon Medi 4) onto the marketplace | ⏳ after #9 |
+| 9 | **Marketplace upload flow**: product → `marketplace_product_listings`, and the company's **storefront is created on first upload** | ✅ **done** — `MarketplaceListingService` + wired into `ProductController` `store` / `update` / `marketplace-toggle`; deploy re-syncs flagged products |
+| 10 | Publish the **6 existing factory products** (Maxi Electronic 2, Moon Medi 4) onto the marketplace | ⏳ **START HERE** — run `php artisan marketplace:publish-products --all` (deploy already syncs any product whose `marketplace_enabled` is true) |
 | 11 | A **Marketplace section** on each of the three panel dashboards: preview the full marketplace, upload a product, view orders, order history | ⏳ |
 | 12 | **Public read-only marketplace site** — **no login page**; browse everything with wholesale price + MOQ (Alibaba-style) | ⏳ |
 | 13 | **Buy → cart + "register your factory / reseller / shop"** — the account is the buying door, the marketplace is not | ⏳ |
@@ -71,6 +71,10 @@ the C-phase record), `PANEL-SEPARATION-PLAN.md` §17 (auth globals).
    `marketplace_storefronts = 0`, `products = 6` (Maxi Electronic 2 + Moon Medi 4 — the old factory
    accounts). So nothing was "lost" and nothing was stored in a hidden table: the **publish step never
    worked**. #9 is therefore a build/repair, not a restore — and the storefront must be auto-created.
+   **✅ Fixed by #9:** `MarketplaceListingService` now creates the storefront on the first upload and
+   writes the `marketplace_product_listings` row; the controller's create/update/toggle all sync it, and
+   the deploy re-syncs products already flagged `marketplace_enabled`. `php artisan marketplace:publish-products`
+   is the idempotent backfill tool (`--all` for products never flagged).
 2. **The three-types model is already half-built in the schema** (`is_msrp_enforced`, `factory_buy_price`,
    `reseller_sell_price`, plus `is_homemade`, `is_brand_verified`, `reseller_otp_locked`, a `factory matrix`
    type system and `ResellerPortalService::enforceMSRP()`). #19/#20 are **wiring**, not invention.
@@ -90,6 +94,7 @@ the C-phase record), `PANEL-SEPARATION-PLAN.md` §17 (auth globals).
 
 1. Read `START-HERE.md` (its read order).
 2. Read this file.
-3. Start at the **first ⏳ item in the queue above** — for now that is **#9, the marketplace upload flow**.
+3. Start at the **first ⏳ item in the queue above** — for now that is **#10, publishing the 6 existing
+   factory products** (`php artisan marketplace:publish-products --all`). #9 (the upload flow) is done.
 4. Keep the two habits: state which item number you are doing, and record the commit hash in the table when
    it lands.

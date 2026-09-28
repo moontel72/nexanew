@@ -52,10 +52,25 @@ class ProductListing extends Model
 
     // ─── Scopes ─────────────────────────────────────────
 
+    /**
+     * A listing is "active" when the product is published to the marketplace.
+     *
+     * Stock is deliberately NOT part of this predicate: a factory product has no
+     * stock column, so gating visibility on `available_quantity > 0` hid every
+     * fresh listing (the listing is created with quantity 0) and made the whole
+     * marketplace look empty. Use {@see scopeInStock} where real stock matters.
+     */
     public function scopeActive($query)
     {
-        return $query->where('is_active', true)
-            ->where('available_quantity', '>', 0);
+        return $query->where('is_active', true);
+    }
+
+    /**
+     * Only listings that actually report stock (reseller inventory views etc.).
+     */
+    public function scopeInStock($query)
+    {
+        return $query->where('available_quantity', '>', 0);
     }
 
     // ─── Accessors ──────────────────────────────────────
