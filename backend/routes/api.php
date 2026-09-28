@@ -537,6 +537,15 @@ $registerRoutes = function (): void {
                 Route::patch("{id}/status", [\App\Http\Controllers\Admin\SubAdminResellerController::class, "updateStatus"]);
                 Route::patch("{id}/restore", [\App\Http\Controllers\Admin\SubAdminResellerController::class, "restore"]);
             });
+
+            /// Marketplace oversight (Super Admin + each group's Sub-Admin) — READ-ONLY.
+            /// Neither role owns a factory or a product (owner, 2026-09-28); they only observe
+            /// the marketplace, so there is no store/update/destroy here. The panels' Marketplace
+            /// section reads these (MASTER-TASK-LIST item #11).
+            Route::prefix("marketplace")->group(function (): void {
+                Route::get("orders", [\App\Http\Controllers\Admin\MarketplaceAdminController::class, "orders"]);
+                Route::get("summary", [\App\Http\Controllers\Admin\MarketplaceAdminController::class, "summary"]);
+            });
         });
 
     // ──────────────────────────────────────────────────────────────

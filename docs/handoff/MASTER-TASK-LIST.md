@@ -33,7 +33,7 @@ the C-phase record), `PANEL-SEPARATION-PLAN.md` §17 (auth globals).
 | 8 | Errors **stay + Copy** — other apps (reseller, shop keeper, cricket) | ⏳ |
 | 9 | **Marketplace upload flow**: product → `marketplace_product_listings`, and the company's **storefront is created on first upload** | ✅ **done** — `MarketplaceListingService` + wired into `ProductController` `store` / `update` / `marketplace-toggle`; deploy re-syncs flagged products |
 | 10 | Publish the **6 existing factory products** (Maxi Electronic 2, Moon Medi 4) onto the marketplace | ✅ **done live 2026-09-28** — `php artisan marketplace:publish-products --all` published 6 listings (Zanni 500mg, Bonbo 300 mg, Mixer 500 watt, GUDO MIXER, Dero Dan 50 mg, testy 50) |
-| 11 | A **Marketplace section** on each of the three panel dashboards: preview the full marketplace, upload a product, view orders, order history | ⏳ **START HERE** |
+| 11 | A **Marketplace section** on each of the three panel dashboards: preview the full marketplace, upload a product, view orders, order history | ⏳ **START HERE** — backend read side **done** (`GET admin/marketplace/orders` + `summary`, read-only); the three Flutter sections are next |
 | 12 | **Public read-only marketplace site** — **no login page**; browse everything with wholesale price + MOQ (Alibaba-style) | ⏳ |
 | 13 | **Buy → cart + "register your factory / reseller / shop"** — the account is the buying door, the marketplace is not | ⏳ |
 | 14 | Orders / sell / buy visible in each panel's own marketplace section | ⏳ |
@@ -51,6 +51,22 @@ the C-phase record), `PANEL-SEPARATION-PLAN.md` §17 (auth globals).
 | 26 | `GET /api/v1/admin/analytics/dashboard` → **500** (pre-existing `AnalyticsService`; needs the `laravel.log` ERROR line — prime suspect: the pgsql-unsupported `PDO::ATTR_CONNECTION_STATUS` at `AnalyticsService.php:233`) | ⏳ |
 | 27 | Two remaining **literal-IP** bugs: `live_bus_tracking_screen.dart:48` and the reseller link copy in `reseller_management_list_screen.dart` | ⏳ |
 | 28 | **Log flood** — the CORS logger writes 3 INFO lines per request, which hides real errors and grows the disk | ⏳ |
+
+### #11 design — what each panel's Marketplace section is (owner, 2026-09-28)
+
+| Panel | Its Marketplace section |
+|---|---|
+| **Factory** | Preview the marketplace; **upload a product** (the existing product create + `marketplace-toggle`); view **its own** orders + order history (`/factory/reseller-orders`) |
+| **Sub-Admin** (`commercial_marketplace`) | **Read-only.** It controls the *marketplace platform*: disputes, marketplace content, reseller / shop-keeper account issues (approve, suspend). **No** product upload, **no** factory products of its own |
+| **Super Admin** | **Read-only.** Preview the full marketplace + all orders |
+
+Owner's rule: *both the Super Admin and every group's Sub-Admin have no factory and no product of their own*, so neither creates or edits listings — oversight is **read-only by construction**, and its scope is the whole
+platform (a role that owns no factories cannot be scoped to "its own" factories; it would see nothing and could
+never resolve a dispute).
+
+Backend delivered for it: `MarketplaceAdminController` — `GET /api/v1/admin/marketplace/orders` and
+`GET /api/v1/admin/marketplace/summary` (read-only, platform-wide), covered by `MarketplaceAdminOrdersTest`.
+Preview already had an API: `GET /api/v1/marketplace/catalog/search` and `/storefronts` (both `auth:sanctum`).
 
 ### Items that were wrong and are fixed (kept so nobody "re-fixes" them)
 
