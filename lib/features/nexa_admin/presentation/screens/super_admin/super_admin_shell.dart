@@ -171,6 +171,19 @@ class SuperAdminShell extends StatelessWidget {
         ],
       ),
       AdminSidebarSection(
+        title: 'Marketplace',
+        color: Color(0xFF0D9488),
+        items: [
+          AdminSidebarItem(
+            label: 'Marketplace Oversight',
+            icon: Icons.storefront_outlined,
+            route: '/marketplace',
+          ),
+          // READ-ONLY by design (MASTER-TASK-LIST item #11): the Super Admin owns no factory
+          // and no product, so it observes the marketplace and its orders — it never lists one.
+        ],
+      ),
+      AdminSidebarSection(
         title: 'Transport',
         color: Color(0xFF4F46E5),
         items: [
@@ -211,6 +224,7 @@ class SuperAdminShell extends StatelessWidget {
   }
 
   String _titleForLocation(String location) {
+    if (location.startsWith('/marketplace')) return 'Marketplace';
     if (location.startsWith('/resellers')) return 'Reseller Management';
     if (location.startsWith('/sub-admins/add')) return 'Add Sub-Admin';
     if (location.startsWith('/sub-admins')) return 'Sub-Admin Management';
@@ -229,6 +243,9 @@ class SuperAdminShell extends StatelessWidget {
   }
 
   List<String> _breadcrumbsForLocation(String location) {
+    if (location.startsWith('/marketplace')) {
+      return const ['Marketplace', 'Oversight'];
+    }
     if (location.startsWith('/resellers')) {
       return const ['Resellers', 'View All Resellers'];
     }

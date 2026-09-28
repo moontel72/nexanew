@@ -66,6 +66,7 @@ import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/t
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/transport/drivers_admin_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/reseller_management/reseller_management_list_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/site_content/site_content_screen.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/marketplace/marketplace_oversight_screen.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/factory_login_screen.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/factory_dashboard.dart';
 import 'package:trace_odd/features/factory/factory_auth_cache.dart';
@@ -356,6 +357,16 @@ class AppRouter {
       path: '/sub-admin/dashboard',
       name: 'sub_admin_dashboard',
       builder: (context, state) => const SubAdminDashboardScreen(),
+    ),
+    // Marketplace oversight — read-only, for the commercial_marketplace Sub-Admin
+    // (MASTER-TASK-LIST item #11). It owns no factory or product, so this only shows.
+    GoRoute(
+      path: '/sub-admin/marketplace',
+      name: 'sub_admin_marketplace',
+      builder: (context, state) => const MarketplaceOversightScreen(
+        standalone: true,
+        backRoute: '/sub-admin/dashboard',
+      ),
     ),
     // ── Cricket Manager Management (Sub-Admin scope) ──
     GoRoute(
@@ -753,6 +764,11 @@ class AppRouter {
           path: '/site-content',
           name: 'site_content',
           builder: (context, state) => const SiteContentScreen(inShell: true),
+        ),
+        GoRoute(
+          path: '/marketplace',
+          name: 'marketplace_oversight',
+          builder: (context, state) => const MarketplaceOversightScreen(),
         ),
       ],
     ),

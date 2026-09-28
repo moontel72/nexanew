@@ -33,8 +33,8 @@ the C-phase record), `PANEL-SEPARATION-PLAN.md` §17 (auth globals).
 | 8 | Errors **stay + Copy** — other apps (reseller, shop keeper, cricket) | ⏳ |
 | 9 | **Marketplace upload flow**: product → `marketplace_product_listings`, and the company's **storefront is created on first upload** | ✅ **done** — `MarketplaceListingService` + wired into `ProductController` `store` / `update` / `marketplace-toggle`; deploy re-syncs flagged products |
 | 10 | Publish the **6 existing factory products** (Maxi Electronic 2, Moon Medi 4) onto the marketplace | ✅ **done live 2026-09-28** — `php artisan marketplace:publish-products --all` published 6 listings (Zanni 500mg, Bonbo 300 mg, Mixer 500 watt, GUDO MIXER, Dero Dan 50 mg, testy 50) |
-| 11 | A **Marketplace section** on each of the three panel dashboards: preview the full marketplace, upload a product, view orders, order history | ⏳ **IN PROGRESS** — backend read side **done** (`GET admin/marketplace/orders` + `summary`, read-only); **Factory panel section done** (`/factory/marketplace`: Preview · My Listings · Orders). Sub-Admin + Super Admin read-only sections next |
-| 12 | **Public read-only marketplace site** — **no login page**; browse everything with wholesale price + MOQ (Alibaba-style) | ⏳ |
+| 11 | A **Marketplace section** on each of the three panel dashboards: preview the full marketplace, upload a product, view orders, order history | ✅ **done** — Factory panel section (`/factory/marketplace`: Preview · My Listings · Orders) + one shared **read-only** oversight screen for the Sub-Admin (`commercial_marketplace`, `/sub-admin/marketplace`) and the Super Admin (`/marketplace`). Backend: `admin/marketplace/orders` + `summary` |
+| 12 | **Public read-only marketplace site** — **no login page**; browse everything with wholesale price + MOQ (Alibaba-style) | ⏳ **START HERE** |
 | 13 | **Buy → cart + "register your factory / reseller / shop"** — the account is the buying door, the marketplace is not | ⏳ |
 | 14 | Orders / sell / buy visible in each panel's own marketplace section | ⏳ |
 | 15 | **B2B** its own login page + attach the old tested screen | ⏳ |
@@ -111,7 +111,7 @@ Preview already had an API: `GET /api/v1/marketplace/catalog/search` and `/store
 
 1. Read `START-HERE.md` (its read order).
 2. Read this file.
-3. Start at the **first ⏳ item in the queue above** — for now that is **#11, a Marketplace section on each of the
-   three panel dashboards**. #9 (the upload flow) and #10 (the 6 existing products) are done.
+3. Start at the **first ⏳ item in the queue above** — for now that is **#12, the public read-only marketplace
+   site**. #9 (upload flow), #10 (the 6 existing products) and #11 (the three panel sections) are done.
 4. Keep the two habits: state which item number you are doing, and record the commit hash in the table when
    it lands.

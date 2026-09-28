@@ -2923,6 +2923,19 @@ class _Sidebar extends StatelessWidget {
           height: 64,
           onTap: onDashboardTap,
         ),
+        // Marketplace oversight — READ-ONLY (MASTER-TASK-LIST item #11).
+        // The commercial_marketplace Sub-Admin owns no factory and no product: it
+        // controls the marketplace *platform* (disputes, content, reseller /
+        // shop-keeper accounts), so it observes listings and orders here and
+        // never creates either.
+        if (vertical == 'commercial_marketplace')
+          Missile3DButton(
+            label: 'Marketplace Oversight',
+            icon: Icons.storefront_outlined,
+            color: const Color(0xFF0D9488),
+            height: 64,
+            onTap: () => context.go('/sub-admin/marketplace'),
+          ),
         Missile3DButton(
           label: 'Refresh Data',
           icon: Icons.refresh,
