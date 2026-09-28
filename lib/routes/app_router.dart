@@ -102,6 +102,7 @@ import 'package:trace_odd/features/factory/store_keeper/presentation/screens/bun
 import 'package:trace_odd/features/factory/store_keeper/presentation/screens/bundle_scan_flow_screen.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/orders/orders_hub_screen.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/orders/order_detail_screen.dart';
+import 'package:trace_odd/features/factory/admin/presentation/screens/marketplace/factory_marketplace_screen.dart';
 import 'package:trace_odd/features/factory/driver/presentation/screens/driver_dashboard_screen.dart';
 import 'package:trace_odd/features/factory/driver/presentation/screens/scan_receive_screen.dart';
 import 'package:trace_odd/features/factory/driver/presentation/screens/delivery_scan_screen.dart';
@@ -895,6 +896,11 @@ class AppRouter {
               },
             ),
           ],
+        ),
+        GoRoute(
+          path: '/factory/marketplace',
+          name: 'factory_marketplace',
+          builder: (context, state) => const FactoryMarketplaceScreen(),
         ),
       ],
     ),

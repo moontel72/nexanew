@@ -243,6 +243,18 @@ class ApiEndpoints {
   static String factoryResellerOrderStatus(String orderId) =>
       '/factory/reseller-orders/$orderId/status';
 
+  // B2B Marketplace (MASTER-TASK-LIST item #11) — preview the marketplace,
+  // and the read-only oversight the Super Admin / Sub-Admin sections use.
+  static const String marketplaceCatalogSearch = '/marketplace/catalog/search';
+  static const String marketplaceStorefronts = '/marketplace/storefronts';
+  static const String adminMarketplaceOrders = '/admin/marketplace/orders';
+  static const String adminMarketplaceSummary = '/admin/marketplace/summary';
+
+  // Public marketplace browse (no auth) — what the Factory preview tab reads,
+  // so it shows exactly what a buyer sees.
+  static const String resellerMarketplaceProducts = '/reseller/products';
+  static const String resellerMarketplaceFactories = '/reseller/factories';
+
   // ==================== STORE KEEPER ENDPOINTS ====================
   static const String storeKeeperDashboard = '/store/dashboard';
   static const String createBundle = '/store/bundles';

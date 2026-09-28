@@ -33,7 +33,7 @@ the C-phase record), `PANEL-SEPARATION-PLAN.md` §17 (auth globals).
 | 8 | Errors **stay + Copy** — other apps (reseller, shop keeper, cricket) | ⏳ |
 | 9 | **Marketplace upload flow**: product → `marketplace_product_listings`, and the company's **storefront is created on first upload** | ✅ **done** — `MarketplaceListingService` + wired into `ProductController` `store` / `update` / `marketplace-toggle`; deploy re-syncs flagged products |
 | 10 | Publish the **6 existing factory products** (Maxi Electronic 2, Moon Medi 4) onto the marketplace | ✅ **done live 2026-09-28** — `php artisan marketplace:publish-products --all` published 6 listings (Zanni 500mg, Bonbo 300 mg, Mixer 500 watt, GUDO MIXER, Dero Dan 50 mg, testy 50) |
-| 11 | A **Marketplace section** on each of the three panel dashboards: preview the full marketplace, upload a product, view orders, order history | ⏳ **START HERE** — backend read side **done** (`GET admin/marketplace/orders` + `summary`, read-only); the three Flutter sections are next |
+| 11 | A **Marketplace section** on each of the three panel dashboards: preview the full marketplace, upload a product, view orders, order history | ⏳ **IN PROGRESS** — backend read side **done** (`GET admin/marketplace/orders` + `summary`, read-only); **Factory panel section done** (`/factory/marketplace`: Preview · My Listings · Orders). Sub-Admin + Super Admin read-only sections next |
 | 12 | **Public read-only marketplace site** — **no login page**; browse everything with wholesale price + MOQ (Alibaba-style) | ⏳ |
 | 13 | **Buy → cart + "register your factory / reseller / shop"** — the account is the buying door, the marketplace is not | ⏳ |
 | 14 | Orders / sell / buy visible in each panel's own marketplace section | ⏳ |
