@@ -353,34 +353,16 @@ class _FactoryDashboardState extends State<FactoryDashboard> {
     );
   }
 
+  /// Transport Statistics.
+  ///
+  /// This card used to render four HARDCODED demo figures — 'Active Loads 3', 'Active Bids 2',
+  /// 'In Transit 1', 'Budget ₹45,000' — which came from the repository's very first commit and were never
+  /// wired to anything (`git log -S "45,000"` -> 82f3ef9a). The owner asked for them to be removed rather
+  /// than wired: fake numbers on a live panel are worse than no numbers. Kept as an empty widget so any
+  /// caller still compiles; replacing it with real transport figures is a separate, deliberate step that
+  /// needs the dashboard wired to the transport endpoints.
   Widget _buildTransportStatistics() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Transport Statistics',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatItem('Active Loads', '3', Icons.pending),
-                _buildStatItem('Active Bids', '2', Icons.gavel),
-                _buildStatItem('In Transit', '1', Icons.local_shipping),
-                _buildStatItem('Budget', '₹45,000', Icons.money),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+    return const SizedBox.shrink();
   }
 
   Widget _buildStatItem(String title, String value, IconData icon) {
