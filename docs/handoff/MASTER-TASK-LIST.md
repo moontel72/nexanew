@@ -32,8 +32,8 @@ the C-phase record), `PANEL-SEPARATION-PLAN.md` §17 (auth globals).
 | 7 | Errors **stay + Copy** — **Super Admin** screens | ⏳ |
 | 8 | Errors **stay + Copy** — other apps (reseller, shop keeper, cricket) | ⏳ |
 | 9 | **Marketplace upload flow**: product → `marketplace_product_listings`, and the company's **storefront is created on first upload** | ✅ **done** — `MarketplaceListingService` + wired into `ProductController` `store` / `update` / `marketplace-toggle`; deploy re-syncs flagged products |
-| 10 | Publish the **6 existing factory products** (Maxi Electronic 2, Moon Medi 4) onto the marketplace | ⏳ **START HERE** — run `php artisan marketplace:publish-products --all` (deploy already syncs any product whose `marketplace_enabled` is true) |
-| 11 | A **Marketplace section** on each of the three panel dashboards: preview the full marketplace, upload a product, view orders, order history | ⏳ |
+| 10 | Publish the **6 existing factory products** (Maxi Electronic 2, Moon Medi 4) onto the marketplace | ✅ **done live 2026-09-28** — `php artisan marketplace:publish-products --all` published 6 listings (Zanni 500mg, Bonbo 300 mg, Mixer 500 watt, GUDO MIXER, Dero Dan 50 mg, testy 50) |
+| 11 | A **Marketplace section** on each of the three panel dashboards: preview the full marketplace, upload a product, view orders, order history | ⏳ **START HERE** |
 | 12 | **Public read-only marketplace site** — **no login page**; browse everything with wholesale price + MOQ (Alibaba-style) | ⏳ |
 | 13 | **Buy → cart + "register your factory / reseller / shop"** — the account is the buying door, the marketplace is not | ⏳ |
 | 14 | Orders / sell / buy visible in each panel's own marketplace section | ⏳ |
@@ -67,14 +67,15 @@ the C-phase record), `PANEL-SEPARATION-PLAN.md` §17 (auth globals).
 
 ## Key findings to carry forward
 
-1. **The marketplace has never been populated.** Live counts: `marketplace_product_listings = 0`,
+1. **The marketplace is now populated.** Live counts before #9: `marketplace_product_listings = 0`,
    `marketplace_storefronts = 0`, `products = 6` (Maxi Electronic 2 + Moon Medi 4 — the old factory
-   accounts). So nothing was "lost" and nothing was stored in a hidden table: the **publish step never
-   worked**. #9 is therefore a build/repair, not a restore — and the storefront must be auto-created.
-   **✅ Fixed by #9:** `MarketplaceListingService` now creates the storefront on the first upload and
-   writes the `marketplace_product_listings` row; the controller's create/update/toggle all sync it, and
-   the deploy re-syncs products already flagged `marketplace_enabled`. `php artisan marketplace:publish-products`
-   is the idempotent backfill tool (`--all` for products never flagged).
+   accounts). Nothing was "lost": the **publish step never wrote a listing**.
+   **✅ Fixed by #9:** `MarketplaceListingService` creates the storefront on the first upload and writes the
+   `marketplace_product_listings` row; the controller's create/update/toggle all sync it, and the deploy
+   re-syncs products already flagged `marketplace_enabled`. **✅ #10 done live 2026-09-28** —
+   `php artisan marketplace:publish-products --all` published all 6 (one storefront per company).
+   ⚠️ Storefronts are created `verification_status = 'verified'` on purpose, because the catalog and the
+   search service only show verified storefronts.
 2. **The three-types model is already half-built in the schema** (`is_msrp_enforced`, `factory_buy_price`,
    `reseller_sell_price`, plus `is_homemade`, `is_brand_verified`, `reseller_otp_locked`, a `factory matrix`
    type system and `ResellerPortalService::enforceMSRP()`). #19/#20 are **wiring**, not invention.
@@ -94,7 +95,7 @@ the C-phase record), `PANEL-SEPARATION-PLAN.md` §17 (auth globals).
 
 1. Read `START-HERE.md` (its read order).
 2. Read this file.
-3. Start at the **first ⏳ item in the queue above** — for now that is **#10, publishing the 6 existing
-   factory products** (`php artisan marketplace:publish-products --all`). #9 (the upload flow) is done.
+3. Start at the **first ⏳ item in the queue above** — for now that is **#11, a Marketplace section on each of the
+   three panel dashboards**. #9 (the upload flow) and #10 (the 6 existing products) are done.
 4. Keep the two habits: state which item number you are doing, and record the commit hash in the table when
    it lands.

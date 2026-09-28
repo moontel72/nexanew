@@ -15,6 +15,11 @@ class Product extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
+        // The caller supplies the UUID (the `products` table has a DB default
+        // too). Without it here, `create()` silently drops the key, the model's
+        // `id` stays null after insert, and anything that reads it right away
+        // (including the marketplace listing sync) writes a null product_id.
+        'id',
         'company_id',
         'name',
         'sku',
