@@ -34,6 +34,11 @@ class FactoryAuthController extends Controller
 
         $user->forceFill(['last_login_at' => now()])->save();
 
+        // The factory's own name (as written on the registration form). The client needs it to show
+        // WHICH factory this account belongs to - it was never sent before, so the panel header could
+        // only ever display the platform brand.
+        $companyName = \App\Models\Company::query()->where('id', $user->company_id)->value('name');
+
         $token = $user->createToken('factory')->plainTextToken;
 
         return response()->json([
@@ -46,6 +51,7 @@ class FactoryAuthController extends Controller
                     'full_name' => (string) $user->full_name,
                     'position' => (string) $user->position,
                     'permissions' => $user->permissions ?? [],
+                    'company_name' => $companyName,
                 ],
                 'token' => $token,
             ],
@@ -102,6 +108,8 @@ class FactoryAuthController extends Controller
                 'full_name' => (string) $user->full_name,
                 'position' => (string) $user->position,
                 'permissions' => $user->permissions ?? [],
+                // Same reason as login(): the panel header shows the factory's own name.
+                'company_name' => \App\Models\Company::query()->where('id', $user->company_id)->value('name'),
             ],
         ]);
     }

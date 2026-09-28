@@ -57,6 +57,7 @@ class _FactoryLoginScreenState extends State<FactoryLoginScreen> {
               userId: state.user['id']?.toString() ?? '',
               token: state.token,
               factoryId: state.user['company_id']?.toString(),
+              companyName: state.user['company_name']?.toString(),
             );
           }
           context.go('/factory/dashboard');

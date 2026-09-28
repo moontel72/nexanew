@@ -2,6 +2,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/features/factory/admin/presentation/bloc/auth/factory_auth_bloc.dart';
+import 'package:trace_odd/features/factory/factory_auth_cache.dart';
 import 'package:trace_odd/routes/app_router.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/app_bars/admin_top_bar.dart';
@@ -20,6 +21,8 @@ class FactoryShell extends StatelessWidget {
       sections: _sections(),
       footerTitle: 'Admin',
       footerSubtitle: null,
+      // The factory's own registered name, so the header no longer reads as the platform brand.
+      companyName: FactoryAuthCache.instance.companyName,
     );
 
     final location = GoRouterState.of(context).uri.toString();

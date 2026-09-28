@@ -47,12 +47,18 @@ class AdminSidebar extends StatelessWidget {
   final String footerTitle;
   final String? footerSubtitle;
 
+  /// The signed-in tenant's own name (e.g. the factory's registered name). Shown under the platform
+  /// brand so whoever is looking at the panel can tell WHICH account they are in. Optional: the
+  /// Super Admin panel passes nothing and looks exactly as before.
+  final String? companyName;
+
   const AdminSidebar({
     super.key,
     required this.collapsed,
     required this.sections,
     this.footerTitle = 'Super Admin',
     this.footerSubtitle = 'Platform',
+    this.companyName,
   });
 
   @override
@@ -92,6 +98,20 @@ class AdminSidebar extends StatelessWidget {
                     Icons.admin_panel_settings,
                     color: Colors.white,
                     size: 28,
+                  ),
+                ),
+              if (!collapsed && companyName != null && companyName!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                  child: Text(
+                    companyName!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               const Divider(height: 1, color: Color(0x20FFFFFF)),

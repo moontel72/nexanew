@@ -48,6 +48,10 @@ class FactoryAuthCache {
   /// The factory's company id — sent as `X-Factory-ID` on factory calls.
   String? factoryId;
 
+  /// The factory's NAME — as written on the registration form. Shown in the panel header so an
+  /// operator can tell which factory this account belongs to. Supplied by the login/profile response.
+  String? companyName;
+
   /// Record a successful factory login, or a session restored at cold start.
   void set({
     required bool isAuthenticated,
@@ -55,12 +59,14 @@ class FactoryAuthCache {
     required String userId,
     required String token,
     String? factoryId,
+    String? companyName,
   }) {
     this.isAuthenticated = isAuthenticated;
     this.userType = userType;
     this.userId = userId;
     this.token = token;
     this.factoryId = factoryId;
+    this.companyName = companyName;
     if (kDebugMode) {
       debugPrint(
         'FACTORY_AUTH_CACHE: set - userType=$userType, userId=$userId, '
@@ -89,6 +95,7 @@ class FactoryAuthCache {
     userId = null;
     userType = null;
     factoryId = null;
+    companyName = null;
     if (kDebugMode) {
       debugPrint('FACTORY_AUTH_CACHE: reset');
     }
