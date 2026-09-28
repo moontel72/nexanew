@@ -11,6 +11,10 @@ has to start.
 ## 1. Read order
 
 1. **this file**
+1b. `docs/handoff/MASTER-TASK-LIST.md` — **the running queue.** Every outstanding item, numbered,
+   with what is done (and its commit hash) and what is next. **A fresh session continues from the
+   first ⏳ item there** — nothing gets re-done and nothing gets skipped. Reading it is not optional:
+   it also carries the ground rules (evidence before edits; restore, don't rebuild) and the key findings.
 2. `docs/handoff/PANEL-SEPARATION-PLAN.md` — §11 registry, §15b provider split (DONE), §17 auth globals,
    §18 provenance
 3. `docs/handoff/GROUP-INCHARGE-MODEL.md` — the authority model + the phase order
