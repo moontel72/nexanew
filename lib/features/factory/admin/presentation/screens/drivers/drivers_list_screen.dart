@@ -141,10 +141,14 @@ class _DriversListScreenState extends State<DriversListScreen> {
             }
             if (state.status == DriversStatus.error &&
                 state.errorMessage != null) {
+              // STAYS on screen instead of flashing for a second. This is the stopgap for the 'stay'
+              // half of the owner's request; the shared StickyErrorBanner (which also adds Copy + X)
+              // replaces it when this screen is converted. See docs: StickyErrorBanner.
               ScaffoldMessenger.of(this.context).showSnackBar(
                 SnackBar(
                   content: Text(state.errorMessage!),
                   backgroundColor: AppColors.error,
+                  duration: const Duration(days: 1),
                 ),
               );
             }
@@ -368,10 +372,12 @@ class _DriversListScreenState extends State<DriversListScreen> {
           }
           if (state.status == DriversStatus.error &&
               state.errorMessage != null) {
+            // STAYS on screen - see the note on the other error handler in this file.
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.errorMessage!),
                 backgroundColor: AppColors.error,
+                duration: const Duration(days: 1),
               ),
             );
           }
