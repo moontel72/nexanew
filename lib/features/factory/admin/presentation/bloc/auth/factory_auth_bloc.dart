@@ -74,10 +74,9 @@ class FactoryAuthBloc extends Bloc<FactoryAuthEvent, FactoryAuthState> {
   Timer? _sessionTimer;
   Timer? _tokenRefreshTimer;
 
-  FactoryAuthBloc({
-    required FactoryAuthRepository authRepository,
-  })  : _authRepository = authRepository,
-        super(FactoryAuthInitial()) {
+  FactoryAuthBloc({required FactoryAuthRepository authRepository})
+    : _authRepository = authRepository,
+      super(FactoryAuthInitial()) {
     on<FactoryLoginRequested>(_onLogin);
     on<FactoryLogoutRequested>(_onLogout);
     on<CheckFactoryAuthStatus>(_onCheckSession);
@@ -118,29 +117,40 @@ class FactoryAuthBloc extends Bloc<FactoryAuthEvent, FactoryAuthState> {
         userId: userData['id']?.toString() ?? '',
         token: token,
         factoryId: userData['company_id']?.toString(),
+        // The panel header shows WHICH factory this account is - so the name has to travel with every
+        // login. This bloc runs BEFORE the login screen's listener, and that listener is guarded by
+        // "if not already authenticated", so this is the write that actually wins.
+        companyName: userData['company_name']?.toString(),
       );
 
       // Start session management
       _startSessionManagement();
 
-      emit(FactoryAuthAuthenticated(
-        user: userData,
-        token: token,
-        tokenExpiry: DateTime.now().add(const Duration(hours: 24)),
-        needsPasswordChange: false,
-      ));
+      emit(
+        FactoryAuthAuthenticated(
+          user: userData,
+          token: token,
+          tokenExpiry: DateTime.now().add(const Duration(hours: 24)),
+          needsPasswordChange: false,
+        ),
+      );
     } catch (error) {
       final errorMessage = error.toString();
-      emit(FactoryAuthError(
-        message: errorMessage,
-        isNetworkError: errorMessage.toLowerCase().contains('network') ||
-            errorMessage.toLowerCase().contains('timeout'),
-        isServerError: errorMessage.toLowerCase().contains('server') ||
-            errorMessage.toLowerCase().contains('internal'),
-        isInvalidCredentials: errorMessage.toLowerCase().contains('invalid') ||
-            errorMessage.toLowerCase().contains('credentials'),
-        isAccountSuspended: errorMessage.toLowerCase().contains('suspended'),
-      ));
+      emit(
+        FactoryAuthError(
+          message: errorMessage,
+          isNetworkError:
+              errorMessage.toLowerCase().contains('network') ||
+              errorMessage.toLowerCase().contains('timeout'),
+          isServerError:
+              errorMessage.toLowerCase().contains('server') ||
+              errorMessage.toLowerCase().contains('internal'),
+          isInvalidCredentials:
+              errorMessage.toLowerCase().contains('invalid') ||
+              errorMessage.toLowerCase().contains('credentials'),
+          isAccountSuspended: errorMessage.toLowerCase().contains('suspended'),
+        ),
+      );
     }
   }
 
@@ -182,12 +192,14 @@ class FactoryAuthBloc extends Bloc<FactoryAuthEvent, FactoryAuthState> {
 
       if (profile['id'] != null) {
         // Factory is authenticated
-        emit(FactoryAuthAuthenticated(
-          user: profile,
-          token: '', // Token is stored in secure storage
-          tokenExpiry: DateTime.now().add(const Duration(hours: 24)),
-          needsPasswordChange: false,
-        ));
+        emit(
+          FactoryAuthAuthenticated(
+            user: profile,
+            token: '', // Token is stored in secure storage
+            tokenExpiry: DateTime.now().add(const Duration(hours: 24)),
+            needsPasswordChange: false,
+          ),
+        );
       } else {
         emit(FactoryAuthUnauthenticated());
       }

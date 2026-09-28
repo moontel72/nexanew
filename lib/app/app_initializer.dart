@@ -225,6 +225,9 @@ class _AppInitializerState extends State<AppInitializer> {
                     userId: user['id']?.toString() ?? '',
                     token: token,
                     factoryId: user['company_id']?.toString(),
+                    // Restored session: the factory's registered name, so a cold start shows the header
+                    // correctly too (login stores the whole user map, which now carries it).
+                    companyName: user['company_name']?.toString(),
                   );
                 }
               }
