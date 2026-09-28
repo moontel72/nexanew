@@ -33,13 +33,9 @@ class _FactoryDashboardState extends State<FactoryDashboard> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Factory Dashboard'),
-          bottom: TabBar(
-            tabs: _buildTabs(canAccessTransport),
-          ),
+          bottom: TabBar(tabs: _buildTabs(canAccessTransport)),
         ),
-        body: TabBarView(
-          children: _buildTabViews(canAccessTransport, limits),
-        ),
+        body: TabBarView(children: _buildTabViews(canAccessTransport, limits)),
       ),
     );
   }
@@ -93,14 +89,14 @@ class _FactoryDashboardState extends State<FactoryDashboard> {
                 children: [
                   const Text(
                     'Factory Overview',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   _buildStatItem(
-                      'Factory ID', widget.factoryId, Icons.business),
+                    'Factory ID',
+                    widget.factoryId,
+                    Icons.business,
+                  ),
                   const SizedBox(height: 12),
                   _buildStatItem('User ID', widget.userId, Icons.person),
                   const SizedBox(height: 12),
@@ -119,21 +115,21 @@ class _FactoryDashboardState extends State<FactoryDashboard> {
                 children: [
                   const Text(
                     'Quick Actions',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   Wrap(
                     spacing: 12,
                     runSpacing: 12,
                     children: [
-                      _buildActionButton('Manage Products', Icons.inventory,
-                          () {
-                        // Navigate to products management
-                        _showSnackbar('Navigate to products management');
-                      }),
+                      _buildActionButton(
+                        'Manage Products',
+                        Icons.inventory,
+                        () {
+                          // Navigate to products management
+                          _showSnackbar('Navigate to products management');
+                        },
+                      ),
                       _buildActionButton('Generate Codes', Icons.qr_code, () {
                         // Navigate to code generation
                         _showSnackbar('Navigate to code generation');
@@ -209,52 +205,19 @@ class _FactoryDashboardState extends State<FactoryDashboard> {
                 children: [
                   const Text(
                     'Recent Products',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
-                  ListTile(
-                    leading:
-                        const Icon(Icons.inventory, color: AppColors.primary),
-                    title: const Text('Product A'),
-                    subtitle: const Text('SKU: PROD-001 • 500 units'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.arrow_forward),
-                      onPressed: () {
-                        // View product details
-                        _showSnackbar('View Product A details');
-                      },
-                    ),
-                  ),
-                  const Divider(),
-                  ListTile(
-                    leading:
-                        const Icon(Icons.inventory, color: AppColors.primary),
-                    title: const Text('Product B'),
-                    subtitle: const Text('SKU: PROD-002 • 300 units'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.arrow_forward),
-                      onPressed: () {
-                        // View product details
-                        _showSnackbar('View Product B details');
-                      },
-                    ),
-                  ),
-                  const Divider(),
-                  ListTile(
-                    leading:
-                        const Icon(Icons.inventory, color: AppColors.primary),
-                    title: const Text('Product C'),
-                    subtitle: const Text('SKU: PROD-003 • 750 units'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.arrow_forward),
-                      onPressed: () {
-                        // View product details
-                        _showSnackbar('View Product C details');
-                      },
-                    ),
+                  // The three rows that used to sit here - 'Product A / SKU: PROD-001 • 500 units',
+                  // then B and C - were hardcoded demo data from the repository's first commit, and each
+                  // one only fired a snackbar ('View Product A details'). They were never the factory's
+                  // real products. The live list is on the Products screen, reachable from the sidebar
+                  // again since deb1d661, so this block now says where to look instead of inventing rows.
+                  const ListTile(
+                    leading: Icon(Icons.inventory, color: AppColors.primary),
+                    title: Text('Open Products'),
+                    subtitle: Text('The live product list for this factory'),
+                    trailing: Icon(Icons.arrow_forward),
                   ),
                 ],
               ),
@@ -280,10 +243,7 @@ class _FactoryDashboardState extends State<FactoryDashboard> {
                 children: [
                   const Text(
                     'Transport Features',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
                   const Text(
@@ -372,10 +332,7 @@ class _FactoryDashboardState extends State<FactoryDashboard> {
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         Text(
           title,
@@ -386,7 +343,10 @@ class _FactoryDashboardState extends State<FactoryDashboard> {
   }
 
   Widget _buildActionButton(
-      String label, IconData icon, VoidCallback onPressed) {
+    String label,
+    IconData icon,
+    VoidCallback onPressed,
+  ) {
     return ElevatedButton.icon(
       onPressed: onPressed,
       icon: Icon(icon),
@@ -425,10 +385,7 @@ class _FactoryDashboardState extends State<FactoryDashboard> {
 
   void _showSnackbar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2),
-      ),
+      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
     );
   }
 
@@ -473,8 +430,9 @@ class _FactoryDashboardState extends State<FactoryDashboard> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Goods Transport Companies'),
-        content:
-            const Text('List of goods transport companies will appear here'),
+        content: const Text(
+          'List of goods transport companies will appear here',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
