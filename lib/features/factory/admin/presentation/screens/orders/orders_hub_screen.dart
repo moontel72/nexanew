@@ -36,6 +36,15 @@ class _OrdersHubScreenState extends State<OrdersHubScreen>
   bool _resellerLoading = false;
   String? _resellerError;
 
+  /// The stack of the last fetch failure. Passed to the banner so a copied report
+  /// carries it — on a release web build the message alone is minified
+  /// ("minified:SU") and useless on its own.
+  String? _resellerStack;
+
+  /// A failed status change (fire-and-forget before). Shown above the list so one
+  /// failed action does not hide the orders.
+  String? _actionError;
+
   /// The owner's rule: a failure stays until closed. The dismissed *message* is
   /// remembered, so the same error stays closed but a new one always shows.
   String? _dismissedError;
@@ -97,20 +106,25 @@ class _OrdersHubScreenState extends State<OrdersHubScreen>
     setState(() {
       _resellerLoading = true;
       _resellerError = null;
+      _resellerStack = null;
     });
     try {
       final res = await ApiService().get(ApiEndpoints.factoryResellerOrders);
-      final map = res is Map
-          ? res.cast<String, dynamic>()
-          : <String, dynamic>{};
-      final data = map['data'];
-      if (data is List) {
-        _resellerOrders = data.cast<Map<String, dynamic>>();
-      } else {
-        _resellerOrders = [];
-      }
-    } catch (e) {
+      // Eager, defensive copy — `List.cast` / `Map.cast` return LAZY views, so a
+      // value the cast rejects throws LATER (during build) and becomes an
+      // uncaught screen-level error instead of a caught one. `Map.from` fails
+      // here, inside the try, where it belongs.
+      final raw = res is Map ? res['data'] : null;
+      _resellerOrders = raw is List
+          ? [
+              for (final item in raw)
+                if (item is Map) Map<String, dynamic>.from(item),
+            ]
+          : <Map<String, dynamic>>[];
+    } catch (e, st) {
       _resellerError = e.toString();
+      _resellerStack = st.toString();
+      debugPrint('Factory · Orders · reseller-orders fetch failed: $e\n$st');
     }
     if (mounted) {
       setState(() => _resellerLoading = false);
@@ -127,14 +141,12 @@ class _OrdersHubScreenState extends State<OrdersHubScreen>
         body: {'order_status': newStatus},
       );
       await _fetchResellerOrders();
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('Factory · Orders · status update failed: $e\n$st');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update status: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        // Was a fire-and-forget SnackBar; the owner's rule is that a failure
+        // stays, copies and closes.
+        setState(() => _actionError = e.toString());
       }
     }
   }
@@ -330,6 +342,7 @@ class _OrdersHubScreenState extends State<OrdersHubScreen>
             StickyErrorBanner(
               message: message,
               source: 'Factory · Orders · GET /api/v1/factory/reseller-orders',
+              stack: _resellerStack,
               onDismiss: () => setState(() => _dismissedError = message),
             ),
           Padding(
@@ -338,7 +351,9 @@ class _OrdersHubScreenState extends State<OrdersHubScreen>
               children: [
                 const Icon(Icons.error_outline, size: 48, color: Colors.red),
                 const SizedBox(height: 12),
-                Text(
+                // SelectableText, not Text: even if the clipboard is unavailable
+                // (plain http://) the operator can select and copy by hand.
+                SelectableText(
                   message ?? 'Failed to load reseller orders',
                   style: const TextStyle(color: AppColors.textSecondary),
                   textAlign: TextAlign.center,
@@ -386,9 +401,21 @@ class _OrdersHubScreenState extends State<OrdersHubScreen>
       onRefresh: _fetchResellerOrders,
       child: ListView.builder(
         padding: EdgeInsets.all(16.w),
-        itemCount: _resellerOrders.length,
+        // +1 while an action failure is showing, so the list is never hidden.
+        itemCount: _resellerOrders.length + (_actionError != null ? 1 : 0),
         itemBuilder: (_, i) {
-          final order = _resellerOrders[i];
+          if (_actionError != null && i == 0) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: 12.h),
+              child: StickyErrorBanner(
+                message: _actionError!,
+                source:
+                    'Factory · Orders · PATCH /api/v1/factory/reseller-orders/{id}/status',
+                onDismiss: () => setState(() => _actionError = null),
+              ),
+            );
+          }
+          final order = _resellerOrders[i - (_actionError != null ? 1 : 0)];
           return _ResellerOrderCard(
             order: order,
             statusColor: _statusColor(order['orderStatus']?.toString() ?? ''),

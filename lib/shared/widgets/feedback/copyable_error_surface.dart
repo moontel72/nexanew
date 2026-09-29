@@ -30,6 +30,23 @@ import 'package:trace_odd/shared/theme/colors.dart';
 /// when `ErrorWidget.builder` is handed only the exception.
 FlutterErrorDetails? lastUncaughtErrorDetails;
 
+/// True when the browser Clipboard API cannot be trusted.
+///
+/// The Clipboard API only exists in a SECURE context. On the plain `http://` raw
+/// IP used for testing, `navigator.clipboard` is undefined — and Flutter's web
+/// implementation does **not** throw in that case, it just does nothing. So the
+/// old try/catch fallback never fired: the button looked like it had copied while
+/// the clipboard stayed empty (owner, 2026-09-29: "neither before nor now does it
+/// copy"). Detect the insecure context up front instead of waiting for an
+/// exception that never comes.
+bool get clipboardLikelyUnavailable {
+  if (!kIsWeb) return false;
+  final base = Uri.base;
+  if (base.scheme == 'https') return false;
+  final host = base.host;
+  return host != 'localhost' && host != '127.0.0.1';
+}
+
 /// The text the Copy action puts on the clipboard.
 String _reportText(Object error, {StackTrace? stack, String? app}) {
   final lines = <String>[];
@@ -48,15 +65,20 @@ String _reportText(Object error, {StackTrace? stack, String? app}) {
 /// served over plain `http://` (the raw IP), where it is unavailable. Without the
 /// fallback the button silently does nothing — which is exactly what the owner hit.
 Future<void> copyReport(BuildContext context, String text) async {
-  try {
-    await Clipboard.setData(ClipboardData(text: text));
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Copied')));
-    return;
-  } catch (_) {
-    // Fall through.
+  // Skip the clipboard entirely in an insecure context — it would neither copy
+  // nor throw (see `clipboardLikelyUnavailable`), so claiming success there is a
+  // lie. Go straight to the manual dialog, which always works.
+  if (!clipboardLikelyUnavailable) {
+    try {
+      await Clipboard.setData(ClipboardData(text: text));
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Copied')));
+      return;
+    } catch (_) {
+      // Fall through to the manual dialog.
+    }
   }
 
   if (!context.mounted) return;

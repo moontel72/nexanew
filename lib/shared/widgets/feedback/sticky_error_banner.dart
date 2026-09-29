@@ -25,6 +25,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/feedback/copyable_error_surface.dart';
 
 class StickyErrorBanner extends StatefulWidget {
   /// The message to show. If it comes from an exception, prefer `fromError` below.
@@ -33,6 +34,11 @@ class StickyErrorBanner extends StatefulWidget {
   /// Where it happened — panel / screen / endpoint. This is what makes a copied report actionable.
   final String? source;
 
+  /// Optional stack trace. It is NOT rendered (it would swamp the panel) — it is
+  /// appended to the copied text, so a minified web error still arrives with the
+  /// line that produced it.
+  final String? stack;
+
   /// Called when the operator taps X. The caller owns the state (the banner stays until then).
   final VoidCallback? onDismiss;
 
@@ -40,6 +46,7 @@ class StickyErrorBanner extends StatefulWidget {
     super.key,
     required this.message,
     this.source,
+    this.stack,
     this.onDismiss,
   });
 
@@ -49,12 +56,14 @@ class StickyErrorBanner extends StatefulWidget {
     Object error, {
     Key? key,
     String? source,
+    String? stack,
     VoidCallback? onDismiss,
   }) {
     return StickyErrorBanner(
       key: key,
       message: error.toString(),
       source: source,
+      stack: stack,
       onDismiss: onDismiss,
     );
   }
@@ -72,17 +81,26 @@ class _StickyErrorBannerState extends State<StickyErrorBanner> {
       lines.add(widget.source!);
     }
     lines.add(widget.message);
+    if (widget.stack != null && widget.stack!.trim().isNotEmpty) {
+      lines.add('Stack:');
+      lines.add(widget.stack!.trim());
+    }
     return lines.join('\n');
   }
 
   Future<void> _copy() async {
-    try {
-      await Clipboard.setData(ClipboardData(text: _copyText));
-      if (!mounted) return;
-      setState(() => _copied = true);
-      return;
-    } catch (_) {
-      // Fall through to the manual path below.
+    // In an insecure context the clipboard API silently does nothing instead of
+    // throwing, so a try/catch is not enough — skip it and show the manual dialog
+    // (see `clipboardLikelyUnavailable`).
+    if (!clipboardLikelyUnavailable) {
+      try {
+        await Clipboard.setData(ClipboardData(text: _copyText));
+        if (!mounted) return;
+        setState(() => _copied = true);
+        return;
+      } catch (_) {
+        // Fall through to the manual path below.
+      }
     }
 
     if (!mounted) return;
