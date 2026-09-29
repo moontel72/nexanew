@@ -49,6 +49,10 @@ class _OrdersHubScreenState extends State<OrdersHubScreen>
   /// remembered, so the same error stays closed but a new one always shows.
   String? _dismissedError;
 
+  /// Same idea for the bundle tabs (their error lives in `BundleBloc`, so it needs
+  /// its own dismissed marker).
+  String? _dismissedBundleError;
+
   static const _tabs = <_OrderTab>[
     _OrderTab(label: 'New', status: 'draft', icon: Icons.description_outlined),
     _OrderTab(
@@ -240,28 +244,40 @@ class _OrdersHubScreenState extends State<OrdersHubScreen>
               }
 
               if (state.status == BundleStatus.error && state.bundles.isEmpty) {
+                // Copyable + closable, like every other failure: the owner's rule is
+                // that an error must be reportable, not just visible. (The copy
+                // itself works over plain http:// too — see `clipboardLikelyUnavailable`.)
+                final message = state.errorMessage ?? 'Failed to load bundles';
                 return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        size: 48,
-                        color: Colors.red,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        state.errorMessage ?? 'Failed to load bundles',
-                        style: const TextStyle(color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton.icon(
-                        onPressed: () =>
-                            context.read<BundleBloc>().add(const LoadBundles()),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
-                      ),
-                    ],
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(height: 12),
+                        if (message != _dismissedBundleError)
+                          StickyErrorBanner(
+                            message: message,
+                            source:
+                                'Factory · Orders · GET /api/v1/factory/codes/bundles/list',
+                            onDismiss: () =>
+                                setState(() => _dismissedBundleError = message),
+                          ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: () => context.read<BundleBloc>().add(
+                            const LoadBundles(),
+                          ),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry'),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               }
