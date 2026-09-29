@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 class FleetDriversScreen extends StatefulWidget {
   const FleetDriversScreen({super.key});
@@ -16,6 +17,14 @@ class _FleetDriversScreenState extends State<FleetDriversScreen> {
   List<Map<String, dynamic>> _items = [];
   bool _loading = true;
   String? _error;
+
+  /// Which endpoint the current `_error` came from — so the banner's source line
+  /// is right whether it was the load or the add that failed.
+  String? _errorSource;
+
+  /// The dismissed message (see `StickyErrorBanner`): the same failure stays
+  /// closed, a different one always shows again.
+  String? _dismissedError;
 
   @override
   void initState() {
@@ -38,6 +47,8 @@ class _FleetDriversScreenState extends State<FleetDriversScreen> {
     } catch (e) {
       setState(() {
         _error = e.toString();
+        _errorSource =
+            'Super Admin · Bus Drivers · GET /api/v1/bus-fleet/drivers/manage';
         _loading = false;
       });
     }
@@ -116,13 +127,14 @@ class _FleetDriversScreenState extends State<FleetDriversScreen> {
           ),
         );
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+      // Was a fire-and-forget red SnackBar; a failure must stay, copy and close.
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _errorSource =
+              'Super Admin · Bus Drivers · POST /api/v1/bus-fleet/drivers/manage';
+        });
+      }
     }
   }
 
@@ -159,24 +171,35 @@ class _FleetDriversScreenState extends State<FleetDriversScreen> {
     ),
     body: _loading
         ? const Center(child: CircularProgressIndicator())
-        : _error != null
-        ? Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(_error!),
-                SizedBox(height: 12),
-                ElevatedButton(onPressed: _load, child: const Text('Retry')),
-              ],
-            ),
-          )
-        : _items.isEmpty
-        ? const Center(child: Text('No drivers registered'))
-        : ListView.separated(
-            padding: EdgeInsets.all(16.w),
-            itemCount: _items.length,
-            separatorBuilder: (_, __) => SizedBox(height: 8.h),
-            itemBuilder: (_, i) => _card(_items[i]),
+        : Column(
+            children: [
+              if (_error != null && _error != _dismissedError)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 0),
+                  child: StickyErrorBanner(
+                    message: _error!,
+                    source: _errorSource,
+                    onDismiss: () => setState(() => _dismissedError = _error),
+                  ),
+                ),
+              Expanded(
+                child: _items.isEmpty
+                    ? Center(
+                        child: _error != null
+                            ? ElevatedButton(
+                                onPressed: _load,
+                                child: const Text('Retry'),
+                              )
+                            : const Text('No drivers registered'),
+                      )
+                    : ListView.separated(
+                        padding: EdgeInsets.all(16.w),
+                        itemCount: _items.length,
+                        separatorBuilder: (_, __) => SizedBox(height: 8.h),
+                        itemBuilder: (_, i) => _card(_items[i]),
+                      ),
+              ),
+            ],
           ),
   );
 

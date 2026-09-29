@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 class GoodsFleetOwnersScreen extends StatefulWidget {
   const GoodsFleetOwnersScreen({super.key});
@@ -16,6 +17,17 @@ class _GoodsFleetOwnersScreenState extends State<GoodsFleetOwnersScreen> {
   List<Map<String, dynamic>> _owners = [];
   bool _loading = true;
   String? _error;
+  String? _errorSource;
+  String? _dismissedError;
+
+  /// Record a failure for the banner — a failed action must STAY, copy and close.
+  void _fail(Object e, String source) {
+    if (!mounted) return;
+    setState(() {
+      _error = e.toString();
+      _errorSource = source;
+    });
+  }
 
   @override
   void initState() {
@@ -38,6 +50,8 @@ class _GoodsFleetOwnersScreenState extends State<GoodsFleetOwnersScreen> {
     } catch (e) {
       setState(() {
         _error = e.toString();
+        _errorSource =
+            'Super Admin · Goods Fleet Owners · GET /api/v1/goods-fleet/owners';
         _loading = false;
       });
     }
@@ -133,13 +147,12 @@ class _GoodsFleetOwnersScreenState extends State<GoodsFleetOwnersScreen> {
           ),
         );
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+      _fail(
+        e,
+        isEdit
+            ? 'Super Admin · Goods Fleet Owners · PUT /api/v1/goods-fleet/owners/{id}'
+            : 'Super Admin · Goods Fleet Owners · POST /api/v1/goods-fleet/owners',
+      );
     }
   }
 
@@ -159,13 +172,10 @@ class _GoodsFleetOwnersScreenState extends State<GoodsFleetOwnersScreen> {
           ),
         );
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+      _fail(
+        e,
+        'Super Admin · Goods Fleet Owners · PUT /api/v1/goods-fleet/owners/{id} (status)',
+      );
     }
   }
 
@@ -203,13 +213,10 @@ class _GoodsFleetOwnersScreenState extends State<GoodsFleetOwnersScreen> {
           ),
         );
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+      _fail(
+        e,
+        'Super Admin · Goods Fleet Owners · DELETE /api/v1/goods-fleet/owners/{id}',
+      );
     }
   }
 
@@ -268,24 +275,35 @@ class _GoodsFleetOwnersScreenState extends State<GoodsFleetOwnersScreen> {
     ),
     body: _loading
         ? const Center(child: CircularProgressIndicator())
-        : _error != null
-        ? Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(_error!),
-                SizedBox(height: 12),
-                ElevatedButton(onPressed: _load, child: const Text('Retry')),
-              ],
-            ),
-          )
-        : _owners.isEmpty
-        ? const Center(child: Text('No owners registered'))
-        : ListView.separated(
-            padding: EdgeInsets.all(16.w),
-            itemCount: _owners.length,
-            separatorBuilder: (_, __) => SizedBox(height: 8.h),
-            itemBuilder: (_, i) => _ownerCard(_owners[i]),
+        : Column(
+            children: [
+              if (_error != null && _error != _dismissedError)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 0),
+                  child: StickyErrorBanner(
+                    message: _error!,
+                    source: _errorSource,
+                    onDismiss: () => setState(() => _dismissedError = _error),
+                  ),
+                ),
+              Expanded(
+                child: _owners.isEmpty
+                    ? Center(
+                        child: _error != null
+                            ? ElevatedButton(
+                                onPressed: _load,
+                                child: const Text('Retry'),
+                              )
+                            : const Text('No owners registered'),
+                      )
+                    : ListView.separated(
+                        padding: EdgeInsets.all(16.w),
+                        itemCount: _owners.length,
+                        separatorBuilder: (_, __) => SizedBox(height: 8.h),
+                        itemBuilder: (_, i) => _ownerCard(_owners[i]),
+                      ),
+              ),
+            ],
           ),
   );
 

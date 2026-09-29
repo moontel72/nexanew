@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 class GoodsFleetDriversScreen extends StatefulWidget {
   const GoodsFleetDriversScreen({super.key});
@@ -17,6 +18,19 @@ class _GoodsFleetDriversScreenState extends State<GoodsFleetDriversScreen> {
   List<Map<String, dynamic>> _items = [];
   bool _loading = true;
   String? _error;
+  String? _errorSource;
+  String? _dismissedError;
+
+  /// Record a failure for the banner. Used by every action so a failed form /
+  /// status change / delete STAYS on screen and can be copied, instead of a red
+  /// SnackBar that vanished before it could be read or reported.
+  void _fail(Object e, String source) {
+    if (!mounted) return;
+    setState(() {
+      _error = e.toString();
+      _errorSource = source;
+    });
+  }
 
   @override
   void initState() {
@@ -39,6 +53,8 @@ class _GoodsFleetDriversScreenState extends State<GoodsFleetDriversScreen> {
     } catch (e) {
       setState(() {
         _error = e.toString();
+        _errorSource =
+            'Super Admin · Goods Fleet Drivers · GET /api/v1/goods-fleet/drivers/manage';
         _loading = false;
       });
     }
@@ -88,7 +104,9 @@ class _GoodsFleetDriversScreenState extends State<GoodsFleetDriversScreen> {
                         labelText: 'Password *',
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
-                          icon: Icon(obscure ? Icons.visibility_off : Icons.visibility),
+                          icon: Icon(
+                            obscure ? Icons.visibility_off : Icons.visibility,
+                          ),
                           onPressed: () => setSt(() => obscure = !obscure),
                         ),
                       ),
@@ -151,13 +169,12 @@ class _GoodsFleetDriversScreenState extends State<GoodsFleetDriversScreen> {
           ),
         );
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+      _fail(
+        e,
+        isEdit
+            ? 'Super Admin · Goods Fleet Drivers · PUT /api/v1/goods-fleet/drivers/manage/{id}'
+            : 'Super Admin · Goods Fleet Drivers · POST /api/v1/goods-fleet/drivers/manage',
+      );
     }
   }
 
@@ -177,13 +194,10 @@ class _GoodsFleetDriversScreenState extends State<GoodsFleetDriversScreen> {
           ),
         );
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+      _fail(
+        e,
+        'Super Admin · Goods Fleet Drivers · PUT /api/v1/goods-fleet/drivers/manage/{id} (status)',
+      );
     }
   }
 
@@ -219,13 +233,10 @@ class _GoodsFleetDriversScreenState extends State<GoodsFleetDriversScreen> {
           ),
         );
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+      _fail(
+        e,
+        'Super Admin · Goods Fleet Drivers · DELETE /api/v1/goods-fleet/drivers/manage/{id}',
+      );
     }
   }
 
@@ -279,24 +290,35 @@ class _GoodsFleetDriversScreenState extends State<GoodsFleetDriversScreen> {
     ),
     body: _loading
         ? const Center(child: CircularProgressIndicator())
-        : _error != null
-        ? Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(_error!),
-                SizedBox(height: 12),
-                ElevatedButton(onPressed: _load, child: const Text('Retry')),
-              ],
-            ),
-          )
-        : _items.isEmpty
-        ? const Center(child: Text('No drivers registered'))
-        : ListView.separated(
-            padding: EdgeInsets.all(16.w),
-            itemCount: _items.length,
-            separatorBuilder: (_, __) => SizedBox(height: 8.h),
-            itemBuilder: (_, i) => _card(_items[i]),
+        : Column(
+            children: [
+              if (_error != null && _error != _dismissedError)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 0),
+                  child: StickyErrorBanner(
+                    message: _error!,
+                    source: _errorSource,
+                    onDismiss: () => setState(() => _dismissedError = _error),
+                  ),
+                ),
+              Expanded(
+                child: _items.isEmpty
+                    ? Center(
+                        child: _error != null
+                            ? ElevatedButton(
+                                onPressed: _load,
+                                child: const Text('Retry'),
+                              )
+                            : const Text('No drivers registered'),
+                      )
+                    : ListView.separated(
+                        padding: EdgeInsets.all(16.w),
+                        itemCount: _items.length,
+                        separatorBuilder: (_, __) => SizedBox(height: 8.h),
+                        itemBuilder: (_, i) => _card(_items[i]),
+                      ),
+              ),
+            ],
           ),
   );
 
