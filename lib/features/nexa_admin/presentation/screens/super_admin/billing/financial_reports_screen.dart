@@ -7,6 +7,7 @@ import 'package:trace_odd/shared/widgets/cards/info_card.dart';
 import 'package:trace_odd/shared/widgets/cards/kpi_card.dart';
 import 'package:trace_odd/shared/widgets/inputs/text_input.dart';
 import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/theme/text_styles.dart';
 
@@ -23,6 +24,11 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
   String _reportType = 'profit_loss';
   bool _isLoading = false;
   RevenueReport? _reportData;
+
+  /// A failed report load/export — copyable banner, not a vanishing SnackBar.
+  /// (The builder below has no `ErrorState` on error, so this is the only surface.)
+  String? _error;
+  String? _dismissedError;
 
   @override
   void initState() {
@@ -116,26 +122,40 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
             error: (message, error) {
               setState(() {
                 _isLoading = false;
+                _error = message;
               });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(message),
-                  backgroundColor: AppColors.error,
-                ),
-              );
             },
             orElse: () {},
           );
         },
         builder: (context, state) {
-          return state.maybeWhen(
-            loading: () => const Center(child: LoadingIndicator()),
-            orElse: () => _buildContent(context),
+          return _withErrorBanner(
+            state.maybeWhen(
+              loading: () => const Center(child: LoadingIndicator()),
+              orElse: () => _buildContent(context),
+            ),
           );
         },
       ),
     );
   }
+
+  /// Wrap content with the copyable failure banner. A failure must stay on screen
+  /// until the operator closes it — the old SnackBar vanished instantly.
+  Widget _withErrorBanner(Widget child) => Column(
+    children: [
+      if (_error != null && _error != _dismissedError)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: StickyErrorBanner(
+            message: _error!,
+            source: 'Super Admin · Financial Reports',
+            onDismiss: () => setState(() => _dismissedError = _error),
+          ),
+        ),
+      Expanded(child: child),
+    ],
+  );
 
   Widget _buildContent(BuildContext context) {
     return SingleChildScrollView(

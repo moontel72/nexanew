@@ -6,9 +6,9 @@ import 'package:trace_odd/features/nexa_admin/presentation/bloc/billing/billing_
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/billing/invoice_detail_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/widgets/billing/invoice_status_badge.dart';
 import 'package:trace_odd/shared/models/billing/invoice_model.dart' as shared;
-import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/theme/typography.dart';
 import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 class PlatformInvoicesScreen extends StatefulWidget {
   const PlatformInvoicesScreen({super.key});
@@ -24,6 +24,10 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
   int _page = 1;
   final int _limit = 20;
   bool _hasMore = true;
+
+  /// A failed load/action — copyable banner (the builder has no `ErrorState`).
+  String? _error;
+  String? _dismissedError;
 
   @override
   void initState() {
@@ -48,31 +52,31 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
     }
 
     context.read<BillingBloc>().add(
-          BillingEvent.loadPlatformInvoices(
-            page: _page,
-            limit: _limit,
-            searchQuery: _searchController.text.trim().isEmpty
-                ? null
-                : _searchController.text.trim(),
-          ),
-        );
+      BillingEvent.loadPlatformInvoices(
+        page: _page,
+        limit: _limit,
+        searchQuery: _searchController.text.trim().isEmpty
+            ? null
+            : _searchController.text.trim(),
+      ),
+    );
   }
 
   Future<void> _finalize(AdminInvoice invoice) async {
     if (invoice.status != shared.InvoiceStatus.draft) return;
     context.read<BillingBloc>().add(
-          BillingEvent.updateInvoiceStatus(
-            invoiceId: invoice.id,
-            status: shared.InvoiceStatus.pending,
-          ),
-        );
+      BillingEvent.updateInvoiceStatus(
+        invoiceId: invoice.id,
+        status: shared.InvoiceStatus.pending,
+      ),
+    );
   }
 
   Future<void> _markPaid(AdminInvoice invoice) async {
     if (invoice.status == shared.InvoiceStatus.paid) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invoice is already paid')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Invoice is already paid')));
       return;
     }
     if (invoice.status == shared.InvoiceStatus.draft) {
@@ -89,20 +93,20 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
     if (method == null) return;
 
     await context.read<ApiClient>().post(
-          '/admin/billing/invoices/${invoice.id}/mark-paid',
-          body: {
-            'payment_method': method == shared.PaymentMethod.cash
-                ? 'cash'
-                : 'bank_transfer',
-            'payment_date': DateTime.now().toIso8601String(),
-          },
-        );
+      '/admin/billing/invoices/${invoice.id}/mark-paid',
+      body: {
+        'payment_method': method == shared.PaymentMethod.cash
+            ? 'cash'
+            : 'bank_transfer',
+        'payment_date': DateTime.now().toIso8601String(),
+      },
+    );
 
     if (!mounted) return;
     _load(reset: true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Invoice marked as paid')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Invoice marked as paid')));
   }
 
   Future<void> _addExtraCharge(AdminInvoice invoice) async {
@@ -118,19 +122,19 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
     if (input == null) return;
 
     await context.read<ApiClient>().post(
-          '/admin/billing/invoices/${invoice.id}/extra-charges',
-          body: {
-            'description': input.description,
-            'unit_price': input.unitPrice,
-            'quantity': input.quantity,
-          },
-        );
+      '/admin/billing/invoices/${invoice.id}/extra-charges',
+      body: {
+        'description': input.description,
+        'unit_price': input.unitPrice,
+        'quantity': input.quantity,
+      },
+    );
 
     if (!mounted) return;
     _load(reset: true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Extra charge added')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Extra charge added')));
   }
 
   void _openDetail(AdminInvoice invoice) {
@@ -180,61 +184,80 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
               });
             },
             invoiceStatusUpdated: (invoice, message) {
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(SnackBar(content: Text(message)));
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(message)));
               _load(reset: true);
             },
             error: (message, error) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(message), backgroundColor: AppColors.error),
-              );
+              // Was a red SnackBar that vanished; the builder below has no error
+              // branch, so this banner is the screen's only failure surface.
+              setState(() => _error = message);
             },
             orElse: () {},
           );
         },
         builder: (context, state) {
-          return state.maybeWhen(
-            loading: () => const LoadingIndicator(),
-            processing: () => const LoadingIndicator(),
-            platformInvoicesLoaded: (invoices, hasMore, currentPage) {
-              if (invoices.isEmpty) {
-                return const Center(child: Text('No invoices found'));
-              }
+          return _withErrorBanner(
+            state.maybeWhen(
+              loading: () => const LoadingIndicator(),
+              processing: () => const LoadingIndicator(),
+              platformInvoicesLoaded: (invoices, hasMore, currentPage) {
+                if (invoices.isEmpty) {
+                  return const Center(child: Text('No invoices found'));
+                }
 
-              return Scrollbar(
-                controller: _scrollController,
-                thumbVisibility: true,
-                child: SingleChildScrollView(
+                return Scrollbar(
                   controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'All Company Invoices',
-                        style: AppTypography.titleMedium.copyWith(
-                          fontWeight: FontWeight.w800,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'All Company Invoices',
+                          style: AppTypography.titleMedium.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      _table(invoices),
-                      if (hasMore)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(child: CircularProgressIndicator()),
-                        ),
-                      const SizedBox(height: 24),
-                    ],
+                        const SizedBox(height: 12),
+                        _table(invoices),
+                        if (hasMore)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
-            orElse: () => const LoadingIndicator(),
+                );
+              },
+              orElse: () => const LoadingIndicator(),
+            ),
           );
         },
       ),
     );
   }
+
+  /// Wrap content with the copyable failure banner (stays until closed).
+  Widget _withErrorBanner(Widget child) => Column(
+    children: [
+      if (_error != null && _error != _dismissedError)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: StickyErrorBanner(
+            message: _error!,
+            source: 'Super Admin · Platform Invoices',
+            onDismiss: () => setState(() => _dismissedError = _error),
+          ),
+        ),
+      Expanded(child: child),
+    ],
+  );
 
   Widget _table(List<AdminInvoice> invoices) {
     return LayoutBuilder(
@@ -283,7 +306,10 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
                           }
                         },
                         itemBuilder: (context) => [
-                          const PopupMenuItem(value: 'view', child: Text('View Detail')),
+                          const PopupMenuItem(
+                            value: 'view',
+                            child: Text('View Detail'),
+                          ),
                           PopupMenuItem(
                             value: 'finalize',
                             enabled: inv.status == shared.InvoiceStatus.draft,
@@ -291,13 +317,15 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
                           ),
                           PopupMenuItem(
                             value: 'paid',
-                            enabled: inv.status == shared.InvoiceStatus.pending ||
+                            enabled:
+                                inv.status == shared.InvoiceStatus.pending ||
                                 inv.status == shared.InvoiceStatus.overdue,
                             child: const Text('Mark as Paid (Cash/Bank)'),
                           ),
                           PopupMenuItem(
                             value: 'charge',
-                            enabled: inv.status == shared.InvoiceStatus.pending ||
+                            enabled:
+                                inv.status == shared.InvoiceStatus.pending ||
                                 inv.status == shared.InvoiceStatus.overdue,
                             child: const Text('Add Extra Charge'),
                           ),
@@ -462,4 +490,3 @@ class _ExtraChargeDialogState extends State<_ExtraChargeDialog> {
     super.dispose();
   }
 }
-
