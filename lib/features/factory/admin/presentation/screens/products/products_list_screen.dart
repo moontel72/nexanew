@@ -8,6 +8,7 @@ import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 import 'package:trace_odd/shared/widgets/empty_states/empty_state_widget.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 
 class ProductsListScreen extends StatefulWidget {
@@ -20,6 +21,11 @@ class ProductsListScreen extends StatefulWidget {
 class _ProductsListScreenState extends State<ProductsListScreen> {
   final _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+
+  /// The owner's rule is "a failure stays until the operator closes it". A simple bool could not
+  /// tell a dismissed error from the SAME error arriving again, so the dismissed *message* is what
+  /// is remembered — a new failure therefore always shows.
+  String? _dismissedError;
 
   @override
   void initState() {
@@ -70,21 +76,34 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
           }
 
           if (state.status == ProductsStatus.error) {
-            return Center(
-              child: EmptyState(
-                title: 'Failed to load products',
-                description: state.errorMessage ?? 'Unknown error',
-                icon: Icons.error_outline,
-                iconColor: AppColors.error,
-                actionButton: PrimaryButton(
-                  text: 'Retry',
-                  icon: Icons.refresh,
-                  backgroundColor: AppColors.secondary,
-                  textColor: Colors.white,
-                  onPressed: () =>
-                      context.read<ProductsBloc>().add(const LoadProducts()),
+            // The banner STAYS (with Copy + X) instead of the old one-second
+            // SnackBar / a bare empty state, which made a failed request look
+            // like "no products".
+            final message = state.errorMessage;
+            return ListView(
+              padding: EdgeInsets.all(16.w),
+              children: [
+                if (message != null && message != _dismissedError)
+                  StickyErrorBanner(
+                    message: message,
+                    source: 'Factory · Products · GET /api/v1/factory/products',
+                    onDismiss: () => setState(() => _dismissedError = message),
+                  ),
+                EmptyState(
+                  title: 'Failed to load products',
+                  description: message ?? 'Unknown error',
+                  icon: Icons.error_outline,
+                  iconColor: AppColors.error,
+                  actionButton: PrimaryButton(
+                    text: 'Retry',
+                    icon: Icons.refresh,
+                    backgroundColor: AppColors.secondary,
+                    textColor: Colors.white,
+                    onPressed: () =>
+                        context.read<ProductsBloc>().add(const LoadProducts()),
+                  ),
                 ),
-              ),
+              ],
             );
           }
 

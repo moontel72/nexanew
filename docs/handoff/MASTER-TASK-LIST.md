@@ -32,7 +32,7 @@ the C-phase record), `PANEL-SEPARATION-PLAN.md` §17 (auth globals).
 | 2 | Remove the Factory dashboard's hardcoded demo figures + demo product rows | ✅ `39bb81c6`, `606fdef6` |
 | 3 | Shared `StickyErrorBanner` widget (stay + Copy + X) | ✅ `a9c0ecec` |
 | 4 | Errors **stay + Copy** — Drivers screen (first screen) | ✅ `a180f573` |
-| 5 | Errors **stay + Copy** — remaining **Factory panel** screens: Products, Store Keepers, Unit/Packet/Carton/Bundle codes, Add/Edit dialogs, dashboard | ⏳ |
+| 5 | Errors **stay + Copy** — remaining **Factory panel** screens: Products, Store Keepers, Unit/Packet/Carton/Bundle codes, Add/Edit dialogs, dashboard | ⏳ **in progress** — done: **Products list**, **Unit / Packet / Carton codes lists** (all now use `StickyErrorBanner`: sticky + Copy + X, and a failed request no longer looks like "no codes"). Remaining: Store Keepers, Bundle codes/overview screens, Orders hub, Add/Edit dialogs, dashboard |
 | 6 | Errors **stay + Copy** — **Sub-Admin** panel screens | ⏳ |
 | 7 | Errors **stay + Copy** — **Super Admin** screens | ⏳ |
 | 8 | Errors **stay + Copy** — other apps (reseller, shop keeper, cricket) | ⏳ |
@@ -145,30 +145,41 @@ PHASE K  K1 → K2 → K3 → K4 → K5 → K6
 
 | # | Task | Reuses (already exists) | Depends on |
 |---|---|---|---|
-| **K1** | Farmer listing CRUD + crop catalogue (photos, quantity, unit, location, base price, available-from) | products/images upload path; `companies`; `districts` | #5–#8 done (panel pattern) |
-| **K2** | **Direct bidding** on a listing (place / list / accept a bid) | `FreightAuctionController` (`loads`, `loads/{id}/bids`, `loads/{id}/match`) + `freight_loads` / `freight_bids` — a kisan is a **`poster_type`**, not a new schema | K1 |
-| **K3** | **Automatic logistics hand-off**: on accept, offer the load to nearby trucks | `BiddingMeshController` (`submit-bid`, `accept-bid`) + Goods/Truck fleet map; `TruckCategory.shahzoreLoader` is already documented as *kisaan-to-mandi produce* | K2, #15/#16 (buyer side) |
+| **K1** | **B2B Kisan onboarding + Agri-Producer Dashboard on `market.traceodd.com`** — registration, document/profile verification, Admin/Verification-Manager approval, and a streamlined producer dashboard (post a crop lot, see bids, accept, track pickup, view contracts). Adds auth role **`kisan_producer`** (`poster_type = 'kisan'`) wired to the market B2B auth gateway. **NOT in the Universal Customer app** | market B2B auth gateway; the Reseller/Shopkeeper role-dashboard pattern; `companies` / users role columns | #15/#16 (a B2B role already provisioned next to them) |
+| **K2** | **Crop listing + direct bidding** (place / list / accept a bid) | `FreightAuctionController` (`loads`, `loads/{id}/bids`, `loads/{id}/match`) + `freight_loads` / `freight_bids` — a kisan is a **`poster_type`**, not a new schema | K1 |
+| **K3** | **Automatic logistics hand-off**: on accept, offer the load to nearby trucks | `BiddingMeshController` (`submit-bid`, `accept-bid`) + Goods/Truck fleet map; `TruckCategory.shahzoreLoader` is already documented as *kisaan-to-mandi produce* | K2 |
 | **K4** | **Batch QR** on loading, verified like any NexaTrace product | `base_codes` + production vault + consumer verify (`/marketplace/consumer/verify`) | K3 |
 | **K5** | **Forward demand** on market.traceodd.com: factory publishes *"500 t cotton in 3 months at X"*; kisan accepts before sowing | market site (#12, done) + a `kisan_demands` table | K1 |
 | **K6** | **Advance token / escrow** behind the forward contract | the **existing idempotent split engine** (`PANEL-SEPARATION-PLAN.md` §10.5) — **no second ledger** | K5, #21/#22 (authority + money settled) |
 
-### K.1 — The owner's question: own Kisan app, or inside the Universal app?
+### K.1 — Entry flow & the boundary rule (CORRECTED — owner, 2026-09-29)
 
-**Recommendation: inside the Universal Customer app + market.traceodd.com first. No separate Kisan
-app, and no Kisan entry in the Sub-Admin marketplace panel next to reseller/shop-keeper.**
+**Superseded:** an earlier agent suggestion put Kisan inside the **Universal Customer App**. That was wrong -
+it is an architectural/policy violation and is recorded here so it is not repeated.
 
-| Why |
-|---|
-| A shop keeper has a **panel** (stock, orders, a lifecycle). A kisan has **one listing and one contract** — there is nothing to administer, so a panel would be empty. |
-| Reseller/shop-keeper accounts exist as *account types with panels*; the farmer is a **one-shot participant**, closer to the Customer app's "scan / book / track" model than to the marketplace's "trade every day" model. |
-| The owner's rule for the Sub-Admin is "no personal products, only platform oversight" — a Kisan vertical would need provisioning, verification and account lifecycle that nobody has asked to manage. |
-| Cost: the Customer app already has a login, a shared UI kit, and a route table. A new app means a new entry point, build step, subdomain, Cloudflare record and password rotation — all for one screen. |
+**The rule:**
 
-**What it does need on the marketplace side:** the *factory/admin* half of K5 (publish forward demand) — that
-belongs in the **existing** Factory panel + the market site, not a new panel.
+| Who | Is | Enters through |
+|---|---|---|
+| Universal Customer App | **B2C** — the general public | consumer features only (bus ticketing, freight tracking, product QR verify, IoT) |
+| `market.traceodd.com` | **B2B only** — verified Factories, Wholesalers, Resellers, Shopkeepers | the market B2B auth gateway, per role |
+| **Kisan** | a **Produce Producer / Supplier — a B2B SELLER** supplying raw material to factories. **Not a consumer** | **`market.traceodd.com`**, under a Vendor/Producer role (`kisan_producer`), approved by the Admin / Verification Manager, with its own **Agri-Producer Dashboard** |
 
-> **Revisit when** a real kisan cohort exists and needs verification/onboarding at scale. Then the shape is
-> a **Marketing-style field hierarchy** (District → Manager → Agent), not a marketplace Sub-Admin vertical.
+**Where the Universal app comes in:** *logistics only*. When either side needs a truck, the existing
+Goods & Logistics / Driver flow handles pickup, trip execution, live Google Maps tracking and QR batch scanning.
+
+**Boundary check to run after every Phase K change:** the B2C Universal app carries **no** B2B marketplace
+trading code, and **no** Kisan account type. Sign-up, verification, listing, bidding and contracts all live on
+the B2B side. (The reverse is also true: the market site does not grow consumer features.)
+
+**Why not a separate Kisan app, and not a Sub-Admin vertical:** the owner's Sub-Admin rule is *"no personal
+products, only platform oversight"* — a Kisan vertical would need a provisioning/verification/account
+lifecycle nobody has asked to manage. The K1 **producer dashboard** gives the kisan everything he needs
+inside the B2B portal, and it sits beside the Reseller/Shopkeeper role dashboards that already exist.
+
+> **Revisit when** a real kisan cohort needs bulk onboarding/verification at scale — then the likely shape is a
+> **Marketing-style field hierarchy** (District → Manager → Agent) that onboards producers, not a marketplace
+> Sub-Admin vertical and not a separate consumer app.
 
 ---
 

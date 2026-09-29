@@ -1859,36 +1859,61 @@
 > **Strategic Decision:** Private car trip sharing creates a direct conflict of interest with commercial Bus Fleet Operators. If bus passengers shift to shared private cars, Bus Companies face financial losses and will reject the NexaTrace platform. This module is permanently shelved and will be launched as a standalone future project under a different brand, alongside a Restaurant Food Delivery network.
 
 ### MODULE 18 — KISAN (AGRI-MARKETPLACE) & ADVANCE DEMAND FORECASTING
-**Domain:** Farm-to-Factory Sourcing & Forward Contracts · **Code Namespace:** `kisan` (new) — reuses `FreightAuctionController`, `freight_loads` / `freight_bids`, `AuctionBidding` (Exchange), `marketplace_*`, and the anti-counterfeit code engine
+**Domain:** Farm-to-Factory Sourcing & Forward Contracts · **Code Namespace:** `kisan` (new) — reuses `FreightAuctionController`, `freight_loads` / `freight_bids`, `BiddingMeshController`, `marketplace_*`, and the anti-counterfeit code engine
 **Status:** ⏳ planned — **Phase K**, after the groups' essential work (see `docs/handoff/MASTER-TASK-LIST.md` §Phase K)
 
-> **Placement decision (owner asked):** Kisan is NOT a separate app in the Sub-Admin marketplace at first.
-> It is a **module inside the existing Universal Customer app + market.traceodd.com**, because a farmer
-> has no panel to run — they have one listing and one contract. A dedicated Kisan app is parked in
-> MUSTAQBIL and will only be justified by volume. See `MASTER-TASK-LIST.md` §Phase K for the reasoning.
+> **Entry-flow correction (owner, 2026-09-29) — supersedes an earlier agent suggestion:**
+> The Kisan does **NOT** enter through the **Universal Customer App**. That app is **B2C** (the general
+> public). `market.traceodd.com` is **B2B only** — verified Factories, Wholesalers, Resellers and
+> Shopkeepers transacting business-to-business. A Kisan is **not a consumer**: he is a **Produce Producer /
+> Supplier (a B2B seller)** supplying raw material to factories, so his entry must follow the **B2B rules**.
+>
+> Therefore:
+> * **Registration + profile verification happen on `market.traceodd.com`** under a B2B
+>   **Vendor/Producer role** (`poster_type = 'kisan'`, auth role `kisan_producer`), approved by the
+>   Admin / Verification Manager — **not** in the Universal app.
+> * A verified Kisan gets a dedicated, streamlined **“Agri-Producer Dashboard”** on the market B2B portal,
+>   the same way Resellers and Shopkeepers have their own role dashboards.
+> * **Both sides trade on `market.traceodd.com`**: Supply (kisan posts a crop lot) and Demand (factory posts
+>   3–6 month advance demand), matched with `FreightAuctionController` + `BiddingMeshController`.
+> * The **Universal Customer App appears only for LOGISTICS**: when either side needs a truck, the existing
+>   Goods & Logistics / Driver flow handles pickup, trip execution, live Google Maps tracking and QR batch
+>   scanning. No B2B trading code enters the B2C app.
+>
+> **Boundary rule to keep (must hold after every Phase K change):** the Universal Customer app carries
+> **no** marketplace-trading code, and the kisan is **not** an account type inside it.
 
-#### 18A — Farmer (Kisan) Listing & Direct Bidding
+#### 18A — Kisan B2B Onboarding & Agri-Producer Dashboard (market.traceodd.com)
+- Registration + document/profile verification on the market B2B portal under a **Vendor/Producer role**
+  (`kisan_producer`, `poster_type = 'kisan'`), approved by the Admin / Verification Manager.
+- A streamlined **Agri-Producer Dashboard**: post a crop lot, see bids, accept, track pickup, view contracts.
+- **Not** in the Universal Customer app (B2C) and **not** a marketplace Sub-Admin vertical.
+- **Tech:** `companies`/users role `kisan_producer` connected to the market B2B auth gateway; the dashboard
+  lives beside the Reseller/Shopkeeper role dashboards.
+- **Built:** Not started.
+
+#### 18B — Crop Listing & Direct Bidding
 - Kisan lists a crop (wheat, cotton, maize, vegetables…) with photos, quantity, unit, location, base price and available-from date.
 - Factories / B2B buyers bid; the winning bid creates the order and moves the load into logistics.
 - **Reuse (do not rebuild):** the freight auction engine — `FreightAuctionController` (`loads`, `loads/{id}/bids`, `loads/{id}/match`) plus `freight_loads` / `freight_bids`. `freight_loads.poster_type` **already allows `customer`** and `cargo_type` already allows `perishable`, so a kisan is a poster type rather than a new schema.
-- **Tech:** new `kisan_crops` (or extend `freight_loads.metadata`) + a `kisan` poster type; live bid push on the existing Reverb channel pattern.
+- **Tech:** new `kisan_crops` (or extend `freight_loads.metadata`) + the `kisan` poster type; live bid push on the existing Reverb channel pattern.
 - **Built:** Not started.
 
-#### 18B — Automatic Logistics Hand-off (Kisan → Truck Fleet)
+#### 18C — Automatic Logistics Hand-off (Kisan → Truck Fleet) — **the Universal app's only part**
 - When a bid is accepted, the load is offered to nearby trucks automatically (the existing Goods/Truck fleet + `TruckCategory.shahzoreLoader`, whose operational domain is already documented as *"kisaan-to-mandi agricultural produce"*).
-- **Tech:** reuse `BiddingMeshController` (`submit-bid`, `accept-bid`, `trip-bids`) and the Goods & Logistics Manager truck map; geocode from `freight_loads.origin_lat/lng`.
+- **Tech:** reuse `BiddingMeshController` (`submit-bid`, `accept-bid`, `trip-bids`) and the Goods & Logistics Manager truck map; geocode from `freight_loads.origin_lat/lng`. Trip execution, live map tracking and QR batch scanning stay in the Universal/Driver app.
 - **Built:** Not started.
 
-#### 18C — Quality, Verification & Batch QR
-- On loading, a **batch QR** is generated and generated against the existing code engine (`base_codes`, production vault, consumer verification), so a grain lot can be scanned like any other NexaTrace product.
+#### 18D — Quality, Verification & Batch QR
+- On loading, a **batch QR** is generated against the existing code engine (`base_codes`, production vault, consumer verification), so a grain lot can be scanned like any other NexaTrace product.
 - **Built:** Not started.
 
-#### 18D — Advance Demand Forecasting (3–6 months) on market.traceodd.com
-- A factory publishes a forward raw-material requirement — *"Need 500 tons cotton in 3 months at X rate"* — with delivery window and terms.
+#### 18E — Advance Demand Forecasting (3–6 months) on market.traceodd.com
+- A factory publishes a forward raw-material requirement — *"Need 500 tons cotton in 3 months at X rate"* — with delivery window and terms, from its factory/B2B panel.
 - Kisan accepts the contract **before sowing**, which is what makes the forecast actionable.
 - **Built:** Not started.
 
-#### 18E — Advance Token / Escrow Deposit
+#### 18F — Advance Token / Escrow Deposit
 - A B2B advance token (escrow) backs the forward contract: the factory commits funds, the kisan commits the crop, and the deposit releases on delivery milestones.
 - **Reuse:** the existing idempotent split/commission engine (`PANEL-SEPARATION-PLAN.md` §10.5) — **no second ledger**.
 - **Built:** Not started.

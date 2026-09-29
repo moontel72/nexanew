@@ -12,9 +12,9 @@ import 'package:trace_odd/shared/models/code/carton_code_model.dart';
 import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 import 'package:trace_odd/shared/widgets/empty_states/empty_state_widget.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
-import 'package:trace_odd/shared/widgets/search/search_bar.dart'
-    as custom;
+import 'package:trace_odd/shared/widgets/search/search_bar.dart' as custom;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:trace_odd/core/constants/api_endpoints.dart';
 
@@ -27,6 +27,10 @@ class CartonCodesListScreen extends StatefulWidget {
 
 class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
   final ScrollController _scrollController = ScrollController();
+
+  /// See `StickyErrorBanner`: the dismissed *message* is remembered, so the same
+  /// failure stays closed but a new one always appears.
+  String? _dismissedError;
 
   bool _isSelectionMode = false;
   final Set<String> _expandedBatches = {};
@@ -610,18 +614,31 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
         builder: (context, state) {
           if (state.status == CartonCodesStatus.error &&
               state.cartonCodes.isEmpty) {
-            return Center(
-              child: EmptyState(
-                icon: Icons.error_outline,
-                title: 'Error Loading Carton Codes',
-                description: state.errorMessage ?? 'Please try again',
-                actionButton: PrimaryButton(
-                  text: 'Retry',
-                  onPressed: () => context.read<CartonCodesBloc>().add(
-                    const LoadCartonCodes(),
+            // Sticky + copyable, instead of a bare "no codes" screen: a failed
+            // request and an empty list used to look identical.
+            final message = state.errorMessage;
+            return ListView(
+              padding: EdgeInsets.all(16.w),
+              children: [
+                if (message != null && message != _dismissedError)
+                  StickyErrorBanner(
+                    message: message,
+                    source:
+                        'Factory · Carton Codes · GET /api/v1/factory/codes/carton',
+                    onDismiss: () => setState(() => _dismissedError = message),
+                  ),
+                EmptyState(
+                  icon: Icons.error_outline,
+                  title: 'Error Loading Carton Codes',
+                  description: message ?? 'Please try again',
+                  actionButton: PrimaryButton(
+                    text: 'Retry',
+                    onPressed: () => context.read<CartonCodesBloc>().add(
+                      const LoadCartonCodes(),
+                    ),
                   ),
                 ),
-              ),
+              ],
             );
           }
 
