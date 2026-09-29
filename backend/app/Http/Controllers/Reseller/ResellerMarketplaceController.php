@@ -21,23 +21,38 @@ class ResellerMarketplaceController extends Controller
 
         $tenantId = $request->query('tenant_id', 'default');
 
-        $factories = Company::where('status', 'active')
-            ->where('is_deleted', false)
+        $factories = Company::query()
+            // The storefront carries the rating the marketplace already shows on a
+            // public page, so the "best first" order the owner asked for is real
+            // data, not a guess. The soft-delete filter belongs IN the join — put it
+            // in a WHERE and a company whose only storefront was deleted would vanish.
+            ->leftJoin('marketplace_storefronts as sf', function ($join) {
+                $join->on('sf.company_id', '=', 'companies.id')
+                    ->whereNull('sf.deleted_at');
+            })
+            ->where('companies.status', 'active')
+            ->where('companies.is_deleted', false)
             ->whereHas('products', function ($q) {
                 $q->where('marketplace_enabled', true)->where('status', 'active');
             })
             ->select([
-                'id',
-                'name',
-                'city',
-                'address as location',
-                'status',
-                'logo_url',
+                'companies.id',
+                'companies.name',
+                'companies.city',
+                'companies.address as location',
+                'companies.status',
+                'companies.logo_url',
+                'sf.rating as rating',
+                'sf.total_reviews as total_reviews',
             ])
             ->withCount(['products as product_count' => function ($query) {
                 $query->where('status', 'active')->where('marketplace_enabled', true);
             }])
-            ->orderBy('name')
+            // Best first: highest rating, then the factory with the most live
+            // products, then alphabetical so the order is stable.
+            ->orderByDesc('sf.rating')
+            ->orderByDesc('product_count')
+            ->orderBy('companies.name')
             ->get();
 
         return response()->json([
@@ -57,8 +72,14 @@ class ResellerMarketplaceController extends Controller
             'factory_id' => 'nullable|string',
             'tenant_id' => 'nullable|string',
             'search' => 'nullable|string|max:100',
+            'category' => 'nullable|string|max:100',
             'page' => 'nullable|integer|min:1',
             'limit' => 'nullable|integer|min:1|max:100',
+            // Ordering the storefront offers: most viewed first (default), newest,
+            // and the two price directions. 'most sold' needs an order aggregate and
+            // is tracked in MASTER-TASK-LIST (MUSTAQBIL) — popularity is the honest
+            // proxy today.
+            'sort_by' => 'nullable|string|in:popular,newest,price_asc,price_desc,name',
         ]);
 
         $factoryId = $request->query('factory_id');
@@ -76,6 +97,16 @@ class ResellerMarketplaceController extends Controller
                 'discount_type', 'discount_value', 'moq', 'marketplace_enabled',
                 'bonus_quantity', 'bonus_threshold', 'wallet_credit',
                 'promo_code', 'promo_discount', 'tags', 'volume_discounts',
+            ])
+            // Popularity = the storefront counters that already exist on the listing
+            // (views + inquiries). A correlated sub-select, so a product is never
+            // duplicated by its listing row.
+            ->addSelect([
+                'popularity' => \Illuminate\Support\Facades\DB::table('marketplace_product_listings')
+                    ->selectRaw('coalesce(sum(view_count + inquiry_count), 0)')
+                    ->whereColumn('marketplace_product_listings.product_id', 'products.id')
+                    ->where('marketplace_product_listings.is_active', true)
+                    ->whereNull('marketplace_product_listings.deleted_at'),
             ]);
 
         // Filter by factory if provided, otherwise get from all active factories
@@ -110,11 +141,27 @@ class ResellerMarketplaceController extends Controller
             });
         }
 
+        // Category filter — the storefront's category chips used to filter only the
+        // handful of products already on screen, which was quietly wrong once the
+        // grid became paged.
+        if ($category = $request->query('category')) {
+            $query->where('category', $category);
+        }
+
         // Eager-load company for factory info
         $query->with('company:id,name,city,logo_url,status');
 
-        $products = $query->orderBy('name')
-            ->paginate($limit);
+        // ─── Ordering ───────────────────────────────────────
+        $sortBy = (string) $request->query('sort_by', 'popular');
+        match ($sortBy) {
+            'newest' => $query->orderByDesc('created_at'),
+            'price_asc' => $query->orderByRaw('coalesce(wholesale_price, unit_price, carton_price, 0) asc'),
+            'price_desc' => $query->orderByRaw('coalesce(wholesale_price, unit_price, carton_price, 0) desc'),
+            'name' => $query->orderBy('name'),
+            default => $query->orderByDesc('popularity')->orderBy('name'),
+        };
+
+        $products = $query->paginate($limit);
 
         // Map factory info into each product using snake_case keys for Flutter (matches generated .g.dart)
         $data = collect($products->items())->map(function ($product) {
@@ -153,6 +200,7 @@ class ResellerMarketplaceController extends Controller
                 'bonus_threshold' => $product->bonus_threshold,
                 'promo_discount' => $product->promo_discount ? (float) $product->promo_discount : null,
                 'volume_discounts' => $product->volume_discounts,
+                'popularity' => (int) ($product->popularity ?? 0),
                 'image_url' => $product->metadata['image_url'] ?? ($product->image_urls[0] ?? null),
                 'metadata' => $metadata,
             ];

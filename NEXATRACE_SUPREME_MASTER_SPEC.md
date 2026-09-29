@@ -1857,6 +1857,41 @@
 > **Strategic Decision:** A dedicated Bus Passenger App is unnecessary. All bus passenger features (seat selection, live bus tracking, encrypted ETA links, QR ticketing) have been consolidated into Module 8 as a unified 2-in-1 Customer App. Passengers use the same NexaTrace Customer App for both product anti-counterfeit verification AND live bus transit booking/tracking.
 ### MODULE 17 — [PERMANENTLY REMOVED — P2P Car Trip Sharing]
 > **Strategic Decision:** Private car trip sharing creates a direct conflict of interest with commercial Bus Fleet Operators. If bus passengers shift to shared private cars, Bus Companies face financial losses and will reject the NexaTrace platform. This module is permanently shelved and will be launched as a standalone future project under a different brand, alongside a Restaurant Food Delivery network.
+
+### MODULE 18 — KISAN (AGRI-MARKETPLACE) & ADVANCE DEMAND FORECASTING
+**Domain:** Farm-to-Factory Sourcing & Forward Contracts · **Code Namespace:** `kisan` (new) — reuses `FreightAuctionController`, `freight_loads` / `freight_bids`, `AuctionBidding` (Exchange), `marketplace_*`, and the anti-counterfeit code engine
+**Status:** ⏳ planned — **Phase K**, after the groups' essential work (see `docs/handoff/MASTER-TASK-LIST.md` §Phase K)
+
+> **Placement decision (owner asked):** Kisan is NOT a separate app in the Sub-Admin marketplace at first.
+> It is a **module inside the existing Universal Customer app + market.traceodd.com**, because a farmer
+> has no panel to run — they have one listing and one contract. A dedicated Kisan app is parked in
+> MUSTAQBIL and will only be justified by volume. See `MASTER-TASK-LIST.md` §Phase K for the reasoning.
+
+#### 18A — Farmer (Kisan) Listing & Direct Bidding
+- Kisan lists a crop (wheat, cotton, maize, vegetables…) with photos, quantity, unit, location, base price and available-from date.
+- Factories / B2B buyers bid; the winning bid creates the order and moves the load into logistics.
+- **Reuse (do not rebuild):** the freight auction engine — `FreightAuctionController` (`loads`, `loads/{id}/bids`, `loads/{id}/match`) plus `freight_loads` / `freight_bids`. `freight_loads.poster_type` **already allows `customer`** and `cargo_type` already allows `perishable`, so a kisan is a poster type rather than a new schema.
+- **Tech:** new `kisan_crops` (or extend `freight_loads.metadata`) + a `kisan` poster type; live bid push on the existing Reverb channel pattern.
+- **Built:** Not started.
+
+#### 18B — Automatic Logistics Hand-off (Kisan → Truck Fleet)
+- When a bid is accepted, the load is offered to nearby trucks automatically (the existing Goods/Truck fleet + `TruckCategory.shahzoreLoader`, whose operational domain is already documented as *"kisaan-to-mandi agricultural produce"*).
+- **Tech:** reuse `BiddingMeshController` (`submit-bid`, `accept-bid`, `trip-bids`) and the Goods & Logistics Manager truck map; geocode from `freight_loads.origin_lat/lng`.
+- **Built:** Not started.
+
+#### 18C — Quality, Verification & Batch QR
+- On loading, a **batch QR** is generated and generated against the existing code engine (`base_codes`, production vault, consumer verification), so a grain lot can be scanned like any other NexaTrace product.
+- **Built:** Not started.
+
+#### 18D — Advance Demand Forecasting (3–6 months) on market.traceodd.com
+- A factory publishes a forward raw-material requirement — *"Need 500 tons cotton in 3 months at X rate"* — with delivery window and terms.
+- Kisan accepts the contract **before sowing**, which is what makes the forecast actionable.
+- **Built:** Not started.
+
+#### 18E — Advance Token / Escrow Deposit
+- A B2B advance token (escrow) backs the forward contract: the factory commits funds, the kisan commits the crop, and the deposit releases on delivery milestones.
+- **Reuse:** the existing idempotent split/commission engine (`PANEL-SEPARATION-PLAN.md` §10.5) — **no second ledger**.
+- **Built:** Not started.
 ## 4. CROSS-CUTTING ARCHITECTURAL CONCERNS (12A–12O)
 
 #### 15F — Passenger Terminal NFC Check-In (Hardware Gateway)

@@ -16,6 +16,11 @@ the C-phase record), `PANEL-SEPARATION-PLAN.md` §17 (auth globals).
 >    features.
 > 3. **Never blind-fix.** If the cause is not proven, ask for the one command or file that proves it.
 > 4. **Own it.** When the breakage is ours, say so plainly and fix it (see #29, #30 below).
+> 5. **Only essential commands in the IDE** (owner, 2026-09-29). Heavy commands — `flutter build`,
+>    release builds, full-tree `dart analyze` — take 15–25 minutes on a dev box, time out, and waste the
+>    whole turn. CI already does exactly those on every push (`frontend-deploy.yml`, `tests.yml`) and
+>    reports red/green within ~10 minutes. So: **edit + push, read the CI result**; run locally only what
+>    is fast (`php -l`, `phpunit` on sqlite, `dart analyze` on the ONE feature you touched).
 
 ---
 
@@ -112,6 +117,74 @@ account) — there is **no shop-keeper account type in the backend at all** (`GR
 §2b.8: *"Shop Keeper has no creation path anywhere"*). So the next step for #13 is a decision, not
 only code: either (a) the cart hands the visitor to the reseller app to finish the order, or
 (b) a buying session is introduced so a visitor can submit an order request that a factory confirms.
+
+---
+
+## Phase K — KISAN (Agri-Marketplace) & Advance Demand Forecasting  [NEW — owner, 2026-09-29]
+
+**Module registry entry:** `NEXATRACE_SUPREME_MASTER_SPEC.md` **MODULE 18**.
+
+### K.0 — Where it sits in the sequence (dependency, not preference)
+
+It goes **after the groups' essential work**, because every one of its five parts reuses something that
+is not finished yet:
+
+```
+#5–#8   error banners everywhere            ── independent, quick wins
+#14     orders/sell/buy per panel            ─┐
+#15     B2B login + old tested screen         │  the marketplace must be usable
+#16     Reseller verify + attach login        │  by a real buyer before a farmer
+#17     Shop Keeper login + dashboard        ─┘  lists into it
+#21     C3b read-only registries              ─┐
+#22     verify/remove AdminCompanyController@store │ money & authority settled
+#24     §17.9 auth domains steps 2–6          │  before escrow is added
+#25–#28 service worker · analytics 500 · IP bugs · log flood ─┘
+        ↓
+PHASE K  K1 → K2 → K3 → K4 → K5 → K6
+```
+
+| # | Task | Reuses (already exists) | Depends on |
+|---|---|---|---|
+| **K1** | Farmer listing CRUD + crop catalogue (photos, quantity, unit, location, base price, available-from) | products/images upload path; `companies`; `districts` | #5–#8 done (panel pattern) |
+| **K2** | **Direct bidding** on a listing (place / list / accept a bid) | `FreightAuctionController` (`loads`, `loads/{id}/bids`, `loads/{id}/match`) + `freight_loads` / `freight_bids` — a kisan is a **`poster_type`**, not a new schema | K1 |
+| **K3** | **Automatic logistics hand-off**: on accept, offer the load to nearby trucks | `BiddingMeshController` (`submit-bid`, `accept-bid`) + Goods/Truck fleet map; `TruckCategory.shahzoreLoader` is already documented as *kisaan-to-mandi produce* | K2, #15/#16 (buyer side) |
+| **K4** | **Batch QR** on loading, verified like any NexaTrace product | `base_codes` + production vault + consumer verify (`/marketplace/consumer/verify`) | K3 |
+| **K5** | **Forward demand** on market.traceodd.com: factory publishes *"500 t cotton in 3 months at X"*; kisan accepts before sowing | market site (#12, done) + a `kisan_demands` table | K1 |
+| **K6** | **Advance token / escrow** behind the forward contract | the **existing idempotent split engine** (`PANEL-SEPARATION-PLAN.md` §10.5) — **no second ledger** | K5, #21/#22 (authority + money settled) |
+
+### K.1 — The owner's question: own Kisan app, or inside the Universal app?
+
+**Recommendation: inside the Universal Customer app + market.traceodd.com first. No separate Kisan
+app, and no Kisan entry in the Sub-Admin marketplace panel next to reseller/shop-keeper.**
+
+| Why |
+|---|
+| A shop keeper has a **panel** (stock, orders, a lifecycle). A kisan has **one listing and one contract** — there is nothing to administer, so a panel would be empty. |
+| Reseller/shop-keeper accounts exist as *account types with panels*; the farmer is a **one-shot participant**, closer to the Customer app's "scan / book / track" model than to the marketplace's "trade every day" model. |
+| The owner's rule for the Sub-Admin is "no personal products, only platform oversight" — a Kisan vertical would need provisioning, verification and account lifecycle that nobody has asked to manage. |
+| Cost: the Customer app already has a login, a shared UI kit, and a route table. A new app means a new entry point, build step, subdomain, Cloudflare record and password rotation — all for one screen. |
+
+**What it does need on the marketplace side:** the *factory/admin* half of K5 (publish forward demand) — that
+belongs in the **existing** Factory panel + the market site, not a new panel.
+
+> **Revisit when** a real kisan cohort exists and needs verification/onboarding at scale. Then the shape is
+> a **Marketing-style field hierarchy** (District → Manager → Agent), not a marketplace Sub-Admin vertical.
+
+---
+
+## MUSTAQBIL — deferred to a later round (recorded so nothing is lost)
+
+Owner, 2026-09-29: *"ab itna kaafi — baqi kaam second round me jab tamam groups ke basic aur zaroori kaam
+mukammal kar lain."*
+
+| # | Deferred item | Why it waits |
+|---|---|---|
+| **M1** | **#13 remainder — the cart does not place an order.** Choices: (a) hand the visitor to the reseller app to finish, or (b) introduce a *buying session* where a visitor submits an order request the factory confirms | Needs a decision **and** a business identity to be meaningful. The cart + buying door are already live (#13, built). |
+| **M2** | **Shop Keeper has no account type in the backend at all** — `POST /reseller/orders` is the only order endpoint | The "register your shop" card is honest about it; building it is Group-2 feature work |
+| **M3** | **`most sold` ordering.** The storefront sorts by *most viewed* (real `view_count + inquiry_count`). True best-selling needs an aggregate over `reseller_orders.items` | Kept honest rather than faked — the sort dropdown says "Most viewed" |
+| **M4** | **Blocker B — the five panels share ONE bundle** (`main.dart` serves Super Admin · Sub-Admin · Customer · Factory Admin · Store Keeper) | Real isolation is `PANEL-SEPARATION-PLAN.md` **Phase 1** (§17.9 steps 2–6 are already queued as #24). Until then a subdomain changes the URL, not the coupling — `subadmin.traceodd.com` redirects to `/sub-admin/login` but `/dashboard` on that host still reaches the Super Admin dashboard |
+| **M5** | Storefront **category chips** are captured from the first unfiltered page, so a category that only appears on page 3 is not offered as a chip | Filtering itself is server-side now; a `/reseller/categories` endpoint would make the chip list complete |
+| **M6** | #18 factory logo upload · #19 three reseller types · #20 middle-man agent · #23 marketing (Group 9) | Already parked in the queue above by the owner |
 
 ### Items that were wrong and are fixed (kept so nobody "re-fixes" them)
 
