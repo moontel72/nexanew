@@ -277,9 +277,15 @@ jobs:
           bash .scripts/version-web-build.sh build/web
           # Marketplace-branded PWA manifest (name/icons) for installs from this host
           cp web/manifest-marketplace.json build/web/manifest.json
-          # Marketplace-specific index.html: declares a ZOOMABLE viewport
-          # (pinch zoom + pan on phones), which the shared index.html does not.
-          cp web/index-marketplace.html build/web/index.html
+          # Marketplace head: a ZOOMABLE viewport (pinch zoom + pan on phones) plus the
+          # marketplace title/description/theme colour.
+          #
+          # PATCH the built file - do NOT copy a template over it. The built index.html
+          # holds the base href Flutter resolved for THIS build; the first version of
+          # this step overwrote it with a template carrying Flutter's literal
+          # "$FLUTTER_BASE_HREF" placeholder, which made market.traceodd.com render
+          # blank with "The base href has to end with a /" (2026-09-29).
+          python3 .scripts/patch-marketplace-head.py build/web/index.html
 
       - name: Deploy Public Marketplace to /marketplace-web/
         run: |
@@ -287,6 +293,13 @@ jobs:
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --progress build/web/ root@135.181.46.27:/var/www/traceodd/marketplace-web/
           ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
             test -f /var/www/traceodd/marketplace-web/index.html && echo '✅ Marketplace index.html present' || { echo '❌ Marketplace index.html MISSING after rsync'; exit 1; }
+            # Guard against the 2026-09-29 blank-page incident: an unresolved placeholder,
+            # or a base href that does not end in '/', makes Flutter refuse to boot.
+            if grep -q 'FLUTTER_BASE_HREF' /var/www/traceodd/marketplace-web/index.html; then
+              echo '❌ Marketplace index.html still contains the literal FLUTTER_BASE_HREF placeholder - the page would render blank'; exit 1;
+            fi
+            grep -qE 'base href=\"[^\"]*/\"' /var/www/traceodd/marketplace-web/index.html && echo '✅ Marketplace base href ends with /' || { echo '❌ Marketplace base href does not end with / - the page would render blank'; exit 1; }
+            grep -q 'user-scalable=yes' /var/www/traceodd/marketplace-web/index.html && echo '✅ Marketplace viewport is zoomable' || echo '⚠️  Marketplace viewport patch did not apply (zoom will be disabled)'
             echo \"deployed=\$(date -u +%s)\" > /var/www/traceodd/marketplace-web/version.txt
           "
 
