@@ -15,6 +15,7 @@ import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_ad
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_verticals.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/buttons/missile_3d_button.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_bloc.dart';
@@ -109,27 +110,38 @@ class _DashboardViewState extends State<_DashboardView> {
     ),
   );
 
-  /// Shown when the list request itself failed. Without this, an API error
-  /// looked exactly like "no records yet" — which is how a 403/500 masqueraded
-  /// as an empty list.
-  Widget _listErrorBox(String message) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: const Color(0xFF4C1D1D),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0xFFDC2626)),
-    ),
-    child: Row(
-      children: [
-        const Icon(Icons.error_outline, color: Color(0xFFFCA5A5), size: 20),
-        const Gap(10),
-        Expanded(
-          child: Text(
-            message,
-            style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 13),
-          ),
-        ),
-      ],
+  /// A dismissed *list* failure message (see `StickyErrorBanner`). The list-load
+  /// failure must stay on screen until the operator closes it — before this, an
+  /// API error looked exactly like "no records yet", which is how a 403/500
+  /// masqueraded as an empty list.
+  ///
+  /// Only the *message* is remembered (the factory screens' pattern): the same
+  /// failure stays closed, but a different one always appears again.
+  String? _dismissedListError;
+
+  /// Shown when a list request itself failed. Dismissing hides the banner (the
+  /// caller's `else if (…isEmpty)` branch is not taken), so a dismissed error
+  /// never turns back into a silent "empty".
+  Widget _listErrorBanner({required String source, required String message}) {
+    if (message == _dismissedListError) return const SizedBox.shrink();
+    return StickyErrorBanner(
+      message: message,
+      source: source,
+      onDismiss: () => setState(() => _dismissedListError = message),
+    );
+  }
+
+  /// A failed form submit inside a bottom sheet — stays, copies and closes.
+  Widget _formErrorBanner({
+    required String source,
+    required String message,
+    required SubAdminBloc bloc,
+  }) => Padding(
+    padding: const EdgeInsets.only(top: 8),
+    child: StickyErrorBanner(
+      message: message,
+      source: source,
+      onDismiss: () => bloc.add(const ClearSubAdminError()),
     ),
   );
 
@@ -560,7 +572,11 @@ class _DashboardViewState extends State<_DashboardView> {
         ),
         const Gap(8),
         if (state.busListError != null)
-          _listErrorBox('Could not load bus companies: ${state.busListError}')
+          _listErrorBanner(
+            source:
+                'Sub-Admin · Bus Companies · GET /api/v1/admin/bus-companies',
+            message: 'Could not load bus companies: ${state.busListError}',
+          )
         else if (state.busCompanies.isEmpty)
           _listEmptyBox('No bus companies registered yet.')
         else
@@ -947,15 +963,11 @@ class _DashboardViewState extends State<_DashboardView> {
                   TextInputType.visiblePassword,
                 ),
                 if (state.busFormError != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      state.busFormError!,
-                      style: const TextStyle(
-                        color: AppColors.error,
-                        fontSize: 12,
-                      ),
-                    ),
+                  _formErrorBanner(
+                    source:
+                        'Sub-Admin · Bus Companies · POST /api/v1/admin/bus-companies',
+                    message: state.busFormError!,
+                    bloc: bloc,
                   ),
                 const Gap(16),
                 ElevatedButton(
@@ -1102,15 +1114,11 @@ class _DashboardViewState extends State<_DashboardView> {
                     TextInputType.visiblePassword,
                   ),
                   if (state.actionError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        state.actionError!,
-                        style: const TextStyle(
-                          color: AppColors.error,
-                          fontSize: 12,
-                        ),
-                      ),
+                    _formErrorBanner(
+                      source:
+                          'Sub-Admin · Bus Companies · PUT /api/v1/admin/bus-companies/{id}',
+                      message: state.actionError!,
+                      bloc: bloc,
                     ),
                   const Gap(16),
                   ElevatedButton(
@@ -1262,8 +1270,11 @@ class _DashboardViewState extends State<_DashboardView> {
         ),
         const Gap(8),
         if (state.factoryListError != null)
-          _listErrorBox(
-            'Could not load factory companies: ${state.factoryListError}',
+          _listErrorBanner(
+            source:
+                'Sub-Admin · Factory Companies · GET /api/v1/admin/factory-companies',
+            message:
+                'Could not load factory companies: ${state.factoryListError}',
           )
         else if (state.factoryCompanies.isEmpty)
           _listEmptyBox('No factory companies registered yet.')
@@ -1604,15 +1615,11 @@ class _DashboardViewState extends State<_DashboardView> {
                     TextInputType.visiblePassword,
                   ),
                   if (state.factoryFormError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        state.factoryFormError!,
-                        style: const TextStyle(
-                          color: AppColors.error,
-                          fontSize: 12,
-                        ),
-                      ),
+                    _formErrorBanner(
+                      source:
+                          'Sub-Admin · Factory Companies · POST /api/v1/admin/factory-companies',
+                      message: state.factoryFormError!,
+                      bloc: bloc,
                     ),
                   const Gap(16),
                   ElevatedButton(
@@ -1774,15 +1781,11 @@ class _DashboardViewState extends State<_DashboardView> {
                     TextInputType.visiblePassword,
                   ),
                   if (state.actionError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        state.actionError!,
-                        style: const TextStyle(
-                          color: AppColors.error,
-                          fontSize: 12,
-                        ),
-                      ),
+                    _formErrorBanner(
+                      source:
+                          'Sub-Admin · Factory Companies · PUT /api/v1/admin/factory-companies/{id}',
+                      message: state.actionError!,
+                      bloc: bloc,
                     ),
                   const Gap(16),
                   ElevatedButton(
@@ -1942,8 +1945,11 @@ class _DashboardViewState extends State<_DashboardView> {
         ),
         const Gap(8),
         if (state.resellerListError != null)
-          _listErrorBox(
-            'Could not load reseller accounts: ${state.resellerListError}',
+          _listErrorBanner(
+            source:
+                'Sub-Admin · Reseller Accounts · GET /api/v1/admin/reseller-accounts',
+            message:
+                'Could not load reseller accounts: ${state.resellerListError}',
           )
         else if (state.resellerAccounts.isEmpty)
           _listEmptyBox('No reseller accounts registered yet.')
@@ -2251,15 +2257,11 @@ class _DashboardViewState extends State<_DashboardView> {
                   const Gap(10),
                   _sheetField('Address (optional)', addressCtrl),
                   if (state.resellerFormError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        state.resellerFormError!,
-                        style: const TextStyle(
-                          color: AppColors.error,
-                          fontSize: 12,
-                        ),
-                      ),
+                    _formErrorBanner(
+                      source:
+                          'Sub-Admin · Reseller Accounts · POST /api/v1/admin/reseller-accounts',
+                      message: state.resellerFormError!,
+                      bloc: bloc,
                     ),
                   const Gap(16),
                   ElevatedButton(
@@ -2404,15 +2406,11 @@ class _DashboardViewState extends State<_DashboardView> {
                   const Gap(10),
                   _sheetField('Address', addressCtrl),
                   if (state.actionError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        state.actionError!,
-                        style: const TextStyle(
-                          color: AppColors.error,
-                          fontSize: 12,
-                        ),
-                      ),
+                    _formErrorBanner(
+                      source:
+                          'Sub-Admin · Reseller Accounts · PUT /api/v1/admin/reseller-accounts/{id}',
+                      message: state.actionError!,
+                      bloc: bloc,
                     ),
                   const Gap(16),
                   ElevatedButton(

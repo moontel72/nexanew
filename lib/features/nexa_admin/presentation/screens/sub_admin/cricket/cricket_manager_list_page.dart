@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/core/services/api_client.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 import 'package:trace_odd/shared/widgets/status_badge.dart';
 
 /// Sub-Admin page: List all Cricket Operations Managers.
@@ -17,6 +18,14 @@ class _CricketManagerListPageState extends State<CricketManagerListPage> {
   List<Map<String, dynamic>> _managers = [];
   bool _loading = true;
   String? _error;
+
+  /// The dismissed list-failure message (see `StickyErrorBanner`) — the same
+  /// failure stays closed, a different one always appears again.
+  String? _dismissedError;
+
+  /// A failed activate / suspend / delete. Shown as a banner above the list, so
+  /// the operator does not lose the list for one failed action.
+  String? _actionError;
 
   @override
   void initState() {
@@ -75,18 +84,32 @@ class _CricketManagerListPageState extends State<CricketManagerListPage> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
           ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                  const Gap(12),
-                  Text(_error!, style: const TextStyle(color: Colors.red)),
-                  const Gap(12),
-                  ElevatedButton(
-                    onPressed: _fetchManagers,
-                    child: const Text('Retry'),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 48,
+                    ),
+                    const Gap(12),
+                    if (_error != _dismissedError)
+                      StickyErrorBanner(
+                        message: _error!,
+                        source:
+                            'Sub-Admin · Cricket Managers · GET /api/v1/cricket/admin/managers',
+                        onDismiss: () =>
+                            setState(() => _dismissedError = _error),
+                      ),
+                    const Gap(12),
+                    ElevatedButton(
+                      onPressed: _fetchManagers,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
               ),
             )
           : _managers.isEmpty
@@ -164,9 +187,22 @@ class _CricketManagerListPageState extends State<CricketManagerListPage> {
             )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: _managers.length + 1, // +1 for login info card
+              // +1 for the login info card, +1 while an action failure is showing.
+              itemCount: _managers.length + 1 + (_actionError != null ? 1 : 0),
               itemBuilder: (ctx, i) {
-                if (i == 0) {
+                if (_actionError != null && i == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: StickyErrorBanner(
+                      message: _actionError!,
+                      source:
+                          'Sub-Admin · Cricket Managers · suspend / activate / delete',
+                      onDismiss: () => setState(() => _actionError = null),
+                    ),
+                  );
+                }
+                final offset = _actionError != null ? 1 : 0;
+                if (i == offset) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: Container(
@@ -208,7 +244,7 @@ class _CricketManagerListPageState extends State<CricketManagerListPage> {
                     ),
                   );
                 }
-                final m = _managers[i - 1];
+                final m = _managers[i - offset - 1];
                 return _ManagerCard(
                   manager: m,
                   onToggle: () => _toggleStatus(m),
@@ -233,9 +269,7 @@ class _CricketManagerListPageState extends State<CricketManagerListPage> {
       _fetchManagers();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        setState(() => _actionError = e.toString());
       }
     }
   }
@@ -288,9 +322,7 @@ class _CricketManagerListPageState extends State<CricketManagerListPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        setState(() => _actionError = e.toString());
       }
     }
   }

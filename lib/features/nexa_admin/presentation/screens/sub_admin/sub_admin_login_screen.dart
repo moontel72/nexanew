@@ -10,6 +10,7 @@ import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_ad
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_event.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_state.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 class SubAdminLoginScreen extends StatelessWidget {
   const SubAdminLoginScreen({super.key});
@@ -174,33 +175,12 @@ class _SubAdminLoginViewState extends State<_SubAdminLoginView> {
                               ),
                               if (state.authError != null) ...[
                                 const Gap(14),
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.error.withValues(
-                                      alpha: 0.06,
-                                    ),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.error_outline,
-                                        color: AppColors.error,
-                                        size: 18,
-                                      ),
-                                      const Gap(8),
-                                      Expanded(
-                                        child: Text(
-                                          state.authError!,
-                                          style: const TextStyle(
-                                            color: AppColors.error,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                StickyErrorBanner(
+                                  message: state.authError!,
+                                  source:
+                                      'Sub-Admin · Login · POST /api/v1/auth/login',
+                                  onDismiss: () =>
+                                      bloc.add(const ClearSubAdminError()),
                                 ),
                               ],
                               if (state.authSuccess != null) ...[

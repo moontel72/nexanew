@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/core/services/api_client.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 /// Sub-Admin page: Add (provision) a new Cricket Operations Manager.
 class CricketManagerAddPage extends StatefulWidget {
@@ -22,6 +23,11 @@ class _CricketManagerAddPageState extends State<CricketManagerAddPage> {
   bool _canStream = false;
   bool _canSponsor = false;
   bool _canStudio = false;
+
+  /// A failed create — sticky, copyable and closable (see `StickyErrorBanner`).
+  /// The old red SnackBar flashed and vanished, so a rejected submit looked like
+  /// nothing happened.
+  String? _error;
 
   @override
   void dispose() {
@@ -63,9 +69,7 @@ class _CricketManagerAddPageState extends State<CricketManagerAddPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        setState(() => _error = e.toString());
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -129,6 +133,13 @@ class _CricketManagerAddPageState extends State<CricketManagerAddPage> {
                 ),
               ),
               const Gap(24),
+              if (_error != null)
+                StickyErrorBanner(
+                  message: _error!,
+                  source:
+                      'Sub-Admin · Cricket Managers · POST /api/v1/cricket/admin/managers',
+                  onDismiss: () => setState(() => _error = null),
+                ),
 
               // Account Details
               const Text(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/core/services/api_client.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 /// Sub-Admin page: Edit an existing Cricket Operations Manager.
 class CricketManagerEditPage extends StatefulWidget {
@@ -45,6 +46,9 @@ class _CricketManagerEditPageState extends State<CricketManagerEditPage> {
     super.dispose();
   }
 
+  /// A failed update — sticky, copyable and closable (see `StickyErrorBanner`).
+  String? _error;
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
@@ -77,9 +81,7 @@ class _CricketManagerEditPageState extends State<CricketManagerEditPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        setState(() => _error = e.toString());
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -143,6 +145,13 @@ class _CricketManagerEditPageState extends State<CricketManagerEditPage> {
                 ),
               ),
               const Gap(24),
+              if (_error != null)
+                StickyErrorBanner(
+                  message: _error!,
+                  source:
+                      'Sub-Admin · Cricket Managers · PUT /api/v1/cricket/admin/managers/{id}',
+                  onDismiss: () => setState(() => _error = null),
+                ),
 
               // Account Details
               const Text(

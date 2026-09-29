@@ -101,8 +101,8 @@ Old item numbers from the previous `MASTER-TASK-LIST.md` are given in brackets w
 
 | # | Task | Notes |
 |---|---|---|
-| **5** | **Errors stay + Copy — Sub-Admin panel screens** ⏳ **[old #6 — this is the resume point]** | Convert every Sub-Admin error path to `StickyErrorBanner` (sticky + Copy + X). Also fixes the known gap: the Sub-Admin dashboards set `factoryListError` / `resellerListError` but **never display** them, so a failed list looks like "no data" (see `START-HERE.md` §6c) |
-| **6** | **Errors stay + Copy — Super Admin screens** ⏳ [old #7] | Same treatment, Super Admin shell |
+| **5** | **Errors stay + Copy — Sub-Admin panel screens** ✅ **done (this commit)** [old #6] | `StickyErrorBanner` now covers: the 3 list failures in `sub_admin_dashboard.dart` (bus / factory / reseller — each with its endpoint as the `source` line), the 3 create+edit form errors, the 3 sheet `actionError`s, the login screen's `authError`, and the Cricket Manager list/add/edit pages (list fetch, activate/suspend/delete, create, update). `ClearSubAdminError` now also clears `factoryFormError` / `resellerFormError`, so a dismissed banner really goes away (and a retry with the same message can show again). Dismissing a **list** error hides the banner but does **not** fall back to the "Nothing here yet" empty box |
+| **6** | **Errors stay + Copy — Super Admin screens** ⏳ **[START HERE (dev)]** [old #7] | Same treatment for the Super Admin shell — **and** the two Sub-Admin *management* screens (`sub_admin_list_screen.dart`, `add_sub_admin_screen.dart`): they sit in the `sub_admin/` folder but are reached from the Super Admin shell, so they belong here, not in item 5 |
 | **7** | **Errors stay + Copy — other apps** ⏳ [old #8] | Reseller, Shop Keeper, Cricket |
 | **8** | **Drivers list → `StickyErrorBanner`** ⏳ [M7] | The drivers list still uses the day-long SnackBar stopgap from the original #4. It already stays and copies; this is a consistency move |
 | **9** | **Dead placeholder buttons on the Factory dashboard** ⏳ [M8] | `_showSnackbar('Navigate to products management')`, `'Generate Codes'`, `'View Reports'`, `'Settings'`, `'Add new product'`, `'upgrade screen'`, `'Driver contact flow not wired yet'`, `'Load posting flow not wired yet'` — they look wired but do nothing (same class as old #32/A3). The real destinations already exist as routes |
@@ -199,6 +199,7 @@ Old item numbers are shown; they are **closed**. Full commit hashes live in §11
 | 3 | Shared `StickyErrorBanner` widget (stay + Copy + X) | `a9c0ecec` |
 | 4 | Errors **stay + Copy** — Drivers screen (first screen) | `a180f573` |
 | 5 | Errors **stay + Copy** — 15 remaining **Factory panel** screens | done |
+| 6 | Errors **stay + Copy** — **Sub-Admin panel screens** (dashboard · login · Cricket Manager list/add/edit) | this commit |
 | 9 | **Marketplace upload flow** — `MarketplaceListingService` + wired into `ProductController` `store`/`update`/`marketplace-toggle`; storefront created on first upload | done |
 | 10 | Publish the **6 existing factory products** (`marketplace:publish-products --all`) | live 2026-09-28 |
 | 11 | A **Marketplace section** on each of the three panel dashboards | `Factory` section + read-only Sub-Admin/Super-Admin oversight; backend `admin/marketplace/orders` + `summary` |

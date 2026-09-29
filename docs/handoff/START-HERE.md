@@ -15,10 +15,12 @@ how you work; that file is what to do.
 ## 0. ⏭ RESUME HERE — for a fresh chat
 
 **Where the work stopped:** the "errors stay + copy" sweep. Items **1–4** of
-`MASTER-TASK-LIST.md` §3 are owner-side (server), and the **next developer item is item 5 —
-"Errors stay + Copy — Sub-Admin panel screens"** (this was item #6 in the old numbering). After
-that: item 6 (Super Admin screens), item 7 (other apps), item 8 (drivers list), item 9 (dead
-placeholder buttons).
+`MASTER-TASK-LIST.md` §3 are owner-side (server); **item 5 (Sub-Admin panel screens) is ✅ done** —
+the dashboard's list/form errors, the login screen and the Cricket Manager pages now use
+`StickyErrorBanner`. **The next developer item is item 6 — "Errors stay + Copy — Super Admin
+screens"**, which also picks up `sub_admin_list_screen.dart` + `add_sub_admin_screen.dart`
+(Super-Admin-side, despite the folder). After that: item 7 (other apps), item 8 (drivers list),
+item 9 (dead placeholder buttons).
 
 **Do NOT re-do these (all landed, all green)** — full ledger with commit hashes in
 `MASTER-TASK-LIST.md` §4:
@@ -133,7 +135,7 @@ Full table in `MASTER-TASK-LIST.md` §2. Summary:
 | **C2 / C2b** | factory + reseller account creation move to their Sub-Admins | ✅ |
 | **C3** | remove group-account creation from the Super Admin (Factory) | ✅ |
 | **C3b → C4 → C5** | registries genuinely read-only → read-only group activity + payments → audited "enter sub-admin view" | ⏳ items 22, 24, 25 |
-| **Error sweep** | errors stay + Copy everywhere | ⏳ **items 5–9 (START HERE)** |
+| **Error sweep** | errors stay + Copy everywhere | ✅ item 5 (Sub-Admin) · ⏳ items 6–9 |
 | **Marketplace** | upload flow · products · panel sections · public site · cart | ✅ built; DNS = item 4; order = item 19 |
 | **Phase K (Kisan)** | K1–K6 | ⏳ item 47 |
 | **Module 19 (Services)** | S1–S4 | ⏳ item 48 (spec = `MASTER-TASK-LIST.md` §8) |
@@ -358,9 +360,9 @@ list worked because it applies **no such filter** at all — the owner spotted e
 `SubAdminResellerController` had already made. A JSON-path filter that "looks right" and passes
 `psql` can still silently return nothing through Eloquent.
 
-**Still to improve (item 5):** the Sub-Admin dashboards render **no error** when their list request
-fails — `factoryListError` / `resellerListError` are set but never displayed, so any future failure
-again looks like "no data" instead of an error.
+**✅ Fixed (item 5, this commit):** the Sub-Admin dashboards now render their list/`form`/`action`
+failures through `StickyErrorBanner` (sticky + Copy + Close), so a failed request can no longer look
+like "no data". Dismissing a list error hides the banner **without** falling back to the empty box.
 
 ---
 

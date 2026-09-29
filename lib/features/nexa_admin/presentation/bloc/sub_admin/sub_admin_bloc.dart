@@ -950,6 +950,11 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
       actionSuccess: null,
       authError: null,
       busFormError: null,
+      // Also cleared so a dismissed `StickyErrorBanner` on the factory / reseller
+      // create sheets actually disappears (and a retry with the SAME message can
+      // still show it again — a value-compared "dismissed" flag would hide it).
+      factoryFormError: null,
+      resellerFormError: null,
     ),
   );
 }
