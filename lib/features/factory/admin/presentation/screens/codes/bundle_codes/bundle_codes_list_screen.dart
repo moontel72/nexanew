@@ -10,10 +10,10 @@ import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 import 'package:trace_odd/shared/widgets/cards/code_card.dart';
 import 'package:trace_odd/shared/widgets/empty_states/empty_state_widget.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 import 'package:trace_odd/shared/widgets/filters/filter_chip_row.dart';
 import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
-import 'package:trace_odd/shared/widgets/search/search_bar.dart'
-    as custom;
+import 'package:trace_odd/shared/widgets/search/search_bar.dart' as custom;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:trace_odd/core/constants/api_endpoints.dart';
 
@@ -27,6 +27,10 @@ class BundleCodesListScreen extends StatefulWidget {
 class _BundleCodesListScreenState extends State<BundleCodesListScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isSelectionMode = false;
+
+  /// Sticky failure message (see `StickyErrorBanner`) — export errors used to
+  /// appear in a SnackBar that vanished before it could be read or copied.
+  String? _error;
 
   @override
   void initState() {
@@ -111,23 +115,23 @@ class _BundleCodesListScreenState extends State<BundleCodesListScreen> {
             final downloadUri = (uri != null && uri.hasScheme)
                 ? uri
                 : Uri.parse(
-                    ApiEndpoints.getFullUrl(raw.startsWith('/') ? raw : '/$raw'),
+                    ApiEndpoints.getFullUrl(
+                      raw.startsWith('/') ? raw : '/$raw',
+                    ),
                   );
 
             await launchUrl(downloadUri, mode: LaunchMode.platformDefault);
 
             if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Download started')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Download started')));
           }
 
           if (state.exportStatus == ExportStatus.failure &&
               state.error != null &&
               state.error!.trim().isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.error!)),
-            );
+            setState(() => _error = state.error);
           }
         },
         builder: (context, state) {
@@ -142,6 +146,16 @@ class _BundleCodesListScreenState extends State<BundleCodesListScreen> {
               controller: _scrollController,
               child: Column(
                 children: [
+                  if (_error != null)
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 0),
+                      child: StickyErrorBanner(
+                        message: _error!,
+                        source:
+                            'Factory · Bundle Codes · GET /api/v1/factory/codes/bundle',
+                        onDismiss: () => setState(() => _error = null),
+                      ),
+                    ),
                   _buildSearchAndFilters(state),
                   _buildStatistics(state),
                   _buildListContent(state),
@@ -337,14 +351,20 @@ class _BundleCodesListScreenState extends State<BundleCodesListScreen> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         ListTile(
-                                          leading: const Icon(Icons.picture_as_pdf),
+                                          leading: const Icon(
+                                            Icons.picture_as_pdf,
+                                          ),
                                           title: const Text('Download PDF'),
-                                          onTap: () => Navigator.pop(context, 'pdf'),
+                                          onTap: () =>
+                                              Navigator.pop(context, 'pdf'),
                                         ),
                                         ListTile(
-                                          leading: const Icon(Icons.table_chart),
+                                          leading: const Icon(
+                                            Icons.table_chart,
+                                          ),
                                           title: const Text('Download CSV'),
-                                          onTap: () => Navigator.pop(context, 'csv'),
+                                          onTap: () =>
+                                              Navigator.pop(context, 'csv'),
                                         ),
                                       ],
                                     ),
@@ -352,16 +372,15 @@ class _BundleCodesListScreenState extends State<BundleCodesListScreen> {
                                 },
                               );
                               if (format == null) return;
-                              final exportFormat =
-                                  (format == 'pdf') ? ExportFormat.pdf : ExportFormat.csv;
-                              context
-                                  .read<BundleCodesBloc>()
-                                  .add(
-                                    ExportBundleCodes(
-                                      format: exportFormat,
-                                      codeIds: [code.id],
-                                    ),
-                                  );
+                              final exportFormat = (format == 'pdf')
+                                  ? ExportFormat.pdf
+                                  : ExportFormat.csv;
+                              context.read<BundleCodesBloc>().add(
+                                ExportBundleCodes(
+                                  format: exportFormat,
+                                  codeIds: [code.id],
+                                ),
+                              );
                             }
                           : null,
                       icon: const Icon(Icons.download_outlined),

@@ -7,6 +7,7 @@ import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 import 'package:trace_odd/shared/widgets/empty_states/empty_state_widget.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 
 class StoreKeepersListScreen extends StatefulWidget {
@@ -18,6 +19,10 @@ class StoreKeepersListScreen extends StatefulWidget {
 class _StoreKeepersListScreenState extends State<StoreKeepersListScreen> {
   final _searchController = TextEditingController();
   String? _statusFilter;
+
+  /// The banner's message. Kept local so a failure STAYS on screen (the old
+  /// SnackBar flashed and vanished) and can be copied.
+  String? _error;
 
   @override
   void initState() {
@@ -313,12 +318,8 @@ class _StoreKeepersListScreenState extends State<StoreKeepersListScreen> {
           }
           if (state.status == StoreKeepersStatus.error &&
               state.errorMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.errorMessage!),
-                backgroundColor: AppColors.error,
-              ),
-            );
+            // Sticky instead of a one-second SnackBar — see StickyErrorBanner.
+            setState(() => _error = state.errorMessage);
           }
         },
         builder: (context, state) {
@@ -327,6 +328,16 @@ class _StoreKeepersListScreenState extends State<StoreKeepersListScreen> {
               state.status == StoreKeepersStatus.deleting;
           return Column(
             children: <Widget>[
+              if (_error != null)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 0),
+                  child: StickyErrorBanner(
+                    message: _error!,
+                    source:
+                        'Factory · Store Keepers · GET /api/v1/factory/store-keepers/list',
+                    onDismiss: () => setState(() => _error = null),
+                  ),
+                ),
               Padding(
                 padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 8.h),
                 child: TextField(

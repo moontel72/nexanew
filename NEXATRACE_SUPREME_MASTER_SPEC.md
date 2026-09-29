@@ -1892,6 +1892,19 @@
   lives beside the Reseller/Shopkeeper role dashboards.
 - **Built:** Not started.
 
+#### 18A-bis — Kisan Verification Manager Panel (under the B2B Sub-Admin)  **[owner, 2026-09-29]**
+- **Why:** one `commercial_marketplace` Sub-Admin cannot personally approve *shopkeepers + resellers + kisan*
+  — the third queue makes the approval desk the bottleneck. So producer verification gets its own layer.
+- **Shape:** the B2B Sub-Admin **creates as many Kisan Verification Managers as it wants**, each covering a
+  **district or an open area**, with a scoped approval queue (pending producers → documents → approve /
+  reject / suspend). Unassigned areas stay with the Sub-Admin.
+- **Reuse:** this is the same *delegated sub-role* mechanism already used for the verticals
+  (`sub_admin_assignments` + feature grants), and it is the natural precursor to the Marketing hierarchy
+  (District → Manager → Agent) — but scoped to **producer verification**, not commission.
+- **Boundary:** a Kisan Verification Manager approves **producers only**. It cannot touch marketplace content,
+  disputes, or reseller/shop-keeper accounts — those stay with the Sub-Admin.
+- **Built:** Not started.
+
 #### 18B — Crop Listing & Direct Bidding
 - Kisan lists a crop (wheat, cotton, maize, vegetables…) with photos, quantity, unit, location, base price and available-from date.
 - Factories / B2B buyers bid; the winning bid creates the order and moves the load into logistics.

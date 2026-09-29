@@ -7,6 +7,7 @@ import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_bloc.dart';
 import 'package:trace_odd/shared/models/code/bundle_model.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 
 /// Orders Hub Screen
@@ -34,6 +35,10 @@ class _OrdersHubScreenState extends State<OrdersHubScreen>
   List<Map<String, dynamic>> _resellerOrders = [];
   bool _resellerLoading = false;
   String? _resellerError;
+
+  /// The owner's rule: a failure stays until closed. The dismissed *message* is
+  /// remembered, so the same error stays closed but a new one always shows.
+  String? _dismissedError;
 
   static const _tabs = <_OrderTab>[
     _OrderTab(label: 'New', status: 'draft', icon: Icons.description_outlined),
@@ -316,25 +321,38 @@ class _OrdersHubScreenState extends State<OrdersHubScreen>
     }
 
     if (_resellerError != null && _resellerOrders.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 12),
-            Text(
-              _resellerError!,
-              style: const TextStyle(color: AppColors.textSecondary),
-              textAlign: TextAlign.center,
+      // Sticky + copyable, so the message can actually be read and reported.
+      final message = _resellerError;
+      return ListView(
+        padding: EdgeInsets.all(16.w),
+        children: [
+          if (message != null && message != _dismissedError)
+            StickyErrorBanner(
+              message: message,
+              source: 'Factory · Orders · GET /api/v1/factory/reseller-orders',
+              onDismiss: () => setState(() => _dismissedError = message),
             ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: _fetchResellerOrders,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 40.h),
+            child: Column(
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 12),
+                Text(
+                  message ?? 'Failed to load reseller orders',
+                  style: const TextStyle(color: AppColors.textSecondary),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: _fetchResellerOrders,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
@@ -667,7 +685,9 @@ class _ResellerOrderCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.4),
+                    ),
                   ),
                   child: Text(
                     statusLabel,

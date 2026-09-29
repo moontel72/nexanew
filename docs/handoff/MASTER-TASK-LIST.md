@@ -32,7 +32,7 @@ the C-phase record), `PANEL-SEPARATION-PLAN.md` §17 (auth globals).
 | 2 | Remove the Factory dashboard's hardcoded demo figures + demo product rows | ✅ `39bb81c6`, `606fdef6` |
 | 3 | Shared `StickyErrorBanner` widget (stay + Copy + X) | ✅ `a9c0ecec` |
 | 4 | Errors **stay + Copy** — Drivers screen (first screen) | ✅ `a180f573` |
-| 5 | Errors **stay + Copy** — remaining **Factory panel** screens: Products, Store Keepers, Unit/Packet/Carton/Bundle codes, Add/Edit dialogs, dashboard | ⏳ **in progress** — done: **Products list**, **Unit / Packet / Carton codes lists** (all now use `StickyErrorBanner`: sticky + Copy + X, and a failed request no longer looks like "no codes"). Remaining: Store Keepers, Bundle codes/overview screens, Orders hub, Add/Edit dialogs, dashboard |
+| 5 | Errors **stay + Copy** — remaining **Factory panel** screens: Products, Store Keepers, Unit/Packet/Carton/Bundle codes, Add/Edit dialogs, dashboard | ⏳ **in progress** — done (**7 screens**): **Products list**, **Store Keepers list**, **Unit / Packet / Carton codes lists**, **Carton / Packet codes overview**, **Bundle codes list**, **Orders hub (reseller orders)** — all now `StickyErrorBanner` (sticky + Copy + X). Remaining: the Add/Edit **form** screens (create/edit product, create store keeper, create driver), the code **generate** screens, the driver-list stopgap upgrade (#4), and the dashboard |
 | 6 | Errors **stay + Copy** — **Sub-Admin** panel screens | ⏳ |
 | 7 | Errors **stay + Copy** — **Super Admin** screens | ⏳ |
 | 8 | Errors **stay + Copy** — other apps (reseller, shop keeper, cricket) | ⏳ |
@@ -146,6 +146,7 @@ PHASE K  K1 → K2 → K3 → K4 → K5 → K6
 | # | Task | Reuses (already exists) | Depends on |
 |---|---|---|---|
 | **K1** | **B2B Kisan onboarding + Agri-Producer Dashboard on `market.traceodd.com`** — registration, document/profile verification, Admin/Verification-Manager approval, and a streamlined producer dashboard (post a crop lot, see bids, accept, track pickup, view contracts). Adds auth role **`kisan_producer`** (`poster_type = 'kisan'`) wired to the market B2B auth gateway. **NOT in the Universal Customer app** | market B2B auth gateway; the Reseller/Shopkeeper role-dashboard pattern; `companies` / users role columns | #15/#16 (a B2B role already provisioned next to them) |
+| **K1b** | **Kisan Verification Manager panel** — the B2B Sub-Admin creates **as many managers as it wants**, each over a **district or open area**, with a scoped producer-approval queue (pending → documents → approve / reject / suspend). Producers only: marketplace content, disputes and reseller/shop-keeper accounts stay with the Sub-Admin | the existing delegated sub-role mechanism (`sub_admin_assignments` + feature grants) and the district vocabulary already used by smart codes | K1 |
 | **K2** | **Crop listing + direct bidding** (place / list / accept a bid) | `FreightAuctionController` (`loads`, `loads/{id}/bids`, `loads/{id}/match`) + `freight_loads` / `freight_bids` — a kisan is a **`poster_type`**, not a new schema | K1 |
 | **K3** | **Automatic logistics hand-off**: on accept, offer the load to nearby trucks | `BiddingMeshController` (`submit-bid`, `accept-bid`) + Goods/Truck fleet map; `TruckCategory.shahzoreLoader` is already documented as *kisaan-to-mandi produce* | K2 |
 | **K4** | **Batch QR** on loading, verified like any NexaTrace product | `base_codes` + production vault + consumer verify (`/marketplace/consumer/verify`) | K3 |
@@ -171,6 +172,12 @@ Goods & Logistics / Driver flow handles pickup, trip execution, live Google Maps
 **Boundary check to run after every Phase K change:** the B2C Universal app carries **no** B2B marketplace
 trading code, and **no** Kisan account type. Sign-up, verification, listing, bidding and contracts all live on
 the B2B side. (The reverse is also true: the market site does not grow consumer features.)
+
+**Why the producer queue needs its own layer (owner, 2026-09-29):** one `commercial_marketplace` Sub-Admin
+cannot personally approve **shopkeepers + resellers + kisan** — the third queue turns the approval desk into the
+bottleneck. So the Sub-Admin appoints **Kisan Verification Managers** (unlimited, one per district or open
+area) to run the producer queue, and keeps everything else (content, disputes, reseller/shop accounts) itself.
+That is **K1b**, and it is the precursor to the Marketing hierarchy (District → Manager → Agent).
 
 **Why not a separate Kisan app, and not a Sub-Admin vertical:** the owner's Sub-Admin rule is *"no personal
 products, only platform oversight"* — a Kisan vertical would need a provisioning/verification/account
