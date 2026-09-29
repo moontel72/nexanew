@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:trace_odd/features/marketplace_public/data/marketplace_cart.dart';
 import 'package:trace_odd/features/marketplace_public/theme/marketplace_theme.dart';
 
 /// Where a buyer goes to open an account. Item #13 makes the account the buying
@@ -14,12 +15,36 @@ double? _num(dynamic v) {
 
 String _str(dynamic v) => v?.toString() ?? '';
 
+/// Puts a browse-API product into the cart (item #13). Kept here so every card
+/// and the detail sheet use one mapping.
+Future<void> addProductToCart(Map<String, dynamic> p) {
+  final wholesale = _num(p['wholesale_price']);
+  final price = wholesale ?? _num(p['price']) ?? 0;
+
+  return MpCart.instance.add(
+    productId: _str(p['id']),
+    name: _str(p['name']).isEmpty ? 'Product' : _str(p['name']),
+    factoryName: _str(p['factory_name']),
+    factoryId: _str(p['factory_id']),
+    currency: _str(p['currency']).isEmpty ? 'PKR' : _str(p['currency']),
+    unitPrice: price,
+    moq: int.tryParse(_str(p['moq'])) ?? 1,
+    imageUrl: _str(p['image_url']),
+  );
+}
+
 /// A single published product, as a buyer sees it.
 class MpProductCard extends StatelessWidget {
-  const MpProductCard({super.key, required this.product, this.onTap});
+  const MpProductCard({
+    super.key,
+    required this.product,
+    this.onTap,
+    this.onAdd,
+  });
 
   final Map<String, dynamic> product;
   final VoidCallback? onTap;
+  final VoidCallback? onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +102,31 @@ class MpProductCard extends StatelessWidget {
                         text: 'WHOLESALE',
                         background: MpColors.coral,
                         foreground: Colors.white,
+                      ),
+                    ),
+                  if (onAdd != null)
+                    Positioned(
+                      right: 10,
+                      bottom: 10,
+                      child: Material(
+                        color: MpColors.indigo,
+                        shape: const CircleBorder(),
+                        elevation: 2,
+                        child: InkWell(
+                          onTap: onAdd,
+                          customBorder: const CircleBorder(),
+                          child: const Tooltip(
+                            message: 'Add to cart',
+                            child: Padding(
+                              padding: EdgeInsets.all(9),
+                              child: Icon(
+                                Icons.add_shopping_cart,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                 ],
@@ -239,8 +289,9 @@ class _Pill extends StatelessWidget {
 /// public, so everything the browse APIs return is rendered here).
 Future<void> showMpProductDetails(
   BuildContext context,
-  Map<String, dynamic> p,
-) {
+  Map<String, dynamic> p, {
+  VoidCallback? onAdd,
+}) {
   final name = _str(p['name']).isEmpty ? 'Product' : _str(p['name']);
   final factory = _str(p['factory_name']);
   final city = _str(p['factory_city']);
@@ -397,6 +448,29 @@ Future<void> showMpProductDetails(
                 }),
               ],
               const SizedBox(height: 22),
+              if (onAdd != null) ...[
+                SizedBox(
+                  height: 50,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: MpColors.coral,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () {
+                      onAdd();
+                      Navigator.of(ctx).pop();
+                    },
+                    icon: const Icon(Icons.add_shopping_cart, size: 20),
+                    label: const Text(
+                      'Add to cart',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
               SizedBox(
                 height: 50,
                 child: FilledButton.icon(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:trace_odd/features/marketplace_public/data/marketplace_cart.dart';
 import 'package:trace_odd/features/marketplace_public/data/marketplace_public_repository.dart';
 import 'package:trace_odd/features/marketplace_public/presentation/widgets/marketplace_product_card.dart';
 import 'package:trace_odd/features/marketplace_public/theme/marketplace_theme.dart';
@@ -375,7 +376,12 @@ class _MarketplaceHomePageState extends State<MarketplaceHomePage> {
                         final product = products[index];
                         return MpProductCard(
                           product: product,
-                          onTap: () => showMpProductDetails(context, product),
+                          onAdd: () => addProductToCart(product),
+                          onTap: () => showMpProductDetails(
+                            context,
+                            product,
+                            onAdd: () => addProductToCart(product),
+                          ),
                         );
                       },
                     );
@@ -574,6 +580,7 @@ class _TopBar extends StatelessWidget {
                     style: TextStyle(color: MpColors.inkSoft),
                   ),
                 ),
+              _CartButton(),
               const SizedBox(width: 6),
               FilledButton(
                 style: FilledButton.styleFrom(
@@ -592,6 +599,58 @@ class _TopBar extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Cart button with a live item-count badge.
+class _CartButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final cart = MpCart.instance;
+
+    return ListenableBuilder(
+      listenable: cart,
+      builder: (context, _) {
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              tooltip: 'Your cart',
+              onPressed: () => context.go('/cart'),
+              icon: const Icon(
+                Icons.shopping_cart_outlined,
+                color: MpColors.ink,
+              ),
+            ),
+            if (cart.itemCount > 0)
+              Positioned(
+                right: 2,
+                top: 2,
+                child: IgnorePointer(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: MpColors.coral,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${cart.itemCount}',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

@@ -35,7 +35,7 @@ the C-phase record), `PANEL-SEPARATION-PLAN.md` §17 (auth globals).
 | 10 | Publish the **6 existing factory products** (Maxi Electronic 2, Moon Medi 4) onto the marketplace | ✅ **done live 2026-09-28** — `php artisan marketplace:publish-products --all` published 6 listings (Zanni 500mg, Bonbo 300 mg, Mixer 500 watt, GUDO MIXER, Dero Dan 50 mg, testy 50) |
 | 11 | A **Marketplace section** on each of the three panel dashboards: preview the full marketplace, upload a product, view orders, order history | ✅ **done** — Factory panel section (`/factory/marketplace`: Preview · My Listings · Orders) + one shared **read-only** oversight screen for the Sub-Admin (`commercial_marketplace`, `/sub-admin/marketplace`) and the Super Admin (`/marketplace`). Backend: `admin/marketplace/orders` + `summary` |
 | 12 | **Public read-only marketplace site** — **no login page**; browse everything with wholesale price + MOQ (Alibaba-style) | ⏳ **START HERE** — app + nginx + deploy wiring built (`lib/main_marketplace.dart` → `market.traceodd.com`). **Owner action: add the Cloudflare DNS record** (see §#12 below) |
-| 13 | **Buy → cart + "register your factory / reseller / shop"** — the account is the buying door, the marketplace is not | ⏳ |
+| 13 | **Buy → cart + "register your factory / reseller / shop"** — the account is the buying door, the marketplace is not | ⏳ **START HERE** — **cart + the buying door are built** on market.traceodd.com (add to cart, MOQ-aware cart page, register page for the three account types). **Not yet: the order itself** — see §#13 below |
 | 14 | Orders / sell / buy visible in each panel's own marketplace section | ⏳ |
 | 15 | **B2B** its own login page + attach the old tested screen | ⏳ |
 | 16 | **Reseller** — verify + attach the existing login | ⏳ |
@@ -91,6 +91,27 @@ Design: a modern storefront, not Alibaba's blue — deep-ink text, indigo→teal
 accents, card grid (responsive 1/2/3/4 columns), category chips, MOQ pills, verified-factory badges,
 and a factory storefront page. Buying is deliberately absent: the CTA hands the visitor to the account
 door (item #13).
+
+### #13 — cart + the buying door (on `market.traceodd.com`)
+
+Built:
+
+| Piece | Path |
+|---|---|
+| Cart (persisted on the device) | `lib/features/marketplace_public/data/marketplace_cart.dart` — `MpCart`, JSON in `shared_preferences` |
+| Cart page | `.../presentation/pages/marketplace_cart_page.dart` — MOQ-aware quantity stepper, remove, per-currency subtotals |
+| Buying door | `.../presentation/pages/marketplace_register_page.dart` — explains the three account types (Factory · Reseller/Wholesaler · Shop Keeper) and opens the registration |
+| Add to cart | the round button on every product card, plus "Add to cart" in the detail sheet |
+| Header | cart icon with a live item-count badge |
+
+Routes: `/cart`, `/register`.
+
+**Still open (the honest gap):** the cart does not yet *place* an order. Creating one needs an
+authenticated business, and the endpoints that exist today are `POST /reseller/orders` (a reseller
+account) — there is **no shop-keeper account type in the backend at all** (`GROUP-INCHARGE-MODEL.md`
+§2b.8: *"Shop Keeper has no creation path anywhere"*). So the next step for #13 is a decision, not
+only code: either (a) the cart hands the visitor to the reseller app to finish the order, or
+(b) a buying session is introduced so a visitor can submit an order request that a factory confirms.
 
 ### Items that were wrong and are fixed (kept so nobody "re-fixes" them)
 

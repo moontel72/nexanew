@@ -262,7 +262,12 @@ class _MarketplaceStorefrontPageState extends State<MarketplaceStorefrontPage> {
                   final product = _products[index];
                   return MpProductCard(
                     product: product,
-                    onTap: () => showMpProductDetails(context, product),
+                    onAdd: () => addProductToCart(product),
+                    onTap: () => showMpProductDetails(
+                      context,
+                      product,
+                      onAdd: () => addProductToCart(product),
+                    ),
                   );
                 },
               );

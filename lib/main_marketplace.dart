@@ -16,13 +16,18 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
+import 'package:trace_odd/features/marketplace_public/data/marketplace_cart.dart';
+import 'package:trace_odd/features/marketplace_public/presentation/pages/marketplace_cart_page.dart';
 import 'package:trace_odd/features/marketplace_public/presentation/pages/marketplace_home_page.dart';
+import 'package:trace_odd/features/marketplace_public/presentation/pages/marketplace_register_page.dart';
 import 'package:trace_odd/features/marketplace_public/presentation/pages/marketplace_storefront_page.dart';
 import 'package:trace_odd/features/marketplace_public/theme/marketplace_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) usePathUrlStrategy();
+  // Restore a cart the visitor left behind (it survives the register detour).
+  MpCart.instance.ensureLoaded();
   runApp(const MarketplaceApp());
 }
 
@@ -43,6 +48,16 @@ class MarketplaceApp extends StatelessWidget {
         builder: (context, state) => MarketplaceStorefrontPage(
           factoryId: state.pathParameters['factoryId'] ?? '',
         ),
+      ),
+      GoRoute(
+        path: '/cart',
+        name: 'marketplace_cart',
+        builder: (context, state) => const MarketplaceCartPage(),
+      ),
+      GoRoute(
+        path: '/register',
+        name: 'marketplace_register',
+        builder: (context, state) => const MarketplaceRegisterPage(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
