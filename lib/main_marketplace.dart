@@ -22,9 +22,12 @@ import 'package:trace_odd/features/marketplace_public/presentation/pages/marketp
 import 'package:trace_odd/features/marketplace_public/presentation/pages/marketplace_register_page.dart';
 import 'package:trace_odd/features/marketplace_public/presentation/pages/marketplace_storefront_page.dart';
 import 'package:trace_odd/features/marketplace_public/theme/marketplace_theme.dart';
+import 'package:trace_odd/shared/widgets/feedback/copyable_error_surface.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // Any uncaught error becomes a copyable report, not a blank area.
+  installCopyableErrorSurface(app: 'Trace Odd Marketplace');
   if (kIsWeb) usePathUrlStrategy();
   // Restore a cart the visitor left behind (it survives the register detour).
   MpCart.instance.ensureLoaded();

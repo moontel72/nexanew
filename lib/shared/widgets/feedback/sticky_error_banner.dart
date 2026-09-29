@@ -76,9 +76,45 @@ class _StickyErrorBannerState extends State<StickyErrorBanner> {
   }
 
   Future<void> _copy() async {
-    await Clipboard.setData(ClipboardData(text: _copyText));
+    try {
+      await Clipboard.setData(ClipboardData(text: _copyText));
+      if (!mounted) return;
+      setState(() => _copied = true);
+      return;
+    } catch (_) {
+      // Fall through to the manual path below.
+    }
+
     if (!mounted) return;
-    setState(() => _copied = true);
+
+    // WHY THIS FALLBACK EXISTS (owner, 2026-09-29: "the error still does not
+    // copy"). The browser Clipboard API is only available in a SECURE context.
+    // This panel is also opened over plain http:// (e.g. http://135.181.46.27),
+    // where `navigator.clipboard` does not exist, so `Clipboard.setData` fails —
+    // silently, because nothing here used to catch it. A button that does nothing
+    // is worse than none, so when the API refuses we show the text pre-selected
+    // with the manual instruction. That copy always works.
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Copy this manually'),
+        content: SizedBox(
+          width: 520,
+          child: SingleChildScrollView(
+            child: SelectableText(
+              _copyText,
+              style: const TextStyle(fontSize: 12.5),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:trace_odd/app/app_initializer.dart';
+import 'package:trace_odd/shared/widgets/feedback/copyable_error_surface.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 
@@ -26,18 +27,11 @@ void main() async {
 }
 
 void _setupErrorHandling() {
-  // Set up Flutter error handling
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    // Log to error logger
-    // ErrorLogger.error('Flutter error', details.exception, details.stack);
-  };
-
-  // Set up platform error handling
-  PlatformDispatcher.instance.onError = (error, stack) {
-    // ErrorLogger.error('Platform error', error, stack);
-    return true;
-  };
+  // One surface for the whole app: any uncaught error (including a build-time
+  // type error, which used to reach Flutter's own error widget and had NO copy
+  // affordance) now renders as a panel with the message, the stack and a Copy
+  // button. Flutter's own console reporting is preserved.
+  installCopyableErrorSurface(app: 'Trace Odd admin panel');
 }
 
 class NexaTraceApp extends StatelessWidget {

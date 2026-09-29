@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/features/marketplace_public/data/marketplace_public_repository.dart';
 import 'package:trace_odd/features/marketplace_public/presentation/widgets/marketplace_product_card.dart';
 import 'package:trace_odd/features/marketplace_public/theme/marketplace_theme.dart';
+import 'package:trace_odd/shared/widgets/brand/traceodd_brand.dart';
 
 /// One factory's public storefront — its published products only (item #12).
 class MarketplaceStorefrontPage extends StatefulWidget {
@@ -99,26 +99,34 @@ class _MarketplaceStorefrontPageState extends State<MarketplaceStorefrontPage> {
                             tooltip: 'Back to marketplace',
                           ),
                           const SizedBox(width: 6),
-                          Container(
-                            width: 24,
-                            height: 24,
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.92),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: SvgPicture.asset(
-                              'assets/logo/traceodd_logo.svg',
-                              semanticsLabel: 'Trace Odd',
-                            ),
+                          // Canonical lockup, white wordmark for the dark header —
+                          // never hand-roll the badge (see marketplace_home_page).
+                          const TraceOddBrand(
+                            badgeSize: 26,
+                            nameSize: 13,
+                            nameColor: Colors.white,
+                            direction: Axis.horizontal,
+                            gap: 8,
+                            nameSpacing: 2,
                           ),
                           const SizedBox(width: 8),
-                          const Text(
-                            'Trace Odd Marketplace',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'MARKETPLACE',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.6,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ],

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:trace_odd/features/marketplace_public/data/marketplace_cart.dart';
 import 'package:trace_odd/features/marketplace_public/data/marketplace_public_repository.dart';
 import 'package:trace_odd/features/marketplace_public/presentation/widgets/marketplace_product_card.dart';
 import 'package:trace_odd/features/marketplace_public/theme/marketplace_theme.dart';
+import 'package:trace_odd/shared/widgets/brand/traceodd_brand.dart';
 
 /// The public marketplace home — browse everything, no login (item #12).
 ///
@@ -785,27 +785,16 @@ class _TopBar extends StatelessWidget {
                 onTap: () => context.go('/'),
                 child: Row(
                   children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: MpColors.surfaceAlt,
-                        borderRadius: BorderRadius.circular(9),
-                      ),
-                      padding: const EdgeInsets.all(4),
-                      child: SvgPicture.asset(
-                        'assets/logo/traceodd_logo.svg',
-                        semanticsLabel: 'Trace Odd',
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'Trace Odd',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color: MpColors.ink,
-                      ),
+                    // The canonical brand lockup — the SAME widget the main site
+                    // (traceodd.com) uses. Do NOT hand-roll the badge asset in a
+                    // padded box: the SVG is a square badge, so a wrapper adds the
+                    // blank space the owner saw on 2026-09-29.
+                    const TraceOddBrand(
+                      badgeSize: 34,
+                      nameSize: 16,
+                      direction: Axis.horizontal,
+                      gap: 8,
+                      nameSpacing: 3,
                     ),
                     const SizedBox(width: 8),
                     Container(
