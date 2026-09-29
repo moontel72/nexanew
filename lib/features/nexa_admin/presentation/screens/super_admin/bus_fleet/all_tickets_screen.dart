@@ -10,6 +10,7 @@
 import 'package:flutter/material.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/core/constants/api_endpoints.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 import 'dart:html' as html;
 
 class AllTicketsScreen extends StatefulWidget {
@@ -33,6 +34,8 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
   List<_TicketSegment> _segments = [];
   bool _loading = true;
   String? _error;
+  String? _errorSource;
+  String? _dismissedError;
 
   @override
   void initState() {
@@ -146,6 +149,8 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
       _segments = segments;
     } catch (e) {
       _error = e.toString();
+      _errorSource =
+          'Super Admin · All Tickets · GET ${widget.panelPrefix}/routes/${widget.routeId}/pricing';
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -191,12 +196,15 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
               'Failed to load ticket data',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 8),
-            Text(
-              _error!,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-              textAlign: TextAlign.center,
-            ),
+            const SizedBox(height: 12),
+            // The message must be COPYABLE, not just visible — plain Text could not
+            // be selected or copied, so this failure could never be reported.
+            if (_error != null && _error != _dismissedError)
+              StickyErrorBanner(
+                message: _error!,
+                source: _errorSource,
+                onDismiss: () => setState(() => _dismissedError = _error),
+              ),
             const SizedBox(height: 16),
             FilledButton.icon(
               icon: const Icon(Icons.refresh),

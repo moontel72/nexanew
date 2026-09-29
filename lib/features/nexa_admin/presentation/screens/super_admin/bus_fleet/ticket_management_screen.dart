@@ -8,6 +8,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 class TicketManagementScreen extends StatefulWidget {
   final String panelPrefix; // '/bus-fleet' or '/bus-owner'
@@ -24,6 +25,17 @@ class _TicketManagementScreenState extends State<TicketManagementScreen> {
   String? _selectedRouteId;
   bool _loadingRoutes = true, _loadingStats = false;
   String? _error;
+  String? _errorSource;
+  String? _dismissedError;
+
+  /// Record a failure for the banner — a failed action must STAY and be copyable.
+  void _fail(Object e, String source) {
+    if (!mounted) return;
+    setState(() {
+      _error = e.toString();
+      _errorSource = source;
+    });
+  }
 
   @override
   void initState() {
@@ -42,6 +54,8 @@ class _TicketManagementScreenState extends State<TicketManagementScreen> {
       if (data is List) _routes = data.cast<Map<String, dynamic>>();
     } catch (e) {
       _error = e.toString();
+      _errorSource =
+          'Super Admin · Ticket Management · GET ${widget.panelPrefix}/routes';
     }
     if (mounted) setState(() => _loadingRoutes = false);
   }
@@ -57,10 +71,10 @@ class _TicketManagementScreenState extends State<TicketManagementScreen> {
       );
       _routeStats = res?['data'] as Map<String, dynamic>?;
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      _fail(
+        e,
+        'Super Admin · Ticket Management · GET ${widget.panelPrefix}/routes/{id}/ticket-stats',
+      );
     }
     if (mounted) setState(() => _loadingStats = false);
   }
@@ -79,6 +93,17 @@ class _TicketManagementScreenState extends State<TicketManagementScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                // NOTE: `_error` used to be set and NEVER rendered here, so a failed
+                // route load just showed an empty dropdown — a silent failure.
+                if (_error != null && _error != _dismissedError)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                    child: StickyErrorBanner(
+                      message: _error!,
+                      source: _errorSource,
+                      onDismiss: () => setState(() => _dismissedError = _error),
+                    ),
+                  ),
                 // Route selector
                 Container(
                   padding: const EdgeInsets.all(12),

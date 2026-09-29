@@ -8,6 +8,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 class BonusManagementScreen extends StatefulWidget {
   final String panelPrefix;
@@ -22,6 +23,17 @@ class _BonusManagementScreenState extends State<BonusManagementScreen> {
   List<Map<String, dynamic>> _bonuses = [];
   bool _loading = true;
   String? _error;
+  String? _errorSource;
+  String? _dismissedError;
+
+  /// Record a failure for the banner — a failed action must STAY and be copyable.
+  void _fail(Object e, String source) {
+    if (!mounted) return;
+    setState(() {
+      _error = e.toString();
+      _errorSource = source;
+    });
+  }
 
   static const _staffTypes = ['driver', 'conductor', 'office_staff'];
   static const _categories = [
@@ -49,6 +61,8 @@ class _BonusManagementScreenState extends State<BonusManagementScreen> {
       if (data is List) _bonuses = data.cast<Map<String, dynamic>>();
     } catch (e) {
       _error = e.toString();
+      _errorSource =
+          'Super Admin · Staff Bonuses · GET ${widget.panelPrefix}/bonuses';
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -77,10 +91,10 @@ class _BonusManagementScreenState extends State<BonusManagementScreen> {
       await _api.delete('${widget.panelPrefix}/bonuses/$id');
       _load();
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      _fail(
+        e,
+        'Super Admin · Staff Bonuses · DELETE ${widget.panelPrefix}/bonuses/{id}',
+      );
     }
   }
 
@@ -210,10 +224,12 @@ class _BonusManagementScreenState extends State<BonusManagementScreen> {
                   Navigator.pop(context);
                   _load();
                 } catch (e) {
-                  if (mounted)
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  _fail(
+                    e,
+                    isEdit
+                        ? 'Super Admin · Staff Bonuses · PUT ${widget.panelPrefix}/bonuses/{id}'
+                        : 'Super Admin · Staff Bonuses · POST ${widget.panelPrefix}/bonuses',
+                  );
                 }
               },
               child: Text(isEdit ? 'Update' : 'Create'),
@@ -243,15 +259,29 @@ class _BonusManagementScreenState extends State<BonusManagementScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
           ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: Colors.red)),
-                  const SizedBox(height: 12),
-                  FilledButton(onPressed: _load, child: const Text('Retry')),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 12),
+                    // Copyable, not just visible (plain Text could not be copied).
+                    if (_error != _dismissedError)
+                      StickyErrorBanner(
+                        message: _error!,
+                        source: _errorSource,
+                        onDismiss: () =>
+                            setState(() => _dismissedError = _error),
+                      ),
+                    const SizedBox(height: 12),
+                    FilledButton(onPressed: _load, child: const Text('Retry')),
+                  ],
+                ),
               ),
             )
           : _bonuses.isEmpty

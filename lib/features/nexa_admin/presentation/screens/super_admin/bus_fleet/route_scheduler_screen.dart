@@ -8,6 +8,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 import 'all_tickets_screen.dart';
 
 class RouteSchedulerScreen extends StatefulWidget {
@@ -22,6 +23,17 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
   List<Map<String, dynamic>> _routes = [];
   bool _loading = true;
   String? _error;
+  String? _errorSource;
+  String? _dismissedError;
+
+  /// Record a failure for the banner — a failed action must STAY and be copyable.
+  void _fail(Object e, String source) {
+    if (!mounted) return;
+    setState(() {
+      _error = e.toString();
+      _errorSource = source;
+    });
+  }
 
   @override
   void initState() {
@@ -40,6 +52,8 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
       if (data is List) _routes = data.cast<Map<String, dynamic>>();
     } catch (e) {
       _error = e.toString();
+      _errorSource =
+          'Super Admin · Route Scheduler · GET ${widget.panelPrefix}/routes';
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -67,10 +81,10 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
       await _api.delete('${widget.panelPrefix}/routes/$id');
       _loadRoutes();
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      _fail(
+        e,
+        'Super Admin · Route Scheduler · DELETE ${widget.panelPrefix}/routes/{id}',
+      );
     }
   }
 
@@ -83,10 +97,10 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
           context,
         ).showSnackBar(const SnackBar(content: Text('Route published!')));
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Publish failed: $e')));
+      _fail(
+        e,
+        'Super Admin · Route Scheduler · POST ${widget.panelPrefix}/routes/{id}/publish',
+      );
     }
   }
 
@@ -99,10 +113,10 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
           context,
         ).showSnackBar(const SnackBar(content: Text('Route unpublished!')));
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      _fail(
+        e,
+        'Super Admin · Route Scheduler · POST ${widget.panelPrefix}/routes/{id}/unpublish',
+      );
     }
   }
 
@@ -125,16 +139,26 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
           ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(_error!),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: _loadRoutes,
-                    child: const Text('Retry'),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Copyable, not just visible (was plain Text).
+                    if (_error != _dismissedError)
+                      StickyErrorBanner(
+                        message: _error!,
+                        source: _errorSource,
+                        onDismiss: () =>
+                            setState(() => _dismissedError = _error),
+                      ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: _loadRoutes,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
               ),
             )
           : _routes.isEmpty
@@ -805,10 +829,12 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                     );
                   _loadRoutes();
                 } catch (e) {
-                  if (mounted)
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  _fail(
+                    e,
+                    isEdit
+                        ? 'Super Admin · Route Scheduler · PUT ${widget.panelPrefix}/routes/{id}'
+                        : 'Super Admin · Route Scheduler · POST ${widget.panelPrefix}/routes',
+                  );
                 }
               },
               child: Text(isEdit ? 'Update' : 'Create'),
@@ -1064,6 +1090,19 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
   bool _loading = true;
   final _renderedPairs = <String>{};
 
+  String? _error;
+  String? _errorSource;
+  String? _dismissedError;
+
+  /// Record a failure for the banner — a failed save must STAY and be copyable.
+  void _fail(Object e, String source) {
+    if (!mounted) return;
+    setState(() {
+      _error = e.toString();
+      _errorSource = source;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1079,7 +1118,13 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
       final data = res?['data'];
       if (data != null && data['prices'] != null)
         _prices = (data['prices'] as List).cast<Map<String, dynamic>>();
-    } catch (_) {}
+    } catch (e) {
+      // Was `catch (_) {}` — a broken pricing load was swallowed entirely and
+      // looked like 'no prices yet'.
+      _error = e.toString();
+      _errorSource =
+          'Super Admin · Route Pricing · GET ${widget.panelPrefix}/routes/${widget.routeId}/pricing';
+    }
     if (mounted) setState(() => _loading = false);
   }
 
@@ -1094,10 +1139,10 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
           context,
         ).showSnackBar(const SnackBar(content: Text('Prices saved!')));
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      _fail(
+        e,
+        'Super Admin · Route Pricing · PUT ${widget.panelPrefix}/routes/${widget.routeId}/pricing',
+      );
     }
   }
 
@@ -1151,7 +1196,15 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               padding: const EdgeInsets.all(16),
-              children: _buildPriceRows(),
+              children: [
+                if (_error != null && _error != _dismissedError)
+                  StickyErrorBanner(
+                    message: _error!,
+                    source: _errorSource,
+                    onDismiss: () => setState(() => _dismissedError = _error),
+                  ),
+                ..._buildPriceRows(),
+              ],
             ),
     );
   }

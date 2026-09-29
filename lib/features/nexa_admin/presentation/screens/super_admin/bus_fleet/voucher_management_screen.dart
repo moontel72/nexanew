@@ -8,6 +8,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 class VoucherManagementScreen extends StatefulWidget {
   final String panelPrefix;
@@ -23,6 +24,17 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
   List<Map<String, dynamic>> _vouchers = [];
   bool _loading = true;
   String? _error;
+  String? _errorSource;
+  String? _dismissedError;
+
+  /// Record a failure for the banner — a failed action must STAY and be copyable.
+  void _fail(Object e, String source) {
+    if (!mounted) return;
+    setState(() {
+      _error = e.toString();
+      _errorSource = source;
+    });
+  }
 
   @override
   void initState() {
@@ -41,6 +53,8 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
       if (data is List) _vouchers = data.cast<Map<String, dynamic>>();
     } catch (e) {
       _error = e.toString();
+      _errorSource =
+          'Super Admin · Vouchers · GET ${widget.panelPrefix}/vouchers';
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -69,9 +83,10 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
       await _api.delete('${widget.panelPrefix}/vouchers/$id');
       _load();
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+      _fail(
+        e,
+        'Super Admin · Vouchers · DELETE ${widget.panelPrefix}/vouchers/{id}',
+      );
     }
   }
 
@@ -80,18 +95,24 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
     final codeCtrl = TextEditingController(text: voucher?['code'] ?? '');
     final titleCtrl = TextEditingController(text: voucher?['title'] ?? '');
     String type = voucher?['type'] ?? 'percentage';
-    final valueCtrl =
-        TextEditingController(text: voucher?['value']?.toString() ?? '');
-    final minOrderCtrl =
-        TextEditingController(text: voucher?['min_order']?.toString() ?? '');
-    final maxDiscCtrl =
-        TextEditingController(text: voucher?['max_discount']?.toString() ?? '');
-    final usageCtrl =
-        TextEditingController(text: voucher?['usage_limit']?.toString() ?? '');
-    final startsCtrl =
-        TextEditingController(text: voucher?['starts_at']?.toString() ?? '');
-    final expiresCtrl =
-        TextEditingController(text: voucher?['expires_at']?.toString() ?? '');
+    final valueCtrl = TextEditingController(
+      text: voucher?['value']?.toString() ?? '',
+    );
+    final minOrderCtrl = TextEditingController(
+      text: voucher?['min_order']?.toString() ?? '',
+    );
+    final maxDiscCtrl = TextEditingController(
+      text: voucher?['max_discount']?.toString() ?? '',
+    );
+    final usageCtrl = TextEditingController(
+      text: voucher?['usage_limit']?.toString() ?? '',
+    );
+    final startsCtrl = TextEditingController(
+      text: voucher?['starts_at']?.toString() ?? '',
+    );
+    final expiresCtrl = TextEditingController(
+      text: voucher?['expires_at']?.toString() ?? '',
+    );
     bool isActive = voucher?['is_active'] != false;
 
     showDialog(
@@ -125,11 +146,17 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
                   decoration: const InputDecoration(labelText: 'Type'),
                   items: const [
                     DropdownMenuItem(
-                        value: 'percentage', child: Text('Percentage')),
+                      value: 'percentage',
+                      child: Text('Percentage'),
+                    ),
                     DropdownMenuItem(
-                        value: 'fixed', child: Text('Fixed Amount')),
+                      value: 'fixed',
+                      child: Text('Fixed Amount'),
+                    ),
                     DropdownMenuItem(
-                        value: 'multiplier', child: Text('Point Multiplier')),
+                      value: 'multiplier',
+                      child: Text('Point Multiplier'),
+                    ),
                   ],
                   onChanged: (v) => setDlg(() => type = v ?? 'percentage'),
                 ),
@@ -141,8 +168,8 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
                     labelText: type == 'percentage'
                         ? 'Value (%)'
                         : type == 'multiplier'
-                            ? 'Multiplier (e.g. 2)'
-                            : 'Amount (Rs.)',
+                        ? 'Multiplier (e.g. 2)'
+                        : 'Amount (Rs.)',
                     hintText: '15',
                   ),
                 ),
@@ -215,8 +242,9 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
                   'max_discount': double.tryParse(maxDiscCtrl.text),
                   'usage_limit': int.tryParse(usageCtrl.text),
                   'starts_at': startsCtrl.text.isEmpty ? null : startsCtrl.text,
-                  'expires_at':
-                      expiresCtrl.text.isEmpty ? null : expiresCtrl.text,
+                  'expires_at': expiresCtrl.text.isEmpty
+                      ? null
+                      : expiresCtrl.text,
                   'is_active': isActive,
                 };
                 try {
@@ -234,10 +262,12 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
                   Navigator.pop(context);
                   _load();
                 } catch (e) {
-                  if (mounted)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: $e')),
-                    );
+                  _fail(
+                    e,
+                    isEdit
+                        ? 'Super Admin · Vouchers · PUT ${widget.panelPrefix}/vouchers/{id}'
+                        : 'Super Admin · Vouchers · POST ${widget.panelPrefix}/vouchers',
+                  );
                 }
               },
               child: Text(isEdit ? 'Update' : 'Create'),
@@ -266,46 +296,60 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline,
-                          size: 48, color: Colors.red),
-                      const SizedBox(height: 12),
-                      Text(_error!,
-                          style: const TextStyle(color: Colors.red)),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                          onPressed: _load, child: const Text('Retry')),
-                    ],
-                  ),
-                )
-              : _vouchers.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.card_giftcard,
-                              size: 56, color: Color(0xFF94A3B8)),
-                          const SizedBox(height: 16),
-                          const Text('No vouchers yet',
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Create your first promo code!',
-                            style: TextStyle(color: Color(0xFF64748B)),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _vouchers.length,
-                      itemBuilder: (_, i) => _voucherCard(_vouchers[i]),
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
                     ),
+                    const SizedBox(height: 12),
+                    // Copyable, not just visible.
+                    if (_error != _dismissedError)
+                      StickyErrorBanner(
+                        message: _error!,
+                        source: _errorSource,
+                        onDismiss: () =>
+                            setState(() => _dismissedError = _error),
+                      ),
+                    const SizedBox(height: 12),
+                    FilledButton(onPressed: _load, child: const Text('Retry')),
+                  ],
+                ),
+              ),
+            )
+          : _vouchers.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.card_giftcard,
+                    size: 56,
+                    color: Color(0xFF94A3B8),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No vouchers yet',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Create your first promo code!',
+                    style: TextStyle(color: Color(0xFF64748B)),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _vouchers.length,
+              itemBuilder: (_, i) => _voucherCard(_vouchers[i]),
+            ),
     );
   }
 
@@ -315,13 +359,13 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
     final typeIcon = type == 'percentage'
         ? Icons.percent
         : type == 'multiplier'
-            ? Icons.star
-            : Icons.money;
+        ? Icons.star
+        : Icons.money;
     final typeColor = type == 'percentage'
         ? const Color(0xFF7C3AED)
         : type == 'multiplier'
-            ? const Color(0xFFF59E0B)
-            : const Color(0xFF059669);
+        ? const Color(0xFFF59E0B)
+        : const Color(0xFF059669);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -333,8 +377,10 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
             Row(
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF1E293B),
                     borderRadius: BorderRadius.circular(6),
@@ -353,12 +399,16 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
                   child: Text(
                     v['title'] ?? '',
                     style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: isActive
                         ? const Color(0xFF16A34A).withValues(alpha: 0.1)
@@ -370,8 +420,9 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
-                      color:
-                          isActive ? const Color(0xFF16A34A) : const Color(0xFF64748B),
+                      color: isActive
+                          ? const Color(0xFF16A34A)
+                          : const Color(0xFF64748B),
                     ),
                   ),
                 ),
@@ -386,12 +437,13 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
                   type == 'percentage'
                       ? '${v['value']}% off'
                       : type == 'multiplier'
-                          ? '${v['value']}x points'
-                          : 'Rs. ${v['value']} off',
+                      ? '${v['value']}x points'
+                      : 'Rs. ${v['value']} off',
                   style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      color: typeColor),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: typeColor,
+                  ),
                 ),
                 const Spacer(),
                 IconButton(
