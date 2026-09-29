@@ -4,7 +4,69 @@
 the owner has already decided — so none of the agreed work is lost when a chat gets long and a new one
 has to start.
 
-**Last updated:** 2026-09-26 (end of a long session — see §6 for what it produced).
+**Last updated:** 2026-09-29 (marketplace live · Sub-Admin full edit · **item #5 complete** — see §0 for the
+resume point, the branch name and the command rules).
+
+---
+
+## 0. ⏭ RESUME HERE — for a fresh chat  *(written 2026-09-29)*
+
+**Where the work stopped:** **item #5 is ✅ done** (15 Factory screens now use `StickyErrorBanner`). The next
+item in the queue is **#6 — Errors stay + Copy on the Sub-Admin panel screens**, then #7 (Super Admin),
+#8 (other apps). Full detail, and everything parked, is in `MASTER-TASK-LIST.md`.
+
+**Do NOT re-do these (all landed, all green):** #9 marketplace upload flow · #10 the 6 existing products ·
+#11 the three panel Marketplace sections · #12 the public site `market.traceodd.com` · #13 cart + buying door
+(cart is built, the ORDER is parked) · #5 · the Sub-Admin full edit form · `subadmin.traceodd.com` vhost ·
+the error-copy fix · the canonical brand lockup on the market site.
+
+### The loop (this is the whole workflow)
+
+1. **Edit** the files.
+2. **Push** — this is what deploys:
+   ```sh
+   cd C:\Ecosystem\NexaTrace_System
+   git add .
+   git commit -m "FIX: <what changed and why>"
+   git push origin mainnew        # ⬅ BRANCH IS `mainnew` (not main, not master)
+   ```
+   The push triggers **Deploy Flutter Web Frontend** (`frontend-deploy.yml`, builds + rsyncs + nginx) and
+   **Deploy to Hetzner** (`deploy.yml`, backend migrate + seeders) and **Tests** (`tests.yml`).
+   **Wait ~10 minutes and read the result** — red or green. That is faster and more reliable than building locally.
+3. **Only if red**, read the log and fix.
+
+### Commands: which may run in the IDE, and which may NOT
+
+| Allowed (fast) | Never run here (heavy — CI does them) |
+|---|---|
+| `php -l <file>` | ❌ `flutter build web …` (any target — 15–25 min, used to time out) |
+| `cd backend && php -d extension_dir=C:/php/ext -d extension=pdo_sqlite vendor/bin/phpunit --no-coverage` | ❌ a whole-tree `dart analyze lib/` |
+| `dart analyze --no-fatal-warnings <only the files you touched>` | ❌ `composer install`, `cargo build` |
+| `python -c "import yaml; yaml.safe_load(open('.github/workflows/<f>.yml'))"` to check a workflow edit | ❌ re-running a deploy locally |
+
+**Dart/Flutter binary path** (Flutter is NOT on the Zed shell's PATH — it is only on the Windows PATH):
+
+```sh
+/c/src/flutter/bin/dart analyze --no-fatal-warnings <files>
+/c/src/flutter/bin/flutter pub get          # only if pubspec changed
+```
+
+**Backend tests** need the sqlite driver enabled explicitly — it exists but is not loaded by default:
+
+```sh
+cd backend && php -d extension_dir=C:/php/ext -d extension=pdo_sqlite vendor/bin/phpunit --no-coverage
+```
+
+### Rules the owner has repeated (do not relearn these)
+
+- **Only essential commands in the IDE.** Builds belong to CI (see the table).
+- **Restore, don't rebuild**; no new features while a phase is being restored.
+- **A failure must STAY, be COPYABLE and be CLOSABLE** — use `StickyErrorBanner`
+  (`lib/shared/widgets/feedback/`) and never a fire-and-forget SnackBar.
+- **The Super Admin and every Sub-Admin own no factory and no product** — oversight is read-only.
+- **Kisan / agri belongs to the B2B side** (`market.traceodd.com`), never the B2C Universal app. See
+  `MASTER-TASK-LIST.md` §Phase K.
+- **The branch is `mainnew`.** A push to it deploys.
 
 ---
 

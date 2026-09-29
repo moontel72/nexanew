@@ -33,7 +33,7 @@ the C-phase record), `PANEL-SEPARATION-PLAN.md` §17 (auth globals).
 | 3 | Shared `StickyErrorBanner` widget (stay + Copy + X) | ✅ `a9c0ecec` |
 | 4 | Errors **stay + Copy** — Drivers screen (first screen) | ✅ `a180f573` |
 | 5 | Errors **stay + Copy** — remaining **Factory panel** screens: Products, Store Keepers, Unit/Packet/Carton/Bundle codes, Add/Edit dialogs, dashboard | ✅ **done** — **15 screens** use `StickyErrorBanner` (sticky + Copy + X): Products list · Store Keepers list · Unit/Packet/Carton codes lists · Carton/Packet codes overview · Bundle codes list · Bundle insights · Bundle packing · Bundle list · Orders hub · Create/Edit Product · Create Store Keeper · Create Driver · Carton/Packet/Bundle code **generate**. **No error path existed on the Factory dashboard** (its only `_showSnackbar` calls are placeholders for unwired buttons), so there was nothing to convert there. **Not part of #5:** the drivers list still uses the #4 stopgap SnackBar — upgrading it to the banner is recorded under MUSTAQBIL M7 |
-| 6 | Errors **stay + Copy** — **Sub-Admin** panel screens | ⏳ |
+| 6 | Errors **stay + Copy** — **Sub-Admin** panel screens | ⏳ **START HERE** |
 | 7 | Errors **stay + Copy** — **Super Admin** screens | ⏳ |
 | 8 | Errors **stay + Copy** — other apps (reseller, shop keeper, cricket) | ⏳ |
 | 9 | **Marketplace upload flow**: product → `marketplace_product_listings`, and the company's **storefront is created on first upload** | ✅ **done** — `MarketplaceListingService` + wired into `ProductController` `store` / `update` / `marketplace-toggle`; deploy re-syncs flagged products |
@@ -252,7 +252,7 @@ mukammal kar lain."*
 
 1. Read `START-HERE.md` (its read order).
 2. Read this file.
-3. Start at the **first ⏳ item in the queue above** — for now that is **#12, the public read-only marketplace
-   site**. #9 (upload flow), #10 (the 6 existing products) and #11 (the three panel sections) are done.
+3. Start at the **first ⏳ item in the queue above** — for now that is **#6, the Sub-Admin panel's error
+   surfaces**. #9–#13, the Sub-Admin edit form and #5 are done.
 4. Keep the two habits: state which item number you are doing, and record the commit hash in the table when
    it lands.
