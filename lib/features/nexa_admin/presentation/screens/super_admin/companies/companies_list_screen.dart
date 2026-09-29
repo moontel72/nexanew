@@ -261,12 +261,8 @@ class _CompaniesListScreenState extends State<CompaniesListScreen> {
               listener: (context, state) {
                 state.maybeWhen(
                   error: (message, _, _, _, _) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(message),
-                        backgroundColor: AppColors.error,
-                      ),
-                    );
+                    // No SnackBar here on purpose: the builder renders this through
+                    // `ErrorState`, which is now a copyable StickyErrorBanner.
                   },
                   exported: (filePath, message) {
                     ScaffoldMessenger.of(context).showSnackBar(

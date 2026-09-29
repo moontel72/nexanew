@@ -19,10 +19,11 @@ class ErrorState extends StatelessWidget {
   /// Render the message through `StickyErrorBanner` (Copy + close) instead of plain
   /// text, so a FAILURE can be reported.
   ///
-  /// Default `false` on purpose: this widget is also used for EMPTY states
-  /// (`ErrorState.empty`), and an empty list is not an error — turning those into
-  /// copyable banners would be a lie. Only `ErrorState.generic` (the failure
-  /// constructor) opts in.
+  /// **Default `true`**: almost every `ErrorState` is a failure, and the owner's rule
+  /// is that a failure must be copyable. The ONE constructor that must not be is
+  /// `ErrorState.empty` — an empty list is not an error, so it opts **out**
+  /// explicitly below. (Turning an empty state into a copyable "error" banner would
+  /// be a lie.)
   final bool copyableMessage;
 
   /// Where the failure came from (panel / endpoint). Used as the banner's source
@@ -39,7 +40,7 @@ class ErrorState extends StatelessWidget {
     this.retryButtonText = 'Try Again',
     this.showRetryButton = true,
     this.padding = const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-    this.copyableMessage = false,
+    this.copyableMessage = true,
     this.source,
   });
 
@@ -115,6 +116,8 @@ class ErrorState extends StatelessWidget {
       iconColor: AppColors.info,
       onRetry: onRetry,
       retryButtonText: retryButtonText ?? 'Refresh',
+      // An empty state is NOT an error — do not offer to 'copy the error'.
+      copyableMessage: false,
     );
   }
 

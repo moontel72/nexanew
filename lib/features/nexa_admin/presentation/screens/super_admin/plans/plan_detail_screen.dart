@@ -4,6 +4,7 @@ import 'package:trace_odd/features/nexa_admin/presentation/bloc/plans/plan_manag
 import 'package:trace_odd/shared/models/subscription/plan_feature_model.dart';
 import 'package:trace_odd/shared/models/subscription/plan_model.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 class PlanDetailScreen extends StatefulWidget {
   final String planId;
@@ -23,8 +24,8 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
 
   void _load() {
     context.read<PlanManagementBloc>().add(
-          PlanManagementEvent.loadPlan(widget.planId),
-        );
+      PlanManagementEvent.loadPlan(widget.planId),
+    );
   }
 
   @override
@@ -40,16 +41,12 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
               ),
             );
             context.read<PlanManagementBloc>().add(
-                  PlanManagementEvent.loadPlan(widget.planId),
-                );
+              PlanManagementEvent.loadPlan(widget.planId),
+            );
           },
           error: (s) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(s.message),
-                backgroundColor: AppColors.error,
-              ),
-            );
+            // No SnackBar: the builder below renders this error as a copyable
+            // StickyErrorBanner with a Retry.
           },
           orElse: () {},
         );
@@ -74,16 +71,25 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
             planDetailLoaded: (s) => _buildDetail(context, s.plan),
             planUpdated: (s) => _buildDetail(context, s.plan),
             error: (s) => Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(s.message),
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: _load,
-                    child: const Text('Retry'),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Copyable, not just visible (was plain Text).
+                    StickyErrorBanner(
+                      message: s.message,
+                      source:
+                          'Super Admin · Plans · GET /api/v1/admin/plans/{id}',
+                      onDismiss: _load,
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                      onPressed: _load,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
               ),
             ),
             orElse: () => const SizedBox.shrink(),
@@ -202,10 +208,9 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
   Widget _sectionTitle(BuildContext context, String title) {
     return Text(
       title,
-      style: Theme.of(context)
-          .textTheme
-          .titleMedium
-          ?.copyWith(fontWeight: FontWeight.w800),
+      style: Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
     );
   }
 
@@ -218,10 +223,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Table(
-        columnWidths: const {
-          0: FixedColumnWidth(260),
-          1: FlexColumnWidth(),
-        },
+        columnWidths: const {0: FixedColumnWidth(260), 1: FlexColumnWidth()},
         defaultVerticalAlignment: TableCellVerticalAlignment.middle,
         children: rows.map((r) {
           return TableRow(
@@ -233,10 +235,9 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                 ),
                 child: Text(
                   r[0],
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
               Padding(
@@ -279,9 +280,12 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
     String currency = plan.currency;
     String status = plan.status.name;
 
-    final initialPrice =
-        billingCycle.toLowerCase() == 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
-    final priceCtrl = TextEditingController(text: initialPrice.toStringAsFixed(2));
+    final initialPrice = billingCycle.toLowerCase() == 'yearly'
+        ? plan.yearlyPrice
+        : plan.monthlyPrice;
+    final priceCtrl = TextEditingController(
+      text: initialPrice.toStringAsFixed(2),
+    );
 
     final currentPublishRates = plan.metadata?['publish_rates'];
     double? rate(dynamic v) {
@@ -312,25 +316,34 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
         ? Map<String, dynamic>.from(currentFreeQuotaRaw.cast<String, dynamic>())
         : <String, dynamic>{};
     final freeUnitCtrl = TextEditingController(
-      text: (freeQuota['unit'] as num?)?.toInt().toString() ??
+      text:
+          (freeQuota['unit'] as num?)?.toInt().toString() ??
           (int.tryParse(freeQuota['unit']?.toString() ?? '')?.toString() ?? ''),
     );
     final freePacketCtrl = TextEditingController(
-      text: (freeQuota['packet'] as num?)?.toInt().toString() ??
-          (int.tryParse(freeQuota['packet']?.toString() ?? '')?.toString() ?? ''),
+      text:
+          (freeQuota['packet'] as num?)?.toInt().toString() ??
+          (int.tryParse(freeQuota['packet']?.toString() ?? '')?.toString() ??
+              ''),
     );
     final freeCartonCtrl = TextEditingController(
-      text: (freeQuota['carton'] as num?)?.toInt().toString() ??
-          (int.tryParse(freeQuota['carton']?.toString() ?? '')?.toString() ?? ''),
+      text:
+          (freeQuota['carton'] as num?)?.toInt().toString() ??
+          (int.tryParse(freeQuota['carton']?.toString() ?? '')?.toString() ??
+              ''),
     );
     final freeBundleCtrl = TextEditingController(
-      text: (freeQuota['bundle'] as num?)?.toInt().toString() ??
-          (int.tryParse(freeQuota['bundle']?.toString() ?? '')?.toString() ?? ''),
+      text:
+          (freeQuota['bundle'] as num?)?.toInt().toString() ??
+          (int.tryParse(freeQuota['bundle']?.toString() ?? '')?.toString() ??
+              ''),
     );
 
     bool isFeatured = plan.isFeatured;
     bool isPopular = plan.isPopular;
-    final sortOrderCtrl = TextEditingController(text: plan.sortOrder.toString());
+    final sortOrderCtrl = TextEditingController(
+      text: plan.sortOrder.toString(),
+    );
 
     final limits = plan.limits;
     String intText(dynamic value) {
@@ -409,11 +422,26 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               items: const [
-                                DropdownMenuItem(value: 'free', child: Text('Free')),
-                                DropdownMenuItem(value: 'basic', child: Text('Basic')),
-                                DropdownMenuItem(value: 'standard', child: Text('Standard')),
-                                DropdownMenuItem(value: 'premium', child: Text('Premium')),
-                                DropdownMenuItem(value: 'custom', child: Text('Custom')),
+                                DropdownMenuItem(
+                                  value: 'free',
+                                  child: Text('Free'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'basic',
+                                  child: Text('Basic'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'standard',
+                                  child: Text('Standard'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'premium',
+                                  child: Text('Premium'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'custom',
+                                  child: Text('Custom'),
+                                ),
                               ],
                               onChanged: (v) {
                                 if (v == null) return;
@@ -432,9 +460,18 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               items: const [
-                                DropdownMenuItem(value: 'active', child: Text('Active')),
-                                DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
-                                DropdownMenuItem(value: 'archived', child: Text('Archived')),
+                                DropdownMenuItem(
+                                  value: 'active',
+                                  child: Text('Active'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'inactive',
+                                  child: Text('Inactive'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'archived',
+                                  child: Text('Archived'),
+                                ),
                               ],
                               onChanged: (v) {
                                 if (v == null) return;
@@ -453,7 +490,9 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                             child: TextField(
                               controller: priceCtrl,
                               keyboardType:
-                                  const TextInputType.numberWithOptions(decimal: true),
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               decoration: InputDecoration(
                                 labelText: 'Price ($currency)',
                                 border: const OutlineInputBorder(),
@@ -469,10 +508,22 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               items: const [
-                                DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
-                                DropdownMenuItem(value: 'quarterly', child: Text('Quarterly')),
-                                DropdownMenuItem(value: 'yearly', child: Text('Yearly')),
-                                DropdownMenuItem(value: 'one_time', child: Text('One Time')),
+                                DropdownMenuItem(
+                                  value: 'monthly',
+                                  child: Text('Monthly'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'quarterly',
+                                  child: Text('Quarterly'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'yearly',
+                                  child: Text('Yearly'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'one_time',
+                                  child: Text('One Time'),
+                                ),
                               ],
                               onChanged: (v) {
                                 if (v == null) return;
@@ -487,8 +538,9 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                       const SizedBox(height: 12),
                       TextField(
                         controller: unitRateCtrl,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                         decoration: const InputDecoration(
                           labelText: 'Unit Price (per code)',
                           border: OutlineInputBorder(),
@@ -500,9 +552,10 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                           Expanded(
                             child: TextField(
                               controller: packetRateCtrl,
-                              keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               decoration: const InputDecoration(
                                 labelText: 'Packet Price',
                                 border: OutlineInputBorder(),
@@ -513,9 +566,10 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                           Expanded(
                             child: TextField(
                               controller: cartonRateCtrl,
-                              keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               decoration: const InputDecoration(
                                 labelText: 'Carton Price',
                                 border: OutlineInputBorder(),
@@ -527,8 +581,9 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                       const SizedBox(height: 12),
                       TextField(
                         controller: bundleRateCtrl,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                         decoration: const InputDecoration(
                           labelText: 'Bundle Price',
                           border: OutlineInputBorder(),
@@ -545,11 +600,26 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               items: const [
-                                DropdownMenuItem(value: 'USD', child: Text('USD')),
-                                DropdownMenuItem(value: 'EUR', child: Text('EUR')),
-                                DropdownMenuItem(value: 'GBP', child: Text('GBP')),
-                                DropdownMenuItem(value: 'INR', child: Text('INR')),
-                                DropdownMenuItem(value: 'AED', child: Text('AED')),
+                                DropdownMenuItem(
+                                  value: 'USD',
+                                  child: Text('USD'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'EUR',
+                                  child: Text('EUR'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'GBP',
+                                  child: Text('GBP'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'INR',
+                                  child: Text('INR'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'AED',
+                                  child: Text('AED'),
+                                ),
                               ],
                               onChanged: (v) {
                                 if (v == null) return;
@@ -598,9 +668,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                         alignment: Alignment.centerLeft,
                         child: Text(
                           'Limits',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
+                          style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                       ),
@@ -722,9 +790,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                         alignment: Alignment.centerLeft,
                         child: Text(
                           'Free Quota',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
+                          style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                       ),
@@ -804,8 +870,9 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                     children: features
                                         .map(
                                           (feature) => CheckboxListTile(
-                                            value: selectedFeatureIds
-                                                .contains(feature.id),
+                                            value: selectedFeatureIds.contains(
+                                              feature.id,
+                                            ),
                                             onChanged: (checked) {
                                               setLocalState(() {
                                                 if (checked == true) {
@@ -823,8 +890,8 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                             title: Text(feature.name),
                                             subtitle:
                                                 feature.description.isNotEmpty
-                                                    ? Text(feature.description)
-                                                    : null,
+                                                ? Text(feature.description)
+                                                : null,
                                             controlAffinity:
                                                 ListTileControlAffinity.leading,
                                             contentPadding: EdgeInsets.zero,
@@ -850,8 +917,9 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                   onPressed: () {
                     final parsedPrice =
                         double.tryParse(priceCtrl.text.trim()) ?? 0.0;
-                    final parsedSortOrder =
-                        int.tryParse(sortOrderCtrl.text.trim());
+                    final parsedSortOrder = int.tryParse(
+                      sortOrderCtrl.text.trim(),
+                    );
                     final parsedUnitRate = rate(unitRateCtrl.text.trim());
                     final parsedPacketRate = rate(packetRateCtrl.text.trim());
                     final parsedCartonRate = rate(cartonRateCtrl.text.trim());
@@ -909,8 +977,9 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                     if (md != null) limitsUpdate['max_drivers'] = md;
                     final mu2 = int.tryParse(maxUsersCtrl.text.trim());
                     if (mu2 != null) limitsUpdate['max_users'] = mu2;
-                    final tc =
-                        int.tryParse(transportConnectionsCtrl.text.trim());
+                    final tc = int.tryParse(
+                      transportConnectionsCtrl.text.trim(),
+                    );
                     if (tc != null) {
                       limitsUpdate['transport_connections_per_month'] = tc;
                     }
@@ -919,25 +988,25 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
 
                     Navigator.pop(context);
                     context.read<PlanManagementBloc>().add(
-                          PlanManagementEvent.updatePlan(
-                            id: plan.id,
-                            name: nameCtrl.text.trim(),
-                            type: type,
-                            description: descriptionCtrl.text.trim(),
-                            price: parsedPrice,
-                            billingCycle: billingCycle,
-                            currency: currency,
-                            status: status,
-                            isFeatured: isFeatured,
-                            isPopular: isPopular,
-                            sortOrder: parsedSortOrder,
-                            limits: limitsUpdate.isEmpty ? null : limitsUpdate,
-                            features: selectedFeatureIds
-                                .map((id) => PlanFeatureInput(id: id))
-                                .toList(),
-                            metadata: metadata.isEmpty ? null : metadata,
-                          ),
-                        );
+                      PlanManagementEvent.updatePlan(
+                        id: plan.id,
+                        name: nameCtrl.text.trim(),
+                        type: type,
+                        description: descriptionCtrl.text.trim(),
+                        price: parsedPrice,
+                        billingCycle: billingCycle,
+                        currency: currency,
+                        status: status,
+                        isFeatured: isFeatured,
+                        isPopular: isPopular,
+                        sortOrder: parsedSortOrder,
+                        limits: limitsUpdate.isEmpty ? null : limitsUpdate,
+                        features: selectedFeatureIds
+                            .map((id) => PlanFeatureInput(id: id))
+                            .toList(),
+                        metadata: metadata.isEmpty ? null : metadata,
+                      ),
+                    );
                   },
                   child: const Text('Save'),
                 ),
