@@ -8,6 +8,7 @@ import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/empty_states/empty_state_widget.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 
 class BundleListScreen extends StatefulWidget {
@@ -17,6 +18,9 @@ class BundleListScreen extends StatefulWidget {
 }
 
 class _BundleListScreenState extends State<BundleListScreen> {
+  /// Sticky failure (see `StickyErrorBanner`) — "Failed: …" used to flash in a
+  /// SnackBar and vanish, so a failed send looked like nothing happened.
+  String? _error;
   @override
   void initState() {
     super.initState();
@@ -69,12 +73,7 @@ class _BundleListScreenState extends State<BundleListScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        setState(() => _error = 'Failed: $e');
       }
     }
   }
@@ -83,93 +82,113 @@ class _BundleListScreenState extends State<BundleListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(title: 'Bundles', showBackButton: true),
-      body: BlocBuilder<BundleBloc, BundleState>(
-        builder: (context, state) {
-          if (state.status == BundleStatus.loading && state.bundles.isEmpty) {
-            return const Center(child: LoadingIndicator());
-          }
-          if (state.bundles.isEmpty) {
-            return const Center(
-              child: EmptyState(
-                icon: Icons.layers_outlined,
-                title: 'No Bundles Yet',
-                description:
-                    'Create bundles by linking cartons and packets to an order.',
+      body: Column(
+        children: [
+          if (_error != null)
+            Padding(
+              padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 0),
+              child: StickyErrorBanner(
+                message: _error!,
+                source:
+                    'Factory · Bundles · PUT /api/v1/factory/store-keeper-bundles/{id}/linking-status',
+                onDismiss: () => setState(() => _error = null),
               ),
-            );
-          }
-          return ListView.builder(
-            padding: EdgeInsets.all(16.w),
-            itemCount: state.bundles.length,
-            itemBuilder: (_, i) {
-              final b = state.bundles[i];
-              return Card(
-                margin: EdgeInsets.only(bottom: 12.h),
-                child: ListTile(
-                  leading: Icon(Icons.layers, color: _statusColor(b.status)),
-                  title: Text(
-                    b.bundleCode,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text(
-                    '${b.orderReference} \u2022 Cartons: ${b.totalCartons} \u2022 Packets: ${b.totalPackets}',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ActionChip(
-                        avatar: const Icon(Icons.link, size: 16),
-                        label: const Text(
-                          'Link Units',
-                          style: TextStyle(fontSize: 11),
+            ),
+          Expanded(
+            child: BlocBuilder<BundleBloc, BundleState>(
+              builder: (context, state) {
+                if (state.status == BundleStatus.loading &&
+                    state.bundles.isEmpty) {
+                  return const Center(child: LoadingIndicator());
+                }
+                if (state.bundles.isEmpty) {
+                  return const Center(
+                    child: EmptyState(
+                      icon: Icons.layers_outlined,
+                      title: 'No Bundles Yet',
+                      description:
+                          'Create bundles by linking cartons and packets to an order.',
+                    ),
+                  );
+                }
+                return ListView.builder(
+                  padding: EdgeInsets.all(16.w),
+                  itemCount: state.bundles.length,
+                  itemBuilder: (_, i) {
+                    final b = state.bundles[i];
+                    return Card(
+                      margin: EdgeInsets.only(bottom: 12.h),
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.layers,
+                          color: _statusColor(b.status),
                         ),
-                        backgroundColor: AppColors.primary.withAlpha(20),
-                        side: const BorderSide(color: AppColors.primary),
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () => _openInsights(b.id),
+                        title: Text(
+                          b.bundleCode,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Text(
+                          '${b.orderReference} \u2022 Cartons: ${b.totalCartons} \u2022 Packets: ${b.totalPackets}',
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ActionChip(
+                              avatar: const Icon(Icons.link, size: 16),
+                              label: const Text(
+                                'Link Units',
+                                style: TextStyle(fontSize: 11),
+                              ),
+                              backgroundColor: AppColors.primary.withAlpha(20),
+                              side: const BorderSide(color: AppColors.primary),
+                              padding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                              onPressed: () => _openInsights(b.id),
+                            ),
+                            SizedBox(width: 4.w),
+                            ActionChip(
+                              avatar: const Icon(Icons.person_add, size: 16),
+                              label: const Text(
+                                'Send to Store',
+                                style: TextStyle(fontSize: 11),
+                              ),
+                              backgroundColor: Colors.amber.withAlpha(20),
+                              side: const BorderSide(color: Colors.amber),
+                              padding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                              onPressed: () =>
+                                  _sendToStoreKeeper(b.id, b.orderReference),
+                            ),
+                            SizedBox(width: 6.w),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 10.w,
+                                vertical: 4.h,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _statusColor(b.status).withAlpha(30),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                b.status,
+                                style: TextStyle(
+                                  color: _statusColor(b.status),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12.sp,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        onTap: () => _openInsights(b.id),
                       ),
-                      SizedBox(width: 4.w),
-                      ActionChip(
-                        avatar: const Icon(Icons.person_add, size: 16),
-                        label: const Text(
-                          'Send to Store',
-                          style: TextStyle(fontSize: 11),
-                        ),
-                        backgroundColor: Colors.amber.withAlpha(20),
-                        side: const BorderSide(color: Colors.amber),
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () =>
-                            _sendToStoreKeeper(b.id, b.orderReference),
-                      ),
-                      SizedBox(width: 6.w),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 10.w,
-                          vertical: 4.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _statusColor(b.status).withAlpha(30),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          b.status,
-                          style: TextStyle(
-                            color: _statusColor(b.status),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12.sp,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  onTap: () => _openInsights(b.id),
-                ),
-              );
-            },
-          );
-        },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

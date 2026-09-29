@@ -8,8 +8,8 @@ import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 import 'package:trace_odd/shared/widgets/inputs/custom_text_field.dart';
 import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
-
 
 class BundleCodeGenerateScreen extends StatefulWidget {
   const BundleCodeGenerateScreen({super.key});
@@ -21,6 +21,11 @@ class BundleCodeGenerateScreen extends StatefulWidget {
 
 class _BundleCodeGenerateScreenState extends State<BundleCodeGenerateScreen> {
   final ScrollController _scrollController = ScrollController();
+
+  /// Sticky generation failure (see `StickyErrorBanner`) — the old SnackBar
+  /// flashed and vanished, so a failed generation looked like nothing happened.
+  String? _error;
+
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _countController = TextEditingController(
     text: '1',
@@ -124,12 +129,7 @@ class _BundleCodeGenerateScreenState extends State<BundleCodeGenerateScreen> {
           if (state.generationStatus == CodeGenerationStatus.success) {
             _showSuccessDialog(context, state);
           } else if (state.generationStatus == CodeGenerationStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error ?? 'Failed to generate codes'),
-                backgroundColor: Colors.red,
-              ),
-            );
+            setState(() => _error = state.error ?? 'Failed to generate codes');
           }
         },
         builder: (context, state) {
@@ -148,6 +148,13 @@ class _BundleCodeGenerateScreenState extends State<BundleCodeGenerateScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (_error != null)
+                      StickyErrorBanner(
+                        message: _error!,
+                        source:
+                            'Factory · Bundle Codes · POST /api/v1/factory/codes/bundle/generate',
+                        onDismiss: () => setState(() => _error = null),
+                      ),
                     _buildBasicInfoSection(),
                     SizedBox(height: 32.h),
                     _buildGenerateButton(state),

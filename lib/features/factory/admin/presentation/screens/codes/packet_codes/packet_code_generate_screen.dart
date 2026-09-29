@@ -9,6 +9,7 @@ import 'package:trace_odd/shared/models/code/base_code_model.dart';
 import 'package:trace_odd/shared/models/code/code_generation_request.dart';
 import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 import 'package:trace_odd/shared/widgets/inputs/custom_text_field.dart';
 import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 
@@ -25,6 +26,11 @@ class PacketCodeGenerateScreen extends StatefulWidget {
 
 class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
   final ScrollController _scrollController = ScrollController();
+
+  /// See `StickyErrorBanner`: the dismissed message is remembered, so the same
+  /// failure stays closed while a new one always appears.
+  String? _dismissedError;
+
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _countController = TextEditingController(
     text: '1',
@@ -407,17 +413,6 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
       ),
       body: BlocBuilder<PacketCodesBloc, PacketCodesState>(
         builder: (context, state) {
-          if (state.status == PacketCodesStatus.error) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.errorMessage ?? 'An error occurred'),
-                  backgroundColor: AppColors.error,
-                ),
-              );
-            });
-          }
-
           return Scrollbar(
             controller: _scrollController,
             thumbVisibility: true,
@@ -437,29 +432,14 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
                     SizedBox(height: 24.h),
                     _buildGenerateButton(),
                     SizedBox(height: 16.h),
-                    if (state.status == PacketCodesStatus.error)
-                      Container(
-                        padding: EdgeInsets.all(16.w),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withAlpha(25),
-                          borderRadius: BorderRadius.circular(8.r),
-                          border: Border.all(color: AppColors.error, width: 1),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.error_outline,
-                              color: AppColors.error,
-                            ),
-                            SizedBox(width: 12.w),
-                            Expanded(
-                              child: Text(
-                                state.errorMessage ?? 'An error occurred',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(color: AppColors.error),
-                              ),
-                            ),
-                          ],
+                    if (state.status == PacketCodesStatus.error &&
+                        state.errorMessage != _dismissedError)
+                      StickyErrorBanner(
+                        message: state.errorMessage ?? 'An error occurred',
+                        source:
+                            'Factory · Packet Codes · POST /api/v1/factory/codes/packet/generate',
+                        onDismiss: () => setState(
+                          () => _dismissedError = state.errorMessage,
                         ),
                       ),
                   ],

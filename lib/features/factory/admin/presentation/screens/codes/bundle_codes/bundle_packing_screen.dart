@@ -7,6 +7,7 @@ import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_
 import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_packing_event.dart';
 import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_packing_state.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 import 'package:trace_odd/shared/widgets/inputs/custom_text_field.dart';
@@ -25,6 +26,10 @@ class _BundlePackingScreenState extends State<BundlePackingScreen> {
   final _shelfCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
   bool _dialogShown = false;
+
+  /// Sticky failure (see `StickyErrorBanner`) — the old SnackBar flashed and
+  /// vanished, so a failed bundle looked like nothing had happened.
+  String? _error;
 
   @override
   void initState() {
@@ -214,12 +219,7 @@ class _BundlePackingScreenState extends State<BundlePackingScreen> {
           );
         }
         if (state.status == BundleStatus.error && state.errorMessage != null) {
-          ScaffoldMessenger.of(ctx).showSnackBar(
-            SnackBar(
-              content: Text(state.errorMessage!),
-              backgroundColor: AppColors.error,
-            ),
-          );
+          setState(() => _error = state.errorMessage);
         }
       },
       child: Scaffold(
@@ -233,6 +233,13 @@ class _BundlePackingScreenState extends State<BundlePackingScreen> {
               child: ListView(
                 padding: EdgeInsets.all(16.w),
                 children: [
+                  if (_error != null)
+                    StickyErrorBanner(
+                      message: _error!,
+                      source:
+                          'Factory · Bundle Packing · POST /api/v1/factory/codes/bundle',
+                      onDismiss: () => setState(() => _error = null),
+                    ),
                   CustomTextField(
                     controller: _orderRefCtrl,
                     labelText: 'Order Reference *',

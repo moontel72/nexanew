@@ -2,6 +2,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/insights/bundle_insights_bloc.dart';
 import 'package:trace_odd/features/factory/admin/presentation/widgets/link_units_to_packet_modal.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 /// Comprehensive Bundle Insights / Aggregation Report.
 ///
@@ -17,6 +18,10 @@ class BundleInsightsScreen extends StatefulWidget {
 }
 
 class _BundleInsightsScreenState extends State<BundleInsightsScreen> {
+  /// See `StickyErrorBanner`: the dismissed message is remembered, so the same
+  /// failure stays closed while a new one always appears.
+  String? _dismissedError;
+
   @override
   void initState() {
     super.initState();
@@ -34,22 +39,41 @@ class _BundleInsightsScreenState extends State<BundleInsightsScreen> {
           }
 
           if (state.status == BundleInsightsStatus.error) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 12),
-                  Text(state.errorMessage ?? 'Failed to load'),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: () => context.read<BundleInsightsBloc>().add(
-                      LoadBundleInsights(widget.bundleId),
-                    ),
-                    child: const Text('Retry'),
+            // Sticky + copyable instead of a bare error column, so the message can
+            // be read and reported rather than looking like an empty report.
+            final message = state.errorMessage;
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                if (message != null && message != _dismissedError)
+                  StickyErrorBanner(
+                    message: message,
+                    source:
+                        'Factory · Bundle Insights · GET /api/v1/factory/codes/bundle/insights',
+                    onDismiss: () => setState(() => _dismissedError = message),
                   ),
-                ],
-              ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.red,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(message ?? 'Failed to load'),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: () => context.read<BundleInsightsBloc>().add(
+                          LoadBundleInsights(widget.bundleId),
+                        ),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             );
           }
 
