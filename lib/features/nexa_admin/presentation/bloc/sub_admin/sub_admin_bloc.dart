@@ -811,8 +811,10 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
   ) async {
     emit(state.copyWith(actionLoading: true));
     try {
-      await _api.post(
-        '${ApiConfig.apiBaseUrl}/admin/sub-admins/${e.adminId}/toggle-status',
+      // Backend route is PATCH /admin/sub-admins/{id}/status (SubAdminController@toggleStatus).
+      // This used to POST to /toggle-status, which does not exist — the action 404'd silently.
+      await _api.patch(
+        '${ApiConfig.apiBaseUrl}/admin/sub-admins/${e.adminId}/status',
       );
       emit(
         state.copyWith(actionLoading: false, actionSuccess: 'Status updated'),
@@ -848,8 +850,11 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
   ) async {
     emit(state.copyWith(actionLoading: true));
     try {
-      await _api.post(
-        '${ApiConfig.apiBaseUrl}/admin/sub-admins/${e.adminId}/change-vertical',
+      // The backend changes a vertical through the SAME update endpoint
+      // (SubAdminController@update reads a `vertical` key), so there is no
+      // /change-vertical route — the old call 404'd.
+      await _api.put(
+        '${ApiConfig.apiBaseUrl}/admin/sub-admins/${e.adminId}',
         data: {'vertical': e.newVertical},
       );
       emit(
@@ -867,8 +872,11 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
   ) async {
     emit(state.copyWith(actionLoading: true));
     try {
-      await _api.post(
-        '${ApiConfig.apiBaseUrl}/admin/sub-admins/${e.adminId}/reset-password',
+      // Password reset is the same update endpoint with a `password` key
+      // (SubAdminController@update hashes via the model mutator) — the old
+      // /reset-password POST did not exist.
+      await _api.put(
+        '${ApiConfig.apiBaseUrl}/admin/sub-admins/${e.adminId}',
         data: {'password': e.newPassword},
       );
       emit(
@@ -906,7 +914,9 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
   ) async {
     emit(state.copyWith(actionLoading: true));
     try {
-      await _api.post(
+      // Backend route is PATCH /admin/sub-admins/{id}/restore
+      // (SubAdminController@restore); the old POST 405'd.
+      await _api.patch(
         '${ApiConfig.apiBaseUrl}/admin/sub-admins/${e.adminId}/restore',
       );
       emit(

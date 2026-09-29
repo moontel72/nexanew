@@ -395,52 +395,126 @@ class SubAdminListScreen extends StatelessWidget {
     }
   }
 
+  /// The full edit form — the whole registration surface, not just name+email
+  /// (owner, 2026-09-29): name, email, phone, vertical AND password.
+  ///
+  /// The backend `SubAdminController@update` accepts all of them, and change-
+  /// vertical / reset-password are the same endpoint with one key, so one form
+  /// covers everything the separate menu items do.
   void _showEditDialog(
     BuildContext ctx,
     Map<String, dynamic> sa,
     SubAdminBloc bloc,
   ) {
-    final nameCtrl = TextEditingController(text: sa['name']);
-    final emailCtrl = TextEditingController(text: sa['email']);
+    final nameCtrl = TextEditingController(text: sa['name']?.toString() ?? '');
+    final emailCtrl = TextEditingController(
+      text: sa['email']?.toString() ?? '',
+    );
+    final phoneCtrl = TextEditingController(
+      text: sa['phone']?.toString() ?? '',
+    );
+    final passCtrl = TextEditingController();
+    String? selectedVertical = SubAdminVerticals.byCode(
+      sa['vertical'] as String?,
+    )?.code;
+
     showDialog(
       context: ctx,
-      builder: (dctx) => AlertDialog(
-        title: const Text('Edit Sub-Admin'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(labelText: 'Name'),
+      builder: (dctx) => StatefulBuilder(
+        builder: (_, setDs) => AlertDialog(
+          title: const Text('Edit Sub-Admin'),
+          content: SizedBox(
+            width: 460,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Full name',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const Gap(12),
+                  TextField(
+                    controller: emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const Gap(12),
+                  TextField(
+                    controller: phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'Phone',
+                      hintText: 'Leave blank to keep unchanged',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const Gap(12),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedVertical,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Vertical',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      for (final v in SubAdminVerticals.all)
+                        DropdownMenuItem(value: v.code, child: Text(v.label)),
+                    ],
+                    onChanged: (v) => setDs(() => selectedVertical = v),
+                  ),
+                  const Gap(12),
+                  TextField(
+                    controller: passCtrl,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'New password',
+                      hintText: 'Leave blank to keep the current one',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const Gap(12),
-            TextField(
-              controller: emailCtrl,
-              decoration: const InputDecoration(labelText: 'Email'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final data = <String, dynamic>{
+                  'name': nameCtrl.text.trim(),
+                  'email': emailCtrl.text.trim(),
+                };
+                // Only send what the admin actually filled in, so a blank box
+                // never blanks a stored value.
+                if (phoneCtrl.text.trim().isNotEmpty) {
+                  data['phone'] = phoneCtrl.text.trim();
+                }
+                if (selectedVertical != null &&
+                    selectedVertical != (sa['vertical'] as String?)) {
+                  data['vertical'] = selectedVertical;
+                }
+                if (passCtrl.text.isNotEmpty) {
+                  data['password'] = passCtrl.text;
+                }
+
+                Navigator.pop(dctx);
+                bloc.add(EditSubAdmin(adminId: sa['id'] as String, data: data));
+              },
+              child: const Text('Save'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(dctx);
-              bloc.add(
-                EditSubAdmin(
-                  adminId: sa['id'] as String,
-                  data: {
-                    'name': nameCtrl.text.trim(),
-                    'email': emailCtrl.text.trim(),
-                  },
-                ),
-              );
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }

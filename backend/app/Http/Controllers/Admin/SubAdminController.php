@@ -30,6 +30,13 @@ class SubAdminController extends Controller
                     ->where('identity_claims.claim_type', 'email')
                     ->where('identity_claims.is_revoked', false);
             })
+            // The phone claim, so the Super Admin's edit form can prefill it
+            // (the full-registration edit form, owner 2026-09-29).
+            ->leftJoin('identity_claims as phone_claims', function ($join) {
+                $join->on('global_identities.id', '=', 'phone_claims.global_identity_id')
+                    ->where('phone_claims.claim_type', 'phone')
+                    ->where('phone_claims.is_revoked', false);
+            })
             ->select(
                 'global_identities.id',
                 'global_identities.display_name as name',
@@ -37,7 +44,8 @@ class SubAdminController extends Controller
                 'global_identities.status',
                 'global_identities.created_at as appointed_at',
                 'sub_admin_verticals.code as vertical',
-                'identity_claims.claim_value as email'
+                'identity_claims.claim_value as email',
+                'phone_claims.claim_value as phone'
             )
             ->orderBy('global_identities.created_at', 'desc')
             ->get();
@@ -228,6 +236,32 @@ class SubAdminController extends Controller
                 ]
             );
             TenantAccount::where('global_identity_id', $id)->update(['email' => $validated['email']]);
+        }
+
+        // Update phone claim. `phone` used to be validated here and then ignored, so the
+        // full-registration edit form silently dropped it (owner, 2026-09-29).
+        if (array_key_exists('phone', $validated)) {
+            $phone = $validated['phone'] ?? null;
+
+            if ($phone !== null && $phone !== '') {
+                IdentityClaim::updateOrCreate(
+                    [
+                        'global_identity_id' => $id,
+                        'claim_type'         => 'phone',
+                        'is_revoked'         => false,
+                    ],
+                    [
+                        'claim_value'  => IdentityClaim::normalize('phone', $phone),
+                        'is_primary'   => false,
+                        'verified_via' => 'admin_updated',
+                        'verified_at'  => now(),
+                    ]
+                );
+            }
+
+            TenantAccount::where('global_identity_id', $id)->update([
+                'phone_number' => ($phone === null || $phone === '') ? null : $phone,
+            ]);
         }
 
         // Change vertical assignment
