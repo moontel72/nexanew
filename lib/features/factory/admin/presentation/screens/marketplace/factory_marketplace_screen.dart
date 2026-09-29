@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:trace_odd/core/constants/api_endpoints.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/features/factory/admin/presentation/bloc/products/products_bloc.dart';
@@ -141,6 +142,12 @@ class _FactoryMarketplaceScreenState extends State<FactoryMarketplaceScreen>
     }
   }
 
+  /// Opens the public, no-login storefront in a new tab.
+  Future<void> _openPublicSite() => launchUrl(
+    Uri.parse('https://market.traceodd.com'),
+    mode: LaunchMode.externalApplication,
+  );
+
   Future<void> _updateOrderStatus(String orderId, String status) async {
     try {
       await _api.patch(
@@ -222,6 +229,11 @@ class _FactoryMarketplaceScreenState extends State<FactoryMarketplaceScreen>
         title: 'Marketplace',
         showBackButton: false,
         actions: [
+          IconButton(
+            tooltip: 'Open the public storefront (market.traceodd.com)',
+            onPressed: _openPublicSite,
+            icon: const Icon(Icons.open_in_new),
+          ),
           IconButton(
             tooltip: 'Refresh',
             onPressed: () {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/features/marketplace_public/data/marketplace_public_repository.dart';
 import 'package:trace_odd/features/marketplace_public/presentation/widgets/marketplace_product_card.dart';
@@ -98,6 +99,20 @@ class _MarketplaceStorefrontPageState extends State<MarketplaceStorefrontPage> {
                             tooltip: 'Back to marketplace',
                           ),
                           const SizedBox(width: 6),
+                          Container(
+                            width: 24,
+                            height: 24,
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.92),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: SvgPicture.asset(
+                              'assets/logo/traceodd_logo.svg',
+                              semanticsLabel: 'Trace Odd',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           const Text(
                             'Trace Odd Marketplace',
                             style: TextStyle(

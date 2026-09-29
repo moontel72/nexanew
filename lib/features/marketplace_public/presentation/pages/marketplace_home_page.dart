@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:trace_odd/features/marketplace_public/data/marketplace_public_repository.dart';
@@ -93,9 +94,11 @@ class _MarketplaceHomePageState extends State<MarketplaceHomePage> {
             else if (_error != null)
               _errorState()
             else ...[
+              // Factories first (owner, 2026-09-29): the verified factories strip
+              // sits ABOVE the featured products.
+              _factoriesSection(context),
               _categoriesRow(),
               _productsSection(context),
-              _factoriesSection(context),
             ],
             _footer(),
           ],
@@ -521,14 +524,13 @@ class _TopBar extends StatelessWidget {
                       width: 34,
                       height: 34,
                       decoration: BoxDecoration(
-                        gradient: MpColors.heroGradient,
+                        color: MpColors.surfaceAlt,
                         borderRadius: BorderRadius.circular(9),
                       ),
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.hub_outlined,
-                        size: 19,
-                        color: Colors.white,
+                      padding: const EdgeInsets.all(4),
+                      child: SvgPicture.asset(
+                        'assets/logo/traceodd_logo.svg',
+                        semanticsLabel: 'Trace Odd',
                       ),
                     ),
                     const SizedBox(width: 10),

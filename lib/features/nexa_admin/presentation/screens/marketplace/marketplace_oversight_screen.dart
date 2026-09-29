@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:trace_odd/core/constants/api_endpoints.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/empty_states/empty_state_widget.dart';
 import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
+
+/// Where the public (no-login) storefront lives. The owner registered this
+/// subdomain; the panels link out to it (item #12 / #13).
+const String kPublicMarketplaceUrl = 'https://market.traceodd.com';
 
 /// Marketplace oversight — READ-ONLY, shared by the Super Admin and the
 /// `commercial_marketplace` Sub-Admin (MASTER-TASK-LIST item #11).
@@ -217,12 +222,18 @@ class _MarketplaceOversightScreenState extends State<MarketplaceOversightScreen>
     context.go(widget.backRoute ?? '/dashboard');
   }
 
+  Future<void> _openPublicSite() => launchUrl(
+    Uri.parse(kPublicMarketplaceUrl),
+    mode: LaunchMode.externalApplication,
+  );
+
   // ─── Build ───────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final content = Column(
       children: [
+        _publicSiteBanner(),
         TabBar(
           controller: _tabController,
           labelColor: AppColors.secondary,
@@ -258,6 +269,38 @@ class _MarketplaceOversightScreenState extends State<MarketplaceOversightScreen>
   }
 
   // ─── Tab 1: the marketplace as buyers see it ─────────────────────
+
+  /// The owner's ask: the panels showed products and orders but had no way to
+  /// open the full public storefront. This is that door.
+  Widget _publicSiteBanner() {
+    return Container(
+      width: double.infinity,
+      color: AppColors.surfaceVariant,
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+      child: Row(
+        children: [
+          const Icon(Icons.public, size: 18, color: AppColors.secondary),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Text(
+              'Read-only view. The public storefront (no login) is live at '
+              'market.traceodd.com.',
+              style: TextStyle(
+                fontSize: 12.sp,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          SizedBox(width: 8.w),
+          OutlinedButton.icon(
+            onPressed: _openPublicSite,
+            icon: const Icon(Icons.open_in_new, size: 16),
+            label: const Text('Open full site'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _previewTab() {
     return Column(
