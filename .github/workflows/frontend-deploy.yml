@@ -266,6 +266,28 @@ jobs:
           ssh -o StrictHostKeyChecking=no root@135.181.46.27 "echo \"deployed=\$(date -u +%s)\" >> /var/www/traceodd/bus-fleet/version.txt"
 
       # ──────────────────────────────────────────────────────────────
+      # STEP H2: Build & Deploy Public Marketplace (main_marketplace.dart)
+      # → market.traceodd.com  (MASTER-TASK-LIST item #12)
+      # ──────────────────────────────────────────────────────────────
+
+      - name: Build Public Marketplace (main_marketplace.dart)
+        run: |
+          flutter build web --release --target=lib/main_marketplace.dart --pwa-strategy none
+          rm -f build/web/flutter_service_worker.js
+          bash .scripts/version-web-build.sh build/web
+          # Marketplace-branded PWA manifest (name/icons) for installs from this host
+          cp web/manifest-marketplace.json build/web/manifest.json
+
+      - name: Deploy Public Marketplace to /marketplace-web/
+        run: |
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "mkdir -p /var/www/traceodd/marketplace-web"
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --progress build/web/ root@135.181.46.27:/var/www/traceodd/marketplace-web/
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
+            test -f /var/www/traceodd/marketplace-web/index.html && echo '✅ Marketplace index.html present' || { echo '❌ Marketplace index.html MISSING after rsync'; exit 1; }
+            echo \"deployed=\$(date -u +%s)\" > /var/www/traceodd/marketplace-web/version.txt
+          "
+
+      # ──────────────────────────────────────────────────────────────
       # STEP I: Copy Nginx configs (traceodd + cricket dual-panel) & reload
       # ──────────────────────────────────────────────────────────────
 
@@ -274,17 +296,21 @@ jobs:
           scp -o StrictHostKeyChecking=no .nginx/traceodd.conf root@135.181.46.27:/etc/nginx/sites-available/traceodd
           scp -o StrictHostKeyChecking=no .nginx/cricket-public.conf root@135.181.46.27:/etc/nginx/sites-available/cricket-public
           scp -o StrictHostKeyChecking=no .nginx/cricket-manager.conf root@135.181.46.27:/etc/nginx/sites-available/cricket-manager
+          scp -o StrictHostKeyChecking=no .nginx/marketplace.conf root@135.181.46.27:/etc/nginx/sites-available/marketplace
           ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
             ln -sf /etc/nginx/sites-available/cricket-public /etc/nginx/sites-enabled/cricket-public
             ln -sf /etc/nginx/sites-available/cricket-manager /etc/nginx/sites-enabled/cricket-manager
+            ln -sf /etc/nginx/sites-available/marketplace /etc/nginx/sites-enabled/marketplace
             rm -f /etc/nginx/sites-enabled/cricket
             rm -f /etc/nginx/sites-available/cricket.disabled
             nginx -t && systemctl reload nginx
 
             MANAGER_CC=\$(curl -sI -H 'Host: cricket-manager.traceodd.com' http://127.0.0.1/ | tr -d '\r' | grep -i '^cache-control' || true)
             PUBLIC_CC=\$(curl -sI -H 'Host: cricket.traceodd.com' http://127.0.0.1/ | tr -d '\r' | grep -i '^cache-control' || true)
+            MARKET_CC=\$(curl -sI -H 'Host: market.traceodd.com' http://127.0.0.1/ | tr -d '\r' | grep -i '^cache-control' || true)
             echo \"manager cache-control: \$MANAGER_CC\"
             echo \"public  cache-control: \$PUBLIC_CC\"
+            echo \"market  cache-control: \$MARKET_CC\"
             case \"\$MANAGER_CC\" in
               *no-cache*) echo '✅ Cricket manager block live' ;;
               *) echo '❌ cricket-manager.traceodd.com NOT matched by its server block'; exit 1 ;;
@@ -292,6 +318,10 @@ jobs:
             case \"\$PUBLIC_CC\" in
               *no-cache*) echo '✅ Cricket public block live' ;;
               *) echo '❌ cricket.traceodd.com NOT matched by its server block'; exit 1 ;;
+            esac
+            case \"\$MARKET_CC\" in
+              *no-cache*) echo '✅ Marketplace block live' ;;
+              *) echo '⚠️  market.traceodd.com NOT matched yet (DNS/Cloudflare record may be pending)' ;;
             esac
           "
 
@@ -319,5 +349,7 @@ jobs:
             chmod -R 755 /var/www/traceodd/bus-owner && \
             chown -R www-data:www-data /var/www/traceodd/bus-fleet && \
             chmod -R 755 /var/www/traceodd/bus-fleet && \
+            chown -R www-data:www-data /var/www/traceodd/marketplace-web && \
+            chmod -R 755 /var/www/traceodd/marketplace-web && \
             systemctl reload nginx
           "

@@ -34,7 +34,7 @@ the C-phase record), `PANEL-SEPARATION-PLAN.md` §17 (auth globals).
 | 9 | **Marketplace upload flow**: product → `marketplace_product_listings`, and the company's **storefront is created on first upload** | ✅ **done** — `MarketplaceListingService` + wired into `ProductController` `store` / `update` / `marketplace-toggle`; deploy re-syncs flagged products |
 | 10 | Publish the **6 existing factory products** (Maxi Electronic 2, Moon Medi 4) onto the marketplace | ✅ **done live 2026-09-28** — `php artisan marketplace:publish-products --all` published 6 listings (Zanni 500mg, Bonbo 300 mg, Mixer 500 watt, GUDO MIXER, Dero Dan 50 mg, testy 50) |
 | 11 | A **Marketplace section** on each of the three panel dashboards: preview the full marketplace, upload a product, view orders, order history | ✅ **done** — Factory panel section (`/factory/marketplace`: Preview · My Listings · Orders) + one shared **read-only** oversight screen for the Sub-Admin (`commercial_marketplace`, `/sub-admin/marketplace`) and the Super Admin (`/marketplace`). Backend: `admin/marketplace/orders` + `summary` |
-| 12 | **Public read-only marketplace site** — **no login page**; browse everything with wholesale price + MOQ (Alibaba-style) | ⏳ **START HERE** |
+| 12 | **Public read-only marketplace site** — **no login page**; browse everything with wholesale price + MOQ (Alibaba-style) | ⏳ **START HERE** — app + nginx + deploy wiring built (`lib/main_marketplace.dart` → `market.traceodd.com`). **Owner action: add the Cloudflare DNS record** (see §#12 below) |
 | 13 | **Buy → cart + "register your factory / reseller / shop"** — the account is the buying door, the marketplace is not | ⏳ |
 | 14 | Orders / sell / buy visible in each panel's own marketplace section | ⏳ |
 | 15 | **B2B** its own login page + attach the old tested screen | ⏳ |
@@ -67,6 +67,30 @@ never resolve a dispute).
 Backend delivered for it: `MarketplaceAdminController` — `GET /api/v1/admin/marketplace/orders` and
 `GET /api/v1/admin/marketplace/summary` (read-only, platform-wide), covered by `MarketplaceAdminOrdersTest`.
 Preview already had an API: `GET /api/v1/marketplace/catalog/search` and `/storefronts` (both `auth:sanctum`).
+
+### #12 — the public marketplace site (host: `market.traceodd.com`)
+
+**Subdomain to register in Cloudflare: `market`** → `market.traceodd.com`
+Add it exactly like the existing `cricket` / `studio` / `broadcaster` records: a proxied **A** record to
+`135.181.46.27` (the same origin those subdomains already use). The origin nginx listens on port 80 like the
+other server blocks, so no TLS setting has to change — Cloudflare terminates it, as it does for `cricket`.
+*(Alternatives if `market` is taken: `marketplace` or `b2b`.)*
+
+What was built:
+
+| Piece | Path |
+|---|---|
+| Public app (no login) | `lib/main_marketplace.dart` — routes `/` (browse) and `/store/:factoryId` |
+| Feature code | `lib/features/marketplace_public/` — its own brand theme (indigo/coral/teal), repository, home page, storefront page, product card + detail sheet |
+| Data | the public read endpoints only: `/reseller/products`, `/reseller/factories`, `requiresAuth: false` — **no token anywhere** |
+| nginx | `.nginx/marketplace.conf` — serves `/var/www/traceodd/marketplace-web/`, proxies **only** `/api/v1/reseller/` + `/api/v1/public/`, returns **403** for every other `/api/` path |
+| Deploy | `frontend-deploy.yml` STEP H2 (build + rsync) and the nginx step now scp's `marketplace.conf`, links it, and checks the block |
+| PWA | `web/manifest-marketplace.json` copied over `manifest.json` on deploy |
+
+Design: a modern storefront, not Alibaba's blue — deep-ink text, indigo→teal hero gradient, coral price
+accents, card grid (responsive 1/2/3/4 columns), category chips, MOQ pills, verified-factory badges,
+and a factory storefront page. Buying is deliberately absent: the CTA hands the visitor to the account
+door (item #13).
 
 ### Items that were wrong and are fixed (kept so nobody "re-fixes" them)
 
