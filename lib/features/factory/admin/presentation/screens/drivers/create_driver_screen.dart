@@ -6,6 +6,7 @@ import 'package:trace_odd/features/factory/admin/presentation/bloc/drivers/drive
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 class CreateDriverScreen extends StatefulWidget {
   const CreateDriverScreen({super.key});
@@ -24,6 +25,10 @@ class _CreateDriverScreenState extends State<CreateDriverScreen> {
   String? _vehicleType;
   DateTime? _licenseExpiry;
   bool _obscure = true;
+
+  /// Sticky submit failure (see `StickyErrorBanner`), instead of a SnackBar that
+  /// vanished before it could be read or copied.
+  String? _error;
 
   @override
   void dispose() {
@@ -91,12 +96,7 @@ class _CreateDriverScreenState extends State<CreateDriverScreen> {
           }
           if (state.status == DriversStatus.error &&
               state.errorMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.errorMessage!),
-                backgroundColor: AppColors.error,
-              ),
-            );
+            setState(() => _error = state.errorMessage);
           }
         },
         builder: (context, state) {
@@ -108,6 +108,13 @@ class _CreateDriverScreenState extends State<CreateDriverScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_error != null)
+                    StickyErrorBanner(
+                      message: _error!,
+                      source:
+                          'Factory · Drivers · POST /api/v1/factory/drivers/create',
+                      onDismiss: () => setState(() => _error = null),
+                    ),
                   Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(

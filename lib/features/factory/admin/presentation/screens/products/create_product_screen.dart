@@ -10,6 +10,7 @@ import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 import 'package:trace_odd/shared/widgets/inputs/custom_text_field.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 enum ProductCategoryMode { foodMedical, nonFoodMedical }
 
@@ -39,6 +40,10 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
   final _promoDiscountController = TextEditingController();
 
   ProductCategoryMode _mode = ProductCategoryMode.foodMedical;
+
+  /// Sticky submit failure (see `StickyErrorBanner`). The old SnackBar flashed
+  /// and vanished, so a rejected form looked like nothing had happened.
+  String? _error;
   DateTime? _defaultManufacturingDate;
   DateTime? _defaultExpiryDate;
 
@@ -233,12 +238,7 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
 
           if (state.status == ProductsStatus.error &&
               state.errorMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.errorMessage!),
-                backgroundColor: AppColors.error,
-              ),
-            );
+            setState(() => _error = state.errorMessage);
           }
         },
         builder: (context, state) {
@@ -250,6 +250,13 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_error != null)
+                    StickyErrorBanner(
+                      message: _error!,
+                      source:
+                          'Factory · Create Product · POST /api/v1/factory/products',
+                      onDismiss: () => setState(() => _error = null),
+                    ),
                   Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(

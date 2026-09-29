@@ -6,6 +6,7 @@ import 'package:trace_odd/features/factory/admin/presentation/bloc/store_keepers
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 class CreateStoreKeeperScreen extends StatefulWidget {
   const CreateStoreKeeperScreen({super.key});
@@ -23,6 +24,10 @@ class _CreateStoreKeeperScreenState extends State<CreateStoreKeeperScreen> {
   final _passC = TextEditingController();
   String? _dutyShift;
   bool _obscure = true;
+
+  /// Sticky submit failure (see `StickyErrorBanner`), instead of a SnackBar that
+  /// vanished before it could be read or copied.
+  String? _error;
 
   @override
   void dispose() {
@@ -69,12 +74,7 @@ class _CreateStoreKeeperScreenState extends State<CreateStoreKeeperScreen> {
           }
           if (state.status == StoreKeepersStatus.error &&
               state.errorMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.errorMessage!),
-                backgroundColor: AppColors.error,
-              ),
-            );
+            setState(() => _error = state.errorMessage);
           }
         },
         builder: (context, state) {
@@ -86,6 +86,13 @@ class _CreateStoreKeeperScreenState extends State<CreateStoreKeeperScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_error != null)
+                    StickyErrorBanner(
+                      message: _error!,
+                      source:
+                          'Factory · Store Keepers · POST /api/v1/factory/store-keepers/create',
+                      onDismiss: () => setState(() => _error = null),
+                    ),
                   Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(

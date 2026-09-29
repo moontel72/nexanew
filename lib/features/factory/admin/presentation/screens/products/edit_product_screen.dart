@@ -11,6 +11,7 @@ import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 import 'package:trace_odd/shared/widgets/inputs/custom_text_field.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 enum ProductCategoryMode { foodMedical, nonFoodMedical }
 
@@ -42,6 +43,10 @@ class _EditProductScreenState extends State<EditProductScreen> {
   final _promoDiscountController = TextEditingController();
 
   ProductCategoryMode _mode = ProductCategoryMode.foodMedical;
+
+  /// Sticky save/delete failure (see `StickyErrorBanner`), instead of a SnackBar
+  /// that vanished before it could be read.
+  String? _error;
   DateTime? _defaultManufacturingDate;
   DateTime? _defaultExpiryDate;
 
@@ -380,13 +385,10 @@ class _EditProductScreenState extends State<EditProductScreen> {
 
           if (state.status == ProductsStatus.error &&
               state.errorMessage != null) {
-            setState(() => _isDeleting = false);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.errorMessage!),
-                backgroundColor: AppColors.error,
-              ),
-            );
+            setState(() {
+              _isDeleting = false;
+              _error = state.errorMessage;
+            });
           }
         },
         builder: (context, state) {
@@ -403,6 +405,13 @@ class _EditProductScreenState extends State<EditProductScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_error != null)
+                    StickyErrorBanner(
+                      message: _error!,
+                      source:
+                          'Factory · Edit Product · PUT/POST /api/v1/factory/products',
+                      onDismiss: () => setState(() => _error = null),
+                    ),
                   // ========== Section 1: Basic Information ==========
                   Card(
                     elevation: 2,
