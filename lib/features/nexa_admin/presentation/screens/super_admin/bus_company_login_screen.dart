@@ -11,6 +11,7 @@ import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
 import 'package:trace_odd/core/utils/auth_state.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 
 /// Bus Company Login Screen
@@ -27,6 +28,10 @@ class _BusCompanyLoginScreenState extends State<BusCompanyLoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = false;
+
+  /// A failed sign-in — shown as a copyable banner, not a vanishing SnackBar.
+  String? _error;
+  String? _dismissedError;
 
   @override
   void dispose() {
@@ -48,12 +53,7 @@ class _BusCompanyLoginScreenState extends State<BusCompanyLoginScreen> {
           );
           context.go('/bus-fleet/dashboard');
         } else if (state is AdminAuthError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppColors.error,
-            ),
-          );
+          setState(() => _error = state.message);
         }
       },
       child: Scaffold(body: _buildLoginScreen()),
@@ -77,6 +77,15 @@ class _BusCompanyLoginScreenState extends State<BusCompanyLoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _buildHeader(),
+                if (_error != null && _error != _dismissedError)
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 16.h),
+                    child: StickyErrorBanner(
+                      message: _error!,
+                      source: 'Bus Company login',
+                      onDismiss: () => setState(() => _dismissedError = _error),
+                    ),
+                  ),
                 Gap(40.h),
                 _buildLoginForm(),
                 Gap(24.h),

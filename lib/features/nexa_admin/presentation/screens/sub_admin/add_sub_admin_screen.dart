@@ -8,6 +8,7 @@ import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_ad
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_state.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_verticals.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 class AddSubAdminScreen extends StatelessWidget {
   final bool inShell;
@@ -43,6 +44,10 @@ class _AddSubAdminViewState extends State<_AddSubAdminView> {
   String _selectedVertical = 'bus_transit';
   bool _obscurePassword = true;
 
+  /// A failed create — shown as a copyable banner, not a vanishing SnackBar.
+  String? _error;
+  String? _dismissedError;
+
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -70,13 +75,9 @@ class _AddSubAdminViewState extends State<_AddSubAdminView> {
           ctx.go('/sub-admins');
         }
         if (state.actionError != null) {
-          ScaffoldMessenger.of(ctx).showSnackBar(
-            SnackBar(
-              content: Text(state.actionError!),
-              backgroundColor: AppColors.error,
-            ),
-          );
-          ctx.read<SubAdminBloc>().add(const ClearSubAdminError());
+          // Was a SnackBar that was then cleared immediately; now the message stays
+          // on screen, copyable, until the operator closes it.
+          setState(() => _error = state.actionError);
         }
       },
       builder: (ctx, state) {
@@ -217,36 +218,22 @@ class _AddSubAdminViewState extends State<_AddSubAdminView> {
                         ? 'Minimum 8 characters'
                         : null,
                   ),
+                  if (_error != null && _error != _dismissedError) ...[
+                    const Gap(14),
+                    StickyErrorBanner(
+                      message: _error!,
+                      source:
+                          'Sub-Admin Management · POST /api/v1/admin/sub-admins/create',
+                      onDismiss: () => setState(() => _dismissedError = _error),
+                    ),
+                  ],
                   if (state.busFormError != null) ...[
                     const Gap(14),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.error.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: AppColors.error.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            color: AppColors.error,
-                            size: 18,
-                          ),
-                          const Gap(8),
-                          Expanded(
-                            child: Text(
-                              state.busFormError!,
-                              style: const TextStyle(
-                                color: AppColors.error,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    StickyErrorBanner(
+                      message: state.busFormError!,
+                      source:
+                          'Sub-Admin Management · POST /api/v1/admin/sub-admins/create',
+                      onDismiss: () => bloc.add(const ClearSubAdminError()),
                     ),
                   ],
                   const Gap(22),

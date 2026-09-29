@@ -10,6 +10,7 @@ import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_ad
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_state.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_verticals.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 class SubAdminListScreen extends StatelessWidget {
   final bool inShell;
@@ -38,13 +39,9 @@ class SubAdminListScreen extends StatelessWidget {
             ctx.read<SubAdminBloc>().add(const ClearSubAdminError());
           }
           if (state.actionError != null) {
-            ScaffoldMessenger.of(ctx).showSnackBar(
-              SnackBar(
-                content: Text(state.actionError!),
-                backgroundColor: AppColors.error,
-              ),
-            );
-            ctx.read<SubAdminBloc>().add(const ClearSubAdminError());
+            // NOTE: the action `SnackBar` was removed here on purpose — the error is
+            // now rendered as a copyable banner inside the list below (it used to
+            // flash and vanish, and it was cleared before it could ever be read).
           }
         },
         builder: (ctx, state) {
@@ -98,6 +95,17 @@ class SubAdminListScreen extends StatelessWidget {
                     child: ListView(
                       padding: const EdgeInsets.all(16),
                       children: [
+                        if (state.actionError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: StickyErrorBanner(
+                              message: state.actionError!,
+                              source:
+                                  'Sub-Admin Management · create / update / delete',
+                              onDismiss: () =>
+                                  bloc.add(const ClearSubAdminError()),
+                            ),
+                          ),
                         Row(
                           children: [
                             Expanded(
@@ -152,15 +160,23 @@ class SubAdminListScreen extends StatelessWidget {
   }
 
   Widget _errorView(String msg, VoidCallback retry) => Center(
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Icon(Icons.error_outline, size: 48, color: AppColors.error),
-        const Gap(12),
-        Text(msg, style: const TextStyle(color: AppColors.textSecondary)),
-        const Gap(12),
-        ElevatedButton(onPressed: retry, child: const Text('Retry')),
-      ],
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+          const Gap(12),
+          // Copyable, not just visible — plain Text could not be selected/copied.
+          StickyErrorBanner(
+            message: msg,
+            source: 'Sub-Admin Management · GET /api/v1/admin/sub-admins',
+            onDismiss: retry,
+          ),
+          const Gap(12),
+          ElevatedButton(onPressed: retry, child: const Text('Retry')),
+        ],
+      ),
     ),
   );
 
