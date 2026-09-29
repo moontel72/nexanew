@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/theme/text_styles.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 class ErrorState extends StatelessWidget {
   final String title;
@@ -15,6 +16,19 @@ class ErrorState extends StatelessWidget {
   final bool showRetryButton;
   final EdgeInsetsGeometry padding;
 
+  /// Render the message through `StickyErrorBanner` (Copy + close) instead of plain
+  /// text, so a FAILURE can be reported.
+  ///
+  /// Default `false` on purpose: this widget is also used for EMPTY states
+  /// (`ErrorState.empty`), and an empty list is not an error — turning those into
+  /// copyable banners would be a lie. Only `ErrorState.generic` (the failure
+  /// constructor) opts in.
+  final bool copyableMessage;
+
+  /// Where the failure came from (panel / endpoint). Used as the banner's source
+  /// line, which is what makes a copied report actionable.
+  final String? source;
+
   const ErrorState({
     super.key,
     required this.title,
@@ -25,6 +39,8 @@ class ErrorState extends StatelessWidget {
     this.retryButtonText = 'Try Again',
     this.showRetryButton = true,
     this.padding = const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+    this.copyableMessage = false,
+    this.source,
   });
 
   factory ErrorState.networkError({
@@ -33,7 +49,8 @@ class ErrorState extends StatelessWidget {
   }) {
     return ErrorState(
       title: 'Connection Error',
-      message: customMessage ??
+      message:
+          customMessage ??
           'Unable to connect to the server. Please check your internet connection and try again.',
       icon: Icons.wifi_off,
       iconColor: AppColors.warning,
@@ -47,7 +64,8 @@ class ErrorState extends StatelessWidget {
   }) {
     return ErrorState(
       title: 'Server Error',
-      message: customMessage ??
+      message:
+          customMessage ??
           'Something went wrong on our end. Please try again later.',
       icon: Icons.cloud_off,
       iconColor: AppColors.error,
@@ -75,7 +93,8 @@ class ErrorState extends StatelessWidget {
   }) {
     return ErrorState(
       title: 'Access Denied',
-      message: customMessage ??
+      message:
+          customMessage ??
           'You don\'t have permission to access this resource.',
       icon: Icons.lock_outline,
       iconColor: AppColors.warning,
@@ -105,6 +124,7 @@ class ErrorState extends StatelessWidget {
     VoidCallback? onRetry,
     IconData? icon,
     Color? iconColor,
+    String? source,
   }) {
     return ErrorState(
       title: title,
@@ -112,6 +132,9 @@ class ErrorState extends StatelessWidget {
       icon: icon ?? Icons.error_outline,
       iconColor: iconColor ?? AppColors.error,
       onRetry: onRetry,
+      // A failure: make it copyable so it can actually be reported.
+      copyableMessage: true,
+      source: source ?? title,
     );
   }
 
@@ -132,11 +155,7 @@ class ErrorState extends StatelessWidget {
                 color: iconColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                size: 40,
-                color: iconColor,
-              ),
+              child: Icon(icon, size: 40, color: iconColor),
             ),
 
             const SizedBox(height: 24),
@@ -153,14 +172,23 @@ class ErrorState extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // Error Message
-            Text(
-              message,
-              style: TextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+            // Error Message — copyable when this is a real failure (see
+            // `copyableMessage`). Plain text could not be selected or copied, so a
+            // failure shown here could never be reported.
+            if (copyableMessage)
+              StickyErrorBanner(
+                message: message,
+                source: source,
+                onDismiss: onRetry,
+              )
+            else
+              Text(
+                message,
+                style: TextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
 
             const SizedBox(height: 32),
 
@@ -181,9 +209,7 @@ class ErrorState extends StatelessWidget {
                 ),
                 child: Text(
                   retryButtonText,
-                  style: TextStyles.buttonMedium.copyWith(
-                    color: Colors.white,
-                  ),
+                  style: TextStyles.buttonMedium.copyWith(color: Colors.white),
                 ),
               ),
 
@@ -230,7 +256,8 @@ class ErrorStateWithImage extends StatelessWidget {
   }) {
     return ErrorStateWithImage(
       title: 'No Internet Connection',
-      message: customMessage ??
+      message:
+          customMessage ??
           'Please check your internet connection and try again.',
       imageAsset: 'assets/images/errors/no_internet.png',
       onRetry: onRetry,
@@ -243,7 +270,8 @@ class ErrorStateWithImage extends StatelessWidget {
   }) {
     return ErrorStateWithImage(
       title: 'Server Maintenance',
-      message: customMessage ??
+      message:
+          customMessage ??
           'Our servers are currently undergoing maintenance. Please try again later.',
       imageAsset: 'assets/images/errors/server_down.png',
       onRetry: onRetry,
@@ -343,9 +371,7 @@ class ErrorStateWithImage extends StatelessWidget {
                 ),
                 child: Text(
                   retryButtonText,
-                  style: TextStyles.buttonMedium.copyWith(
-                    color: Colors.white,
-                  ),
+                  style: TextStyles.buttonMedium.copyWith(color: Colors.white),
                 ),
               ),
           ],
@@ -383,11 +409,7 @@ class ListErrorState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.error_outline,
-            size: 48,
-            color: AppColors.error,
-          ),
+          Icon(Icons.error_outline, size: 48, color: AppColors.error),
           const SizedBox(height: 16),
           Text(
             message,
@@ -449,11 +471,7 @@ class ErrorStateWithActions extends StatelessWidget {
                 color: iconColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                size: 40,
-                color: iconColor,
-              ),
+              child: Icon(icon, size: 40, color: iconColor),
             ),
 
             const SizedBox(height: 24),

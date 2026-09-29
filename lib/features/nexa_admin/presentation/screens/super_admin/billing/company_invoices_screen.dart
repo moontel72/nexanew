@@ -9,8 +9,7 @@ import 'package:trace_odd/features/nexa_admin/presentation/widgets/billing/invoi
 import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 import 'package:trace_odd/shared/widgets/error_state/error_state_widget.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
-import 'package:trace_odd/shared/models/billing/invoice_model.dart'
-    as shared;
+import 'package:trace_odd/shared/models/billing/invoice_model.dart' as shared;
 import 'package:trace_odd/features/nexa_admin/data/models/invoice_model.dart';
 
 /// Company Invoices Screen
@@ -192,12 +191,10 @@ class _CompanyInvoicesScreenState extends State<CompanyInvoicesScreen> {
               }
             },
             error: (message, error) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(message),
-                  backgroundColor: AppColors.error,
-                ),
-              );
+              // No SnackBar here on purpose: the builder renders this through
+              // `ErrorState.generic`, which is now a copyable StickyErrorBanner. The
+              // old fire-and-forget SnackBar was a duplicate that vanished before it
+              // could be read.
             },
             orElse: () {},
           );

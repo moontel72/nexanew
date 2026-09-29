@@ -94,12 +94,8 @@ class _PlatformRevenueDashboardState extends State<PlatformRevenueDashboard> {
         listener: (context, state) {
           state.maybeWhen(
             error: (message, error) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(message),
-                  backgroundColor: AppColors.error,
-                ),
-              );
+              // No SnackBar here on purpose: the builder renders this through
+              // `ErrorState.generic`, which is now a copyable StickyErrorBanner.
             },
             orElse: () {},
           );
@@ -347,7 +343,9 @@ class _PlatformRevenueDashboardState extends State<PlatformRevenueDashboard> {
                       children: companies.take(5).map((company) {
                         return ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                            backgroundColor: AppColors.primary.withValues(
+                              alpha: 0.1,
+                            ),
                             child: Text(
                               company.name.substring(0, 1).toUpperCase(),
                               style: const TextStyle(
