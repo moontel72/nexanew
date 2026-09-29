@@ -30,7 +30,7 @@ limitation, not a data problem.
 ## ⚠️ Legal review required
 
 The `banknote.*` strings are **user-facing legal disclaimers** for the banknote-authentication panel
-(see `docs/handoff/PILLAR-A-BANKNOTE-AUTHENTICATION.md`). They must be **verified by the owner
+(see `docs/handoff/MASTER-TASK-LIST.md`). They must be **verified by the owner
 against the source wording** before any public release. A disclaimer that is silently paraphrased is
 worse than none.
 

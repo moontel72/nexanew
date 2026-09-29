@@ -1,6 +1,6 @@
 name: Panel isolation
 
-# Enforces the layering model of docs/handoff/PANEL-SEPARATION-PLAN.md §5b.1 and hard rules 3-5:
+# Enforces the layering model of docs/handoff/MASTER-TASK-LIST.md §5b.1 and hard rules 3-5:
 #
 #     core  <-  shared  <-  features/<panel>
 #

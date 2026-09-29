@@ -2,7 +2,7 @@
 // This file provides safe access to auth state for router redirects
 // without causing provider timing issues
 //
-// ── Domains: what lives here, and where the others went (PANEL-SEPARATION-PLAN.md §17) ──────────
+// ── Domains: what lives here, and where the others went (MASTER-TASK-LIST.md §17) ──────────
 //   * super-admin / admin — the fields in this file.
 //   * factory             — `lib/features/factory/factory_auth_cache.dart` (§17.8 / step B1). This
 //                           file used to keep `token`, `userId` and `userType` in one bag that BOTH
@@ -107,7 +107,7 @@ void resetAuthState() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Sub-admin session (PANEL-SEPARATION-PLAN.md §17 step 5)
+// Sub-admin session (MASTER-TASK-LIST.md §17 step 5)
 //
 // The sub-admin panel authenticates with its OWN Bearer token (`sub_admin_token` in
 // SharedPreferences). It does NOT use the super-admin or factory flags above. The router now

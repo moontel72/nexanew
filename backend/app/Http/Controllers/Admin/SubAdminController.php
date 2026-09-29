@@ -67,8 +67,8 @@ class SubAdminController extends Controller
             'phone'    => ['nullable', 'string', 'max:30'],
             'cnic'     => ['nullable', 'string', 'max:30'],
             // Validity is checked against the registry table below, NOT a hardcoded list — so a new
-            // vertical (e.g. `factory`) needs no edit here. Owner's requirement: PANEL-SEPARATION-PLAN.md
-            // section 2 D3 ("make the Sub-Admin roles DYNAMIC, not hardcoded").
+            // vertical (e.g. `factory`) needs no edit here. Owner's requirement:
+            // MASTER-TASK-LIST.md §6 D3 ("make the Sub-Admin roles DYNAMIC, not hardcoded").
             'vertical' => ['required', 'string', 'max:50'],
             'password' => ['required', 'string', 'min:8'],
         ]);

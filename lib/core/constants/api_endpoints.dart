@@ -243,7 +243,7 @@ class ApiEndpoints {
   static String factoryResellerOrderStatus(String orderId) =>
       '/factory/reseller-orders/$orderId/status';
 
-  // B2B Marketplace (MASTER-TASK-LIST item #11) — preview the marketplace,
+  // B2B Marketplace (MASTER-TASK-LIST.md §4 done-ledger item #11) — preview the marketplace,
   // and the read-only oversight the Super Admin / Sub-Admin sections use.
   static const String marketplaceCatalogSearch = '/marketplace/catalog/search';
   static const String marketplaceStorefronts = '/marketplace/storefronts';

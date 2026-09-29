@@ -264,7 +264,7 @@ class NexaBootstrapSeeder extends Seeder
                     'name' => 'Super Admin',
                     'email' => 'admin@nexatrace.local',
                     // SECURITY: password must come from the environment — never hardcoded.
-                    // See docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md
+                    // See docs/handoff/START-HERE.md
                     'password' => env('NEXATRACE_BOOTSTRAP_ADMIN_PASSWORD') ?: throw new \RuntimeException('Set NEXATRACE_BOOTSTRAP_ADMIN_PASSWORD before running NexaBootstrapSeeder.'),
                     'role' => 'super_admin',
                     'status' => 'active',

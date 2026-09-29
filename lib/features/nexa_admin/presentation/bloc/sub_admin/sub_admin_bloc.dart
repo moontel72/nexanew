@@ -76,7 +76,7 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('sub_admin_token', token);
         // Keep the in-memory flag in step with the token, so the router's /sub-admin/* guard
-        // lets this session through immediately (PANEL-SEPARATION-PLAN.md §17 step 5).
+        // lets this session through immediately (MASTER-TASK-LIST.md §17 step 5).
         setSubAdminAuthenticatedCache(true);
         await _api.setAuthToken(token);
         await prefs.setString(
@@ -141,10 +141,10 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
     // factory / marketplace, whose dashboards never show it.
     final vertical = p.getString('sub_admin_vertical') ?? '';
     if (vertical == 'factory') {
-      // Factory panel (C2, GROUP-INCHARGE-MODEL.md §2b/§4).
+      // Factory panel (C2, MASTER-TASK-LIST.md §2b/§4).
       add(const FetchFactoryCompanies());
     } else if (vertical == 'commercial_marketplace') {
-      // Marketplace panel (C2b, GROUP-INCHARGE-MODEL.md §2b).
+      // Marketplace panel (C2b, MASTER-TASK-LIST.md §2b).
       add(const FetchResellerAccounts());
     } else if (vertical == 'cricket_ops') {
       // The cricket dashboard loads its own managers on demand.
@@ -940,7 +940,7 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
     await p.remove('sub_admin_vertical');
     await p.remove('sub_admin_email');
     // Clear the in-memory flag too, or the router's guard would keep letting this session through
-    // after logout (PANEL-SEPARATION-PLAN.md §17 step 5).
+    // after logout (MASTER-TASK-LIST.md §17 step 5).
     setSubAdminAuthenticatedCache(false);
   }
 

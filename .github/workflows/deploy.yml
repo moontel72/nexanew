@@ -243,7 +243,7 @@ jobs:
             php artisan db:seed --class=CricketFeatureRegistrySeeder --force
             php artisan db:seed --class=SubAdminVerticalExpansionSeeder --force
 
-            # MASTER-TASK-LIST item #9 - the marketplace upload flow. The factory's
+            # MASTER-TASK-LIST.md §4 done-ledger item #9 - the marketplace upload flow. The factory's
             # publish action now writes a storefront + a marketplace_product_listings
             # row, but products that were flagged for the marketplace before the fix
             # still have no listing. This re-syncs them, idempotently, and only for

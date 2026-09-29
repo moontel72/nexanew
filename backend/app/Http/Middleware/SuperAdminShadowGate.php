@@ -47,7 +47,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * So enforcement is a CONFIG change, not a code change, and the rollback is the
  * same single variable. The two SQL queries that settle it in advance are in
- * docs/handoff/PANEL-SEPARATION-PLAN.md §7b.4.
+ * docs/handoff/MASTER-TASK-LIST.md §7b.4.
  *
  * HOW TO TURN IT ON
  * =================

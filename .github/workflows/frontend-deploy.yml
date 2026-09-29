@@ -267,7 +267,7 @@ jobs:
 
       # ──────────────────────────────────────────────────────────────
       # STEP H2: Build & Deploy Public Marketplace (main_marketplace.dart)
-      # → market.traceodd.com  (MASTER-TASK-LIST item #12)
+      # → market.traceodd.com  (MASTER-TASK-LIST.md §4 done-ledger item #12)
       # ──────────────────────────────────────────────────────────────
 
       - name: Build Public Marketplace (main_marketplace.dart)

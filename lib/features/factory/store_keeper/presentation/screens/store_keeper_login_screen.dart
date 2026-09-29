@@ -25,7 +25,7 @@ class _StoreKeeperLoginScreenState extends State<StoreKeeperLoginScreen> {
   void initState() {
     super.initState();
     // SECURITY: never pre-fill credentials in the UI.
-    // See docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md
+    // See docs/handoff/START-HERE.md
   }
 
   @override

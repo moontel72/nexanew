@@ -64,7 +64,7 @@ class MpCartLine {
   }
 }
 
-/// The public marketplace's cart (MASTER-TASK-LIST item #13).
+/// The public marketplace's cart (MASTER-TASK-LIST.md §4 done-ledger item #13).
 ///
 /// Browsing needs no account, but a cart that dies on refresh would make the
 /// "register to buy" hand-off useless — the visitor registers in a new tab and

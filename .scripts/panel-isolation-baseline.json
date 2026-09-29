@@ -1,5 +1,5 @@
 {
-  "$comment": "Tracked cross-panel coupling (PANEL-SEPARATION-PLAN.md §5c mechanism 1). These import statements exist today and are grandfathered so the guard can run without a red build. Statement-level on purpose: a folder-pair baseline would let a brand-new file cross the same boundary unnoticed. REMOVE an entry once that import has been extracted — never add one without an owner decision.",
+  "$comment": "Tracked cross-panel coupling (MASTER-TASK-LIST.md §5c mechanism 1). These import statements exist today and are grandfathered so the guard can run without a red build. Statement-level on purpose: a folder-pair baseline would let a brand-new file cross the same boundary unnoticed. REMOVE an entry once that import has been extracted — never add one without an owner decision.",
   "generatedAt": "2026-09-25T22:20:35.818Z",
   "summary": {
     "core -> features/auth": 1,

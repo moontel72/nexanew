@@ -5,7 +5,7 @@
 // dashboard sidebar) and the copies had already drifted (e.g. `cricket_ops` was
 // missing from one of them). Every screen that needs to render or label a
 // vertical reads it from here instead, so a new vertical appears everywhere for
-// free — the owner's requirement: PANEL-SEPARATION-PLAN.md §2 D3 ("make the
+// free — the owner's requirement: MASTER-TASK-LIST.md §6 D3 ("make the
 // Sub-Admin roles DYNAMIC, not hardcoded").
 import 'package:flutter/material.dart';
 
@@ -73,7 +73,7 @@ class SubAdminVerticals {
       icon: Icons.sports_cricket,
       color: Color(0xFF10B981),
     ),
-    // Group 3 — Factory. Vertical registered in C1 (GROUP-INCHARGE-MODEL.md §2b.1).
+    // Group 3 — Factory. Vertical registered in C1 (MASTER-TASK-LIST.md §2b.1).
     SubAdminVertical(
       code: 'factory',
       label: 'Factory Manager',

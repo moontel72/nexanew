@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
  * NEXATRACE — MARKETPLACE LISTING SERVICE
  * ========================================
  *
- * The factory "upload to marketplace" flow (MASTER-TASK-LIST.md item #9).
+ * The factory "upload to marketplace" flow (MASTER-TASK-LIST.md §4 done-ledger item #9).
  *
  * WHY THIS EXISTS
  * ---------------

@@ -6,8 +6,8 @@
 > **Status: legacy base, superseded in parts.** Still authoritative for §10's *principles*;
 > **no longer authoritative** for surface counts, entry points, build status, or fleet-app structure.
 >
-> **The master document is `docs/handoff/PANEL-SEPARATION-PLAN.md`.** Where the two disagree, that
-> plan wins — its §9 hard rule 8 already records that this file *"needs a correction pass"*.
+> **The master document is `docs/handoff/MASTER-TASK-LIST.md`.** Where the two disagree, that
+> plan wins — its **hard rule 8** (`MASTER-TASK-LIST.md` §1) already records that this file *"needs a correction pass"*.
 >
 > ### What this document gets wrong (all verified 2026-09-24)
 >
@@ -18,7 +18,7 @@
 > | §3, §10.12 | 15 modules | **26 numbered surfaces** across **8 groups** — see plan §11. The owner's "18" was itself an estimate |
 > | §10.6 | Seat layout = `transport_bus_layouts` + `transport_bus_layout_revisions` with RFC-6902 `json_patch` | As-built is **`absolute_bus_layouts`** (freeform canvas JSON) + `absolute_bus_layout_revisions` — the migration states it is *"100% independent from the legacy `transport_bus_layouts` grid-based table"*. Both exist; the freeform canvas is what ships |
 > | §1.3 | The Rust table implies a working `flutter_rust_bridge` bridge | The bridge is **dead** — Cargo pins frb **1.82.4 (v1)**, `pubspec.yaml` declares **^2.11.1 (v2)**, zero generated artifacts, no `build.rs`. The operative path is `ffi_abi.rs` + `dart:ffi`. See plan §13 |
-> | — | *(absent)* | **PKR banknote authentication** is not mentioned anywhere in this document. It is now surface **#25**, in the new **Group 8 (Trust & Safety)** — see plan §11, plan §15, and the dedicated spec `docs/handoff/PILLAR-A-BANKNOTE-AUTHENTICATION.md` |
+> | — | *(absent)* | **PKR banknote authentication** is not mentioned anywhere in this document. It is now surface **#25**, in the new **Group 8 (Trust & Safety)** — see plan §11 and `MASTER-TASK-LIST.md` §15 + item 41 |
 > | — | *(absent)* | **IoT vehicle security** appears only in `assets/landing/landing_content.json`, not here. It is now surface **#24** / **Group 7 (Vehicle Security)** — see plan §11 and §15 |
 >
 > ### What is still correct and valuable here
@@ -34,10 +34,10 @@
 > - **§1.3's** note that camera binarization + OCR is *"Planned for v2"* is **accurate** — nothing has
 >   been built. It is the honest starting point for Pillar A.
 >
-> **Instruction to agents:** read `PANEL-SEPARATION-PLAN.md` **first**. Come here for §10's
+> **Instruction to agents:** read `MASTER-TASK-LIST.md` **first**. Come here for §10's
 > architecture principles and §4's cross-cutting rules — never for counts, entry points, or status.
 
-> **PROTOCOL FOR ALL AI AGENTS & DEVELOPERS:** This document is the absolute, unified, and singular Source of Truth for the entire Trace Odd ecosystem. It replaces all prior master files (`PROJECT_MASTER.md`, `PROJECT_LOGICS_TREE.md`, `ARCHITECTURAL_PROPOSAL_MULTI_TENANT_CLOUD.md` v1.0, and all derivative specifications). It integrates the original ~4,000-line business requirement trees, the full technical modernization blueprint of 2026, the 15-module product registry, AND the approved **Multi-Tenant Cloud Architecture v2.0** (Section 10 — authoritative). **No code generation, architecture decision, or feature planning shall proceed without strict reference to this document.** *Amended 2026-09-24: it is a **legacy base document**, not the singular source of truth — where it conflicts with `docs/handoff/PANEL-SEPARATION-PLAN.md`, the plan wins (see the correction notice above).*
+> **PROTOCOL FOR ALL AI AGENTS & DEVELOPERS:** This document is the absolute, unified, and singular Source of Truth for the entire Trace Odd ecosystem. It replaces all prior master files (`PROJECT_MASTER.md`, `PROJECT_LOGICS_TREE.md`, `ARCHITECTURAL_PROPOSAL_MULTI_TENANT_CLOUD.md` v1.0, and all derivative specifications). It integrates the original ~4,000-line business requirement trees, the full technical modernization blueprint of 2026, the 15-module product registry, AND the approved **Multi-Tenant Cloud Architecture v2.0** (Section 10 — authoritative). **No code generation, architecture decision, or feature planning shall proceed without strict reference to this document.** *Amended 2026-09-24: it is a **legacy base document**, not the singular source of truth — where it conflicts with `docs/handoff/MASTER-TASK-LIST.md`, the plan wins (see the correction notice above).*
 
 ---
 
@@ -45,7 +45,7 @@
 >
 > **⚠️ Items 3 and 4 below are FALSE and must not be acted on.** The repo holds **13 live
 > `lib/main_*.dart` entry points** and a populated backend — nothing was purged. See the correction
-> notice above and `PANEL-SEPARATION-PLAN.md` §11. Items 1, 2, 5 and 6 still stand.
+> notice above and `MASTER-TASK-LIST.md` §11. Items 1, 2, 5 and 6 still stand.
 >
 > 1. **Zero Published Apps.** No application is currently live on the Google Play Store or Apple App Store.
 > 2. **Zero Live Users.** All deployments to date are internal/testing only.
@@ -76,6 +76,10 @@
    - [Module 13 — Public Transport Bus Admin Panel](#module-13--public-transport-bus-admin-panel)
    - [Module 14 — Bus Owners App](#module-14--bus-owners-app)
    - [Module 15 — Bus Drivers App](#module-15--bus-drivers-app)
+   - [Module 16 — consolidated into Module 8](#module-16--consolidated-into-module-8--customers-app-2-in-1)
+   - [Module 17 — removed (P2P car trip sharing)](#module-17--permanently-removed--p2p-car-trip-sharing)
+   - [Module 18 — KISAN (Agri-Marketplace) & Advance Demand Forecasting](#module-18--kisan-agri-marketplace--advance-demand-forecasting)
+   - [**Module 19 — Services & Skilled Workers Grid**](#module-19--services--skilled-workers-grid)
 4. [Cross-Cutting Architectural Concerns (12A–12O)](#4-cross-cutting-architectural-concerns-12a12o)
 5. [Subscription Plans System](#5-subscription-plans-system)
 6. [Implementation Status Matrix](#6-implementation-status-matrix)
@@ -1928,8 +1932,39 @@
 
 #### 18F — Advance Token / Escrow Deposit
 - A B2B advance token (escrow) backs the forward contract: the factory commits funds, the kisan commits the crop, and the deposit releases on delivery milestones.
-- **Reuse:** the existing idempotent split/commission engine (`PANEL-SEPARATION-PLAN.md` §10.5) — **no second ledger**.
+- **Reuse:** the existing idempotent split/commission engine (**this document §10.5** / `MASTER-TASK-LIST.md` §8) — **no second ledger**.
 - **Built:** Not started.
+### MODULE 19 — SERVICES & SKILLED WORKERS GRID
+**Domain:** On-Demand Services / Technicians & Skilled Workers · **Code Namespace:** `services` (new) — reuses the panel scaffold, `FreightAuctionService` (bidding), the `passenger_safety_tokens` share-token pattern, and the **§10.5 idempotent commission split engine**
+**Status:** ⏳ planned — **item 48** in `docs/handoff/MASTER-TASK-LIST.md` §3. **The full specification and the 3-section architecture review are in `MASTER-TASK-LIST.md` §8.**
+
+> A flexible grid of technicians / on-demand skilled workers. There are **no rigid fixed categories** — any worker types their own skill in free text, and it auto-renders as a category badge/filter in the Universal Customer App.
+>
+> **Strict isolation lock (a hard rule):** a **technician** account must be **100% LOCKED** from wholesalers / resellers / shopkeepers / factories — no catalogs, wholesale pricing, inventories or ordering systems, and no B2B trading data. Its dashboard is restricted to its **own service bookings, bids and schedule slots**. The lock is **structural** (own panel + own `/api/v1/services/*` prefix + nginx 403 for every other `/api/` path), not a UI toggle.
+>
+> **Boundary rule:** the Universal Customer App gets the *nearby map, booking and link-share* only — **no B2B trading code and no catalog access**. Worker registration lives on the B2B side (`market.traceodd.com`).
+
+#### 19A — Worker Onboarding & Dynamic Skill Input (S1)
+- Registration with fixed dropdowns **plus** an open `skill_title` text box **plus** a `description` short-text area.
+- `SkillResolverService` (normalise → `Str::slug` → exact `skill_categories.slug` → `skill_aliases` → trigram fuzzy match → else create an unapproved category + queue it for moderation). Tables: `service_skills`, `skill_categories`, `skill_aliases`.
+- **Built:** Not started.
+
+#### 19B — Strict Isolation RBAC (S2)
+- New technician account type + vertical, its own middleware (mirror `BusFleetGate`), its own `/api/v1/services/*` prefix, and a nginx vhost that 403s every other `/api/` path.
+- **Verification test:** a technician token calling any `/api/v1/reseller/*`, `/api/v1/marketplace/*` or `freight/*` route returns **403/404**, and no services controller touches a catalog table.
+- **Built:** Not started.
+
+#### 19C — Universal App Dynamic Category Rendering (S3)
+- Public `GET /api/v1/services/skill-categories` (approved categories + `worker_count`) → chips/filters in the Universal Customer App; the worker's `skill_title` renders as the category badge.
+- Nearby-worker map + list (shares the map/location decision with Pillars B/C/E — `MASTER-TASK-LIST.md` item 14).
+- **Built:** Not started.
+
+#### 19D — Geo Bidding, Slots & Link-Share Hand-off (S4)
+- `service_jobs` / `service_bids` (mirror `freight_loads`/`freight_bids`) routed through the `FreightAuctionService` scoring contract; a **service slot engine** (`service_slots` with a Postgres `tstzrange` **exclusion constraint** so double-booking is impossible).
+- Link-share of a booking reusing the `passenger_safety_tokens` token model — this time with the public page actually built.
+- All payouts through the **§10.5 idempotent split engine** — **no second ledger**.
+- **Built:** Not started.
+
 ## 4. CROSS-CUTTING ARCHITECTURAL CONCERNS (12A–12O)
 
 #### 15F — Passenger Terminal NFC Check-In (Hardware Gateway)
@@ -2100,7 +2135,7 @@
 > written, the repository already contained 13 `lib/main_*.dart` entry points, 135 migrations,
 > 11 panel route files, ~52 services, a populated `media-engine/` Rust workspace, and a native
 > Android broadcaster. There is no "Login + empty Dashboard" baseline to reset from.
-> **For real status, read `docs/handoff/PANEL-SEPARATION-PLAN.md` §11 and §14.** The rows below are
+> **For real status, read `docs/handoff/MASTER-TASK-LIST.md` §11 and §14.** The rows below are
 > useful only as *specified scope*.
 
 > **🚨 GREENFIELD STATUS RESET (v5.0 — 2026-06-02 — AUTHORITATIVE):**
@@ -3212,7 +3247,7 @@ Any route that bypasses this stack (e.g., public marketing endpoints) is explici
 > scanning and parcel tracking). The driver's *account* is one, shared through a **backend link /
 > contract record** — not a shared frontend. `lib/features/fleet/**` must **not** be created, and
 > `main_driver.dart` / `main_reseller.dart` are live, not deleted.
-> Authoritative decision: `docs/handoff/PANEL-SEPARATION-PLAN.md` **D1** and **hard rule 7**.
+> Authoritative decision: `docs/handoff/MASTER-TASK-LIST.md` **D1** and **hard rule 7**.
 > The table below is retained as a record of the rejected design only.
 
 | Entry Point | Replaces | Vertical Selection |
@@ -3361,7 +3396,7 @@ The following tables are introduced (➕), modified (🔄), or deleted (❌) by 
 ### Flutter (v5.0 Greenfield Layout)
 
 > **❌ STRUCTURAL OVERRIDE — REJECTED 2026-09-24. Do not implement.**
-> The entry points listed below are **not deleted** — they are live (see `PANEL-SEPARATION-PLAN.md`
+> The entry points listed below are **not deleted** — they are live (see `MASTER-TASK-LIST.md`
 > §11). Bus vs Truck stays a **compile-time** separation (plan **D1**: separate apps, one shared
 > *backend* identity), **not** runtime data in `fleet_assignments.fleet_type`. The original text is
 > retained below as a record of the rejected design only.

@@ -14,7 +14,7 @@ import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 const String kPublicMarketplaceUrl = 'https://market.traceodd.com';
 
 /// Marketplace oversight — READ-ONLY, shared by the Super Admin and the
-/// `commercial_marketplace` Sub-Admin (MASTER-TASK-LIST item #11).
+/// `commercial_marketplace` Sub-Admin (MASTER-TASK-LIST.md §4 done-ledger item #11).
 ///
 /// The owner's rule: both roles own no factory and no product, so this screen
 /// only *shows* the marketplace — never creates or edits a listing or an order.

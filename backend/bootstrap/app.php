@@ -71,7 +71,7 @@ return Application::configure(basePath: dirname(__DIR__))
             // 'global_identity', and identity_type is not a TenantAccount
             // column), leaving only the master_admin_assignments row to allow
             // it. Enabling enforcement is therefore a config change, not a
-            // code change. See docs/handoff/PANEL-SEPARATION-PLAN.md §7b.4.
+            // code change. See docs/handoff/MASTER-TASK-LIST.md §7b.4.
             'super.admin.shadow' => \App\Http\Middleware\SuperAdminShadowGate::class,
         ]);
     })

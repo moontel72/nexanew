@@ -120,7 +120,7 @@ class _CompaniesListScreenState extends State<CompaniesListScreen> {
   }
 
   // _onRegisterCompany was removed 2026-09-26 (C3): the Super Admin no longer creates factories.
-  // Factory admins are created by the Factory Sub-Admin (GROUP-INCHARGE-MODEL.md §2b.7), so this
+  // Factory admins are created by the Factory Sub-Admin (MASTER-TASK-LIST.md §2b.7), so this
   // registry is READ-ONLY.
 
   void _onExportCompanies() {

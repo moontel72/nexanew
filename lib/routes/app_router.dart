@@ -359,7 +359,7 @@ class AppRouter {
       builder: (context, state) => const SubAdminDashboardScreen(),
     ),
     // Marketplace oversight — read-only, for the commercial_marketplace Sub-Admin
-    // (MASTER-TASK-LIST item #11). It owns no factory or product, so this only shows.
+    // (MASTER-TASK-LIST.md §4 done-ledger item #11). It owns no factory or product, so this only shows.
     GoRoute(
       path: '/sub-admin/marketplace',
       name: 'sub_admin_marketplace',

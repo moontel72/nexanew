@@ -142,11 +142,11 @@ cargo check -p todd-signaling -p todd-sfu --features gst
 
 Iske liye `libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev`
 (GStreamer >= 1.24) chahiye. Windows par setup ka tareeqa
-`docs/handoff/STREAMING-HISTORY-AND-FIX.md` (§7) me likha hai.
+`docs/handoff/START-HERE.md` (§7) me likha hai.
 
 ### Fault history — pehle ye parhein
 
-`docs/handoff/STREAMING-HISTORY-AND-FIX.md` me poori history hai: pipeline ka
+`docs/handoff/START-HERE.md` me poori history hai: pipeline ka
 map, commits ki timeline, us hop ke **teen root causes** (aur wo galat theories
 jin par waqt zaya na karein), aur verification evidence.
 

@@ -7,7 +7,7 @@ param(
     [int]$Port = 5444,
     [string]$Username = "postgres",
     # SECURITY: never defaulted in this repo. Supply as a parameter or via
-    # NEXATRACE_PG_ADMIN_PASSWORD. See docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md
+    # NEXATRACE_PG_ADMIN_PASSWORD. See docs/handoff/START-HERE.md
     [string]$Password = $env:NEXATRACE_PG_ADMIN_PASSWORD,
     [string]$BackupDir = "C:\nexatrace_backups",
     [int]$RetentionDays = 7,

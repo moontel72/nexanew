@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
  * ===================================================
  *
  * Group-Incharge C2b. The `commercial_marketplace` Sub-Admin creates and manages
- * reseller accounts (GROUP-INCHARGE-MODEL.md §2b.2), and its endpoints must show only
+ * reseller accounts (MASTER-TASK-LIST.md §2b), and its endpoints must show only
  * its own rows.
  *
  * `resellers` has no `created_by` / metadata column — unlike `companies`, which could

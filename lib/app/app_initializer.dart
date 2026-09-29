@@ -2,7 +2,7 @@
 // App-level composition root: initializes async dependencies, then composes the core services with
 // each panel's providers before showing the app.
 //
-// MOVED here from `lib/core/widgets/` (PANEL-SEPARATION-PLAN.md §15b). App-level composition must not
+// MOVED here from `lib/core/widgets/` (MASTER-TASK-LIST.md §15b). App-level composition must not
 // live in `core/`, because composing panels means importing `features/` — and `core/` must not depend
 // on `features/`. Entry points and routing (this layer) may import anything.
 
@@ -204,7 +204,7 @@ class _AppInitializerState extends State<AppInitializer> {
               // Sub-admin authenticates with its own token (`sub_admin_token`), not with the flags
               // above. Cache it BEFORE setAuthCheckCompleted(true) so the router can guard
               // /sub-admin/* without performing I/O inside a redirect.
-              // See PANEL-SEPARATION-PLAN.md §17 step 5.
+              // See MASTER-TASK-LIST.md §17 step 5.
               setSubAdminAuthenticatedCache(
                 (context.read<SharedPreferences>().getString(
                           'sub_admin_token',

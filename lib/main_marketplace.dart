@@ -1,7 +1,7 @@
 // Public Marketplace Entrypoint — market.traceodd.com
 //
 // A standalone Flutter web build that hosts ONLY the public, read-only
-// marketplace (MASTER-TASK-LIST item #12): browse every published product with
+// marketplace (MASTER-TASK-LIST.md §4 done-ledger item #12): browse every published product with
 // its wholesale price and MOQ, and open a factory's storefront.
 //
 // There is NO login screen and NO token: this app is compiled without the

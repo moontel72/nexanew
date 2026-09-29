@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
  * MARKETPLACE OVERSIGHT — READ-ONLY
  * =================================
  *
- * MASTER-TASK-LIST item #11: the Marketplace section the panels show.
+ * MASTER-TASK-LIST.md §4 done-ledger item #11: the Marketplace section the panels show.
  *
  * WHY THERE IS NO WRITE PATH HERE
  * -------------------------------
@@ -30,7 +30,7 @@ use Illuminate\Support\Facades\DB;
  * resolved. Both roles therefore read the whole marketplace. Narrowing this per
  * vertical (so a bus-fleet Sub-Admin sees nothing here) is Phase 6 — the same
  * pending work as every other `admin/*` route today (see `SubAdminResellerController`
- * header and `GROUP-INCHARGE-MODEL.md` §2b.3).
+ * header and `MASTER-TASK-LIST.md` §2b.3).
  */
 class MarketplaceAdminController extends Controller
 {

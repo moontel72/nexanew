@@ -83,7 +83,7 @@ class GlobalIdentity extends Model
      *
      * Same lockout risk as AdminUser::setPasswordAttribute: a bcrypt string passed in must not be
      * hashed a second time, or the identity can never authenticate again. See
-     * docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md §3.6.1.
+     * docs/handoff/START-HERE.md §3.6.1.
      */
     public function setPasswordAttribute(string $value): void
     {

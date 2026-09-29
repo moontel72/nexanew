@@ -1,10 +1,10 @@
 # gitleaks configuration — NexaTrace
 #
-# Companion to .github/workflows/secret-scan.yml and
-# docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md.
+# Companion to .github/workflows/secret-scan.yml and docs/handoff/START-HERE.md
+# (Appendix A — the credential-remediation runbook).
 #
 # SCOPE: the scan runs against the WORKING TREE (`gitleaks detect --no-git`), not git
-# history — per docs/handoff/PANEL-SEPARATION-PLAN.md §7b.5. Git history still contains
+# history — per docs/handoff/MASTER-TASK-LIST.md §7b.5. Git history still contains
 # credentials that were removed in this cycle; scanning history would fail the build on
 # findings that are already deleted and pending rotation, which tells us nothing.
 #
@@ -18,15 +18,20 @@ title = "NexaTrace"
 [extend]
 useDefault = true
 
-[[allowlists]]
-description = """
-Remediation-evidence documents. These two files quote the compromised password values
-as evidence of the Phase 0a incident, so they trip the default rules on every run.
-
-REMOVE these entries once the passwords have been rotated AND the docs have been
-re-redacted to describe the incident without quoting the values.
-"""
-paths = [
-  '''docs/handoff/PANEL-SEPARATION-PLAN\.md''',
-  '''docs/handoff/PANEL-SEPARATION-RECOMMENDATIONS\.md''',
-]
+# ---------------------------------------------------------------------------
+# NO ALLOWLIST ENTRIES (2026-09-29).
+#
+# The two entries that used to live here pointed at the separation-plan and
+# recommendations docs, which quoted the compromised password values as incident
+# evidence. Those two files have been deleted and their material consolidated into
+# docs/handoff/START-HERE.md + docs/handoff/MASTER-TASK-LIST.md, and both of those
+# deliberately do NOT quote any credential value — so no allowlist entry is needed.
+#
+# Keep it that way: never re-introduce a value (or a broad path) here. If a genuine
+# false positive ever appears, add a NARROW, commented entry naming the single file.
+#
+# Still owed (owner, server-side): rotate the leaked passwords — see START-HERE.md
+# Appendix A. Once rotated, the working-tree scan can be switched to history scanning
+# (with an allowlist entry for the historical commits + a rotation note), and then
+# `continue-on-error: true` can be removed from the workflow.
+# ---------------------------------------------------------------------------

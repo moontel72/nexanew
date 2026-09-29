@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Route;
 // (see the middleware's docblock), so applying `admin` directly risked 403ing
 // every call from the owner's own account. Observation first, then flip the
 // variable. The two queries that settle it are in
-// docs/handoff/PANEL-SEPARATION-PLAN.md §7b.4.
+// docs/handoff/MASTER-TASK-LIST.md §7b.4.
 Route::prefix('api/v1/super-admin')
     ->middleware(['auth:sanctum', 'super.admin.shadow'])
     ->group(function (): void {

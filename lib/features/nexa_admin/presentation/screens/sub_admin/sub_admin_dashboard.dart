@@ -1844,7 +1844,7 @@ class _DashboardViewState extends State<_DashboardView> {
   }
 
   // ── Reseller Sub-Admin Dashboard (commercial_marketplace, C2b) ──
-  /// Only provisions and manages reseller accounts (GROUP-INCHARGE-MODEL.md §2b).
+  /// Only provisions and manages reseller accounts (MASTER-TASK-LIST.md §2b).
   Widget _resellerDashboard(
     BuildContext ctx,
     SubAdminBloc bloc,
@@ -2923,7 +2923,7 @@ class _Sidebar extends StatelessWidget {
           height: 64,
           onTap: onDashboardTap,
         ),
-        // Marketplace oversight — READ-ONLY (MASTER-TASK-LIST item #11).
+        // Marketplace oversight — READ-ONLY (MASTER-TASK-LIST.md §4 done-ledger item #11).
         // The commercial_marketplace Sub-Admin owns no factory and no product: it
         // controls the marketplace *platform* (disputes, content, reseller /
         // shop-keeper accounts), so it observes listings and orders here and

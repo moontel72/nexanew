@@ -1,6 +1,6 @@
 // Factory panel providers — admin, store keeper and driver.
 //
-// Moved verbatim out of `lib/core/providers/app_providers.dart` (PANEL-SEPARATION-PLAN.md §15b)
+// Moved verbatim out of `lib/core/providers/app_providers.dart` (MASTER-TASK-LIST.md §15b)
 // so that `lib/core/` no longer imports `lib/features/`. Behaviour is unchanged: the same providers,
 // in the same order.
 //

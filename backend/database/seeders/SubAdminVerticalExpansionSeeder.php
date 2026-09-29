@@ -20,7 +20,7 @@ use Illuminate\Support\Str;
  *   * financial_auditor's bundle is UNIONED, never replaced — so re-running this, or running it before
  *     or after FeatureRegistrySeeder, cannot lose a code.
  *
- * Design + rationale: docs/handoff/GROUP-INCHARGE-MODEL.md section 2b (C0).
+ * Design + rationale: docs/handoff/MASTER-TASK-LIST.md section 2b (C0).
  */
 class SubAdminVerticalExpansionSeeder extends Seeder
 {

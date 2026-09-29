@@ -115,7 +115,7 @@ class SuperAdminShell extends StatelessWidget {
             route: '/companies',
           ),
           // 'Create New Factory' was here. Removed 2026-09-26 (C3): factory admins are now
-          // created by the Factory Sub-Admin (GROUP-INCHARGE-MODEL.md §2b.7), and the Super Admin
+          // created by the Factory Sub-Admin (MASTER-TASK-LIST.md §2b.7), and the Super Admin
           // keeps the registry as READ-ONLY — 'View All Factories' above.
         ],
       ),
@@ -166,7 +166,7 @@ class SuperAdminShell extends StatelessWidget {
             route: '/resellers',
           ),
           // 'Register Reseller' was here. Removed 2026-09-26 (C2b): resellers are now created by
-          // the commercial_marketplace Sub-Admin (GROUP-INCHARGE-MODEL.md §2b.8 / C2b), and the Super
+          // the commercial_marketplace Sub-Admin (MASTER-TASK-LIST.md §2b.8 / C2b), and the Super
           // Admin keeps the registry as READ-ONLY — 'View All Resellers' above.
         ],
       ),
@@ -179,7 +179,7 @@ class SuperAdminShell extends StatelessWidget {
             icon: Icons.storefront_outlined,
             route: '/marketplace',
           ),
-          // READ-ONLY by design (MASTER-TASK-LIST item #11): the Super Admin owns no factory
+          // READ-ONLY by design (MASTER-TASK-LIST.md §4 done-ledger item #11): the Super Admin owns no factory
           // and no product, so it observes the marketplace and its orders — it never lists one.
         ],
       ),

@@ -23,7 +23,7 @@ class MpPage {
 ///
 /// It talks to the same public endpoints the reseller app uses
 /// (`/reseller/products`, `/reseller/factories`) with `requiresAuth: false` —
-/// this site has no login at all (MASTER-TASK-LIST item #12), so it must never
+/// this site has no login at all (MASTER-TASK-LIST.md §4 done-ledger item #12), so it must never
 /// send or expect a token.
 class MarketplacePublicRepository {
   MarketplacePublicRepository({ApiService? api}) : _api = api ?? ApiService();

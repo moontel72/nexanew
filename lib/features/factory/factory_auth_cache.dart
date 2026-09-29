@@ -1,6 +1,6 @@
 // Factory domain auth cache — the factory panel's OWN cached session.
 //
-// ── WHY THIS FILE EXISTS (PANEL-SEPARATION-PLAN.md §17.8, step B1) ──────────────────────────────
+// ── WHY THIS FILE EXISTS (MASTER-TASK-LIST.md §17.8, step B1) ──────────────────────────────
 // `core/utils/auth_state.dart` used to keep `token`, `userId` and `userType` in ONE process-wide bag
 // that BOTH auth domains wrote:
 //

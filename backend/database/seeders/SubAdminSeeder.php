@@ -33,7 +33,7 @@ class SubAdminSeeder extends Seeder
 {
     /**
      * SECURITY: never hardcode a shared password for every sub-admin. Supply it via
-     * NEXATRACE_SUBADMIN_PASSWORD. See docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md
+     * NEXATRACE_SUBADMIN_PASSWORD. See docs/handoff/START-HERE.md
      */
     private function defaultPassword(): string
     {

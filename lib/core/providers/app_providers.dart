@@ -1,6 +1,6 @@
 ﻿// App Providers — CORE SERVICES ONLY.
 //
-// PANEL-SEPARATION-PLAN.md §15b: this file used to hold every panel's repositories and BLoCs, which
+// MASTER-TASK-LIST.md §15b: this file used to hold every panel's repositories and BLoCs, which
 // made `lib/core/` import `lib/features/` (45 violating imports). The panel-specific providers now
 // live with their panels:
 //

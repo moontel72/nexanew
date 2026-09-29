@@ -29,7 +29,7 @@ class MasterAdminSeeder extends Seeder
     /**
      * SECURITY: the Master Admin password is never hardcoded in this repo.
      * Supply it via the NEXATRACE_MASTER_ADMIN_PASSWORD environment variable.
-     * See docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md
+     * See docs/handoff/START-HERE.md
      */
     private function masterAdminPassword(): string
     {

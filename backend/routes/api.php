@@ -95,7 +95,7 @@ $registerRoutes = function (): void {
 
             /// Factory Company Management (Factory Sub-Admin jurisdiction — Group-Incharge C2)
             /// Scoped to the caller's OWN companies (metadata.created_by_sub_admin_id). No plan/billing here:
-            /// that belongs to the financial_auditor (GROUP-INCHARGE-MODEL.md section 2b.3).
+            /// that belongs to the financial_auditor (MASTER-TASK-LIST.md section 2b.3).
             Route::prefix("factory-companies")->group(function (): void {
                 Route::get("", [\App\Http\Controllers\Admin\SubAdminFactoryCompanyController::class, "index"]);
                 Route::post("create", [\App\Http\Controllers\Admin\SubAdminFactoryCompanyController::class, "store"]);
@@ -541,7 +541,7 @@ $registerRoutes = function (): void {
             /// Marketplace oversight (Super Admin + each group's Sub-Admin) — READ-ONLY.
             /// Neither role owns a factory or a product (owner, 2026-09-28); they only observe
             /// the marketplace, so there is no store/update/destroy here. The panels' Marketplace
-            /// section reads these (MASTER-TASK-LIST item #11).
+            /// section reads these (MASTER-TASK-LIST.md §4 done-ledger item #11).
             Route::prefix("marketplace")->group(function (): void {
                 Route::get("orders", [\App\Http\Controllers\Admin\MarketplaceAdminController::class, "orders"]);
                 Route::get("summary", [\App\Http\Controllers\Admin\MarketplaceAdminController::class, "summary"]);

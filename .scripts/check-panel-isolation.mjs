@@ -2,7 +2,7 @@
 /**
  * Panel isolation guard.
  *
- * Enforces the layering model of docs/handoff/PANEL-SEPARATION-PLAN.md §5b.1 and its
+ * Enforces the layering model of docs/handoff/MASTER-TASK-LIST.md §5b.1 and its
  * hard rules 3, 4 and 5:
  *
  *     core  <-  shared  <-  features/<panel>   <-  main_<panel>.dart
@@ -155,7 +155,7 @@ if (WRITE_BASELINE) {
     `${JSON.stringify(
       {
         $comment:
-          'Tracked cross-panel coupling (PANEL-SEPARATION-PLAN.md §5c mechanism 1). ' +
+          'Tracked cross-panel coupling (MASTER-TASK-LIST.md §5c mechanism 1). ' +
           'These import statements exist today and are grandfathered so the guard can run ' +
           'without a red build. Statement-level on purpose: a folder-pair baseline would let ' +
           'a brand-new file cross the same boundary unnoticed. ' +
@@ -231,6 +231,6 @@ console.error(
   `Fix the import — promote the shared thing to lib/shared/, or route it through the API.\n` +
     `If it genuinely must stay, a human decides and then adds it to ` +
     `.scripts/panel-isolation-baseline.json.\n` +
-    `See docs/handoff/PANEL-SEPARATION-PLAN.md §5b.1 and hard rules 3-5.`,
+    `See docs/handoff/MASTER-TASK-LIST.md §5b.1 and hard rules 3-5.`,
 );
 process.exit(1);

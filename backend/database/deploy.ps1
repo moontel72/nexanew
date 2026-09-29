@@ -8,7 +8,7 @@ param(
     [int]$Port = 5444,
     [string]$AdminUser = "postgres",
     # SECURITY: passwords are NEVER defaulted in this repo. Supply each one as a parameter
-    # or via its environment variable. See docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md
+    # or via its environment variable. See docs/handoff/START-HERE.md
     [string]$AdminPassword = $env:NEXATRACE_PG_ADMIN_PASSWORD,
     [string]$AppUser = "nexa_app",
     [string]$AppPassword = $env:NEXATRACE_PG_APP_PASSWORD,
@@ -24,7 +24,7 @@ param(
 
 # ── SECURITY GATE — passwords are never committed to this repo ───────────────
 # Supply each password as a parameter, or set its environment variable.
-# See docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md
+# See docs/handoff/START-HERE.md
 $missingPasswords = @()
 if ([string]::IsNullOrWhiteSpace($AdminPassword))      { $missingPasswords += 'AdminPassword / NEXATRACE_PG_ADMIN_PASSWORD' }
 if ([string]::IsNullOrWhiteSpace($AppPassword))        { $missingPasswords += 'AppPassword / NEXATRACE_PG_APP_PASSWORD' }

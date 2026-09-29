@@ -12,7 +12,7 @@ import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/empty_states/empty_state_widget.dart';
 import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 
-/// Factory panel — the Marketplace section (MASTER-TASK-LIST item #11).
+/// Factory panel — the Marketplace section (MASTER-TASK-LIST.md §4 done-ledger item #11).
 ///
 /// The owner's design for the factory (the only role that sells here):
 ///   * Preview      — the whole marketplace as a buyer sees it.

@@ -35,7 +35,7 @@ class _FactoryLoginScreenState extends State<FactoryLoginScreen> {
   void initState() {
     super.initState();
     // SECURITY: never pre-fill credentials in the UI. Doing so let anyone sign in
-    // without knowing a password. See docs/handoff/PHASE-0A-CREDENTIAL-REMEDIATION.md
+    // without knowing a password. See docs/handoff/START-HERE.md
   }
 
   @override
