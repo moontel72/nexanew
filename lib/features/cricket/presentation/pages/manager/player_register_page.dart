@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/core/config/api_config.dart';
 import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_presenter.dart';
 
 class PlayerRegisterPage extends StatefulWidget {
   final String? teamId;
@@ -75,13 +76,11 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
       return RepositoryProvider.of<CricketRepository>(context);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Service unavailable — please go back and try again.',
-            ),
-            backgroundColor: Color(0xFFEF4444),
-          ),
+        // A failure must stay and be copyable, not flash and vanish.
+        showStickyError(
+          context,
+          'Service unavailable — please go back and try again.',
+          source: 'Cricket · Player register · service',
         );
       }
       return null;
@@ -167,16 +166,12 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
           // Player was created, but the photo upload failed — surface it
           // so the user can retry instead of silently losing the picture.
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Player created, but the photo upload failed. '
-                  'You can retry it from the Players list.\n'
-                  '${e.toString().replaceFirst('Exception: ', '')}',
-                ),
-                backgroundColor: const Color(0xFFEF4444),
-                duration: const Duration(seconds: 8),
-              ),
+            showStickyError(
+              context,
+              'Player created, but the photo upload failed. '
+              'You can retry it from the Players list.\n'
+              '${e.toString().replaceFirst('Exception: ', '')}',
+              source: 'Cricket · Player register · photo upload',
             );
           }
         }
@@ -189,11 +184,10 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _isSubmitting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceFirst('Exception: ', '')),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
+        showStickyError(
+          context,
+          e.toString().replaceFirst('Exception: ', ''),
+          source: 'Cricket · Player register · create',
         );
       }
     }

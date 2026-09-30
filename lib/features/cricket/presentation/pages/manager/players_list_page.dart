@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/core/config/api_config.dart';
 import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_presenter.dart';
 import 'player_register_page.dart';
 
 class PlayersListPage extends StatefulWidget {
@@ -58,8 +59,16 @@ class _PlayersListPageState extends State<PlayersListPage> {
           _trashedPlayers = players;
           _loading = false;
         });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      // Was swallowed: a failed load looked like 'no players yet'.
+      if (mounted) {
+        setState(() => _loading = false);
+        showStickyError(
+          context,
+          e.toString().replaceFirst('Exception: ', ''),
+          source: 'Cricket · Players · GET players',
+        );
+      }
     }
   }
 
@@ -69,13 +78,11 @@ class _PlayersListPageState extends State<PlayersListPage> {
       return RepositoryProvider.of<CricketRepository>(context);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Service unavailable — please go back and try again.',
-            ),
-            backgroundColor: Color(0xFFEF4444),
-          ),
+        // A failure must stay and be copyable, not flash and vanish.
+        showStickyError(
+          context,
+          'Service unavailable — please go back and try again.',
+          source: 'Cricket · Players · service',
         );
       }
       return null;
@@ -427,11 +434,10 @@ class _PlayersListPageState extends State<PlayersListPage> {
                     }
                   } catch (e) {
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Failed: $e'),
-                          backgroundColor: Color(0xFFEF4444),
-                        ),
+                      showStickyError(
+                        context,
+                        'Failed: $e',
+                        source: 'Cricket · Players · photo upload',
                       );
                     }
                   }
@@ -482,7 +488,9 @@ class _PlayersListPageState extends State<PlayersListPage> {
                       decoration: BoxDecoration(
                         color: posColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: posColor.withValues(alpha: 0.5)),
+                        border: Border.all(
+                          color: posColor.withValues(alpha: 0.5),
+                        ),
                       ),
                       child: Text(
                         _positionLabel(p.position),
@@ -563,11 +571,10 @@ class _PlayersListPageState extends State<PlayersListPage> {
                           _load();
                         } catch (e) {
                           if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('$e'),
-                                backgroundColor: const Color(0xFFEF4444),
-                              ),
+                            showStickyError(
+                              context,
+                              e.toString(),
+                              source: 'Cricket · Players · DELETE player',
                             );
                           }
                         }
@@ -578,11 +585,10 @@ class _PlayersListPageState extends State<PlayersListPage> {
                         _load();
                       } catch (e) {
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('$e'),
-                              backgroundColor: const Color(0xFFEF4444),
-                            ),
+                          showStickyError(
+                            context,
+                            e.toString(),
+                            source: 'Cricket · Players · mark active',
                           );
                         }
                       }
@@ -592,11 +598,10 @@ class _PlayersListPageState extends State<PlayersListPage> {
                         _load();
                       } catch (e) {
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('$e'),
-                              backgroundColor: const Color(0xFFEF4444),
-                            ),
+                          showStickyError(
+                            context,
+                            e.toString(),
+                            source: 'Cricket · Players · mark inactive',
                           );
                         }
                       }

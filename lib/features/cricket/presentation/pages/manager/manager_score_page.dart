@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/shared/theme/cricket_colors.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_presenter.dart';
 
 import '../../blocs/live_score/live_score_bloc.dart';
 import '../../blocs/scoring_control/scoring_control_bloc.dart';
@@ -132,14 +133,17 @@ class _ManagerScorePageState extends State<ManagerScorePage> {
     String notice, {
     required bool isError,
   }) {
+    // A FAILURE stays, copies and closes; a success/info notice keeps its toast.
+    if (isError) {
+      showStickyError(context, notice, source: 'Cricket · Live Scoring');
+      return;
+    }
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
           content: Text(notice),
-          backgroundColor: isError
-              ? CricketColors.wicket
-              : CricketColors.complete,
+          backgroundColor: CricketColors.complete,
         ),
       );
   }

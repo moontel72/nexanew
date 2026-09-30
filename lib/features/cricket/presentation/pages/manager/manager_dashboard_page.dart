@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_presenter.dart';
 
 import '../../blocs/cricket_auth/cricket_auth_bloc.dart';
 import '../../blocs/live_score/live_score_bloc.dart';
@@ -464,16 +465,20 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
           listener: (context, state) {
             final notice = state is MatchListLoaded ? state.notice : null;
             if (notice == null || notice.isEmpty) return;
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(
-                SnackBar(
-                  content: Text(notice),
-                  backgroundColor: notice.contains('LIVE')
-                      ? const Color(0xFF10B981)
-                      : const Color(0xFFEF4444),
-                ),
-              );
+            // 'LIVE' means the go-live succeeded — a toast is fine. Anything else
+            // is a FAILURE, which must stay, copy and close.
+            if (notice.contains('LIVE')) {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  SnackBar(
+                    content: Text(notice),
+                    backgroundColor: const Color(0xFF10B981),
+                  ),
+                );
+              return;
+            }
+            showStickyError(context, notice, source: 'Cricket · Match List');
           },
           child: ListView(
             padding: const EdgeInsets.all(20),
