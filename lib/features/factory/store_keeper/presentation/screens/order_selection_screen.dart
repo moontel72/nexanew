@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:trace_odd/features/factory/store_keeper/presentation/bloc/store_keeper_bloc.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/theme/text_styles.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_presenter.dart';
 
 class OrderSelectionScreen extends StatefulWidget {
   const OrderSelectionScreen({super.key});
@@ -51,11 +52,11 @@ class _OrderSelectionScreenState extends State<OrderSelectionScreen> {
       body: BlocConsumer<StoreKeeperBloc, StoreKeeperState>(
         listener: (context, state) {
           if (state is ErrorState) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.error,
-              ),
+            // A failure must stay, be copyable and be closable.
+            showStickyError(
+              context,
+              state.message,
+              source: 'Store Keeper · Order selection',
             );
           }
         },
@@ -167,7 +168,9 @@ class _OrderSelectionScreenState extends State<OrderSelectionScreen> {
                                   vertical: 4.h,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.accent.withValues(alpha: 0.1),
+                                  color: AppColors.accent.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(6.r),
                                 ),
                                 child: Text(

@@ -7,6 +7,7 @@ import 'package:trace_odd/features/factory/store_keeper/presentation/bloc/store_
 import 'package:trace_odd/features/factory/store_keeper/presentation/widgets/sync_status_badge.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_presenter.dart';
 
 class StoreKeeperLoginScreen extends StatefulWidget {
   const StoreKeeperLoginScreen({super.key});
@@ -43,11 +44,11 @@ class _StoreKeeperLoginScreenState extends State<StoreKeeperLoginScreen> {
           context.go('/factory/store-keeper/dashboard');
         }
         if (state is ErrorState) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppColors.error,
-            ),
+          // A failure must stay, be copyable and be closable.
+          showStickyError(
+            context,
+            state.message,
+            source: 'Store Keeper · Login',
           );
         }
       },

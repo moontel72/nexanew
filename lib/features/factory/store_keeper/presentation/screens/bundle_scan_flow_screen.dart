@@ -6,6 +6,7 @@ import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/theme/text_styles.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_presenter.dart';
 
 enum ScanFlowStep { bundle, carton, packet, unit, complete }
 
@@ -95,11 +96,10 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error processing scan: $e'),
-            backgroundColor: AppColors.error,
-          ),
+        showStickyError(
+          context,
+          'Error processing scan: $e',
+          source: 'Store Keeper · Bundle scan flow',
         );
         setState(() => _isProcessing = false);
       }

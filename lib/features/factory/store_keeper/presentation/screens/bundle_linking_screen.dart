@@ -9,6 +9,7 @@ import 'package:trace_odd/features/factory/store_keeper/data/datasources/local_d
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/theme/text_styles.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_presenter.dart';
 
 class BundleLinkingScreen extends StatefulWidget {
   final String bundleId;
@@ -134,11 +135,10 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load bundle info: $e'),
-            backgroundColor: AppColors.error,
-          ),
+        showStickyError(
+          context,
+          'Failed to load bundle info: $e',
+          source: 'Store Keeper · Bundle linking · load bundle',
         );
       }
     }
@@ -184,12 +184,10 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isGeneratingQr = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to generate QR: $e'),
-            backgroundColor: AppColors.error,
-          ),
+        showStickyError(
+          context,
+          'Failed to generate QR: $e',
+          source: 'Store Keeper · Bundle linking · generate QR',
         );
       }
     }
@@ -251,11 +249,10 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to link $linkType: $e'),
-            backgroundColor: AppColors.error,
-          ),
+        showStickyError(
+          context,
+          'Failed to link $linkType: $e',
+          source: 'Store Keeper · Bundle linking · link',
         );
       }
     }
@@ -311,11 +308,10 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to finalize: $e'),
-            backgroundColor: AppColors.error,
-          ),
+        showStickyError(
+          context,
+          'Failed to finalize: $e',
+          source: 'Store Keeper · Bundle linking · finalize',
         );
       }
     }
@@ -392,11 +388,10 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to unlink: $e'),
-            backgroundColor: AppColors.error,
-          ),
+        showStickyError(
+          context,
+          'Failed to unlink: $e',
+          source: 'Store Keeper · Bundle linking · unlink',
         );
       }
     }

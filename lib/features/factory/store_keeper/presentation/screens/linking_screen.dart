@@ -7,6 +7,7 @@ import 'package:trace_odd/features/factory/store_keeper/presentation/bloc/store_
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/theme/text_styles.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_presenter.dart';
 
 class LinkingScreen extends StatefulWidget {
   const LinkingScreen({super.key});
@@ -38,11 +39,11 @@ class _LinkingScreenState extends State<LinkingScreen> {
             _step = state.linkingStep;
           });
         if (state is ErrorState)
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppColors.error,
-            ),
+          // A failure must stay, be copyable and be closable.
+          showStickyError(
+            context,
+            state.message,
+            source: 'Store Keeper · Link items',
           );
       },
       child: Scaffold(
@@ -50,7 +51,10 @@ class _LinkingScreenState extends State<LinkingScreen> {
           title: const Text('Link Items'),
           backgroundColor: AppColors.accent,
           foregroundColor: Colors.white,
-        leading: IconButton(icon: const Icon(Icons.home), onPressed: () => context.go('/factory/store-keeper/dashboard')),
+          leading: IconButton(
+            icon: const Icon(Icons.home),
+            onPressed: () => context.go('/factory/store-keeper/dashboard'),
+          ),
         ),
         body: SingleChildScrollView(
           padding: EdgeInsets.all(16.w),
