@@ -12,6 +12,7 @@ import 'package:trace_odd/shared/models/billing/invoice_model.dart' as shared;
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/theme/typography.dart';
 import 'package:trace_odd/shared/widgets/error_state/error_state_widget.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 
 class InvoiceDetailScreen extends StatefulWidget {
@@ -26,6 +27,11 @@ class InvoiceDetailScreen extends StatefulWidget {
 class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   final _scrollController = ScrollController();
 
+  /// A failed PDF download — copyable banner (the load error is already covered by
+  /// the shared `ErrorState`, which is copyable too).
+  String? _error;
+  String? _dismissedError;
+
   @override
   void initState() {
     super.initState();
@@ -33,8 +39,12 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   }
 
   void _load() {
-    context.read<InvoiceBloc>().add(LoadInvoiceDetail(invoiceId: widget.invoiceId));
-    context.read<InvoiceBloc>().add(LoadInvoicePayments(invoiceId: widget.invoiceId));
+    context.read<InvoiceBloc>().add(
+      LoadInvoiceDetail(invoiceId: widget.invoiceId),
+    );
+    context.read<InvoiceBloc>().add(
+      LoadInvoicePayments(invoiceId: widget.invoiceId),
+    );
   }
 
   double _n(dynamic value) {
@@ -75,47 +85,70 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       ),
       body: BlocBuilder<InvoiceBloc, InvoiceState>(
         builder: (context, state) {
-          return state.maybeWhen(
-            loading: () => const LoadingIndicator(),
-            processing: () => const LoadingIndicator(),
-            invoiceDetailLoaded: (invoice, payments, message) {
-              return Scrollbar(
-                controller: _scrollController,
-                thumbVisibility: true,
-                child: SingleChildScrollView(
+          return _withErrorBanner(
+            state.maybeWhen(
+              loading: () => const LoadingIndicator(),
+              processing: () => const LoadingIndicator(),
+              invoiceDetailLoaded: (invoice, payments, message) {
+                return Scrollbar(
                   controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _header(invoice, dateFormat, money),
-                      const SizedBox(height: 16),
-                      _billingBreakdown(invoice, money),
-                      const SizedBox(height: 16),
-                      _lineItems(invoice, money),
-                      const SizedBox(height: 16),
-                      _usageBreakdown(invoice),
-                      const SizedBox(height: 16),
-                      _payments(invoice, payments),
-                      const SizedBox(height: 24),
-                    ],
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _header(invoice, dateFormat, money),
+                        const SizedBox(height: 16),
+                        _billingBreakdown(invoice, money),
+                        const SizedBox(height: 16),
+                        _lineItems(invoice, money),
+                        const SizedBox(height: 16),
+                        _usageBreakdown(invoice),
+                        const SizedBox(height: 16),
+                        _payments(invoice, payments),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
-            error: (message, error) => ErrorState.generic(
-              title: 'Error',
-              message: message,
-              onRetry: _load,
+                );
+              },
+              error: (message, error) => ErrorState.generic(
+                title: 'Error',
+                message: message,
+                onRetry: _load,
+              ),
+              orElse: () => const LoadingIndicator(),
             ),
-            orElse: () => const LoadingIndicator(),
           );
         },
       ),
     );
   }
 
-  Widget _header(AdminInvoice invoice, DateFormat dateFormat, NumberFormat money) {
+  /// Wrap content with the copyable failure banner (stays until closed).
+  Widget _withErrorBanner(Widget child) => Column(
+    children: [
+      if (_error != null && _error != _dismissedError)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: StickyErrorBanner(
+            message: _error!,
+            source:
+                'Super Admin · Invoice · GET /admin/billing/invoices/{id}/pdf',
+            onDismiss: () => setState(() => _dismissedError = _error),
+          ),
+        ),
+      Expanded(child: child),
+    ],
+  );
+
+  Widget _header(
+    AdminInvoice invoice,
+    DateFormat dateFormat,
+    NumberFormat money,
+  ) {
     final statusText = invoice.status.toString().split('.').last;
     final currency = invoice.currency.isEmpty ? 'USD' : invoice.currency;
 
@@ -172,11 +205,14 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
 
   Future<void> _downloadPdf(AdminInvoice invoice) async {
     try {
-      final bytes = await context
-          .read<ApiClient>()
-          .getBytes('/admin/billing/invoices/${invoice.id}/pdf');
+      final bytes = await context.read<ApiClient>().getBytes(
+        '/admin/billing/invoices/${invoice.id}/pdf',
+      );
 
-      final safeNumber = invoice.invoiceNumber.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+      final safeNumber = invoice.invoiceNumber.replaceAll(
+        RegExp(r'[^A-Za-z0-9_-]'),
+        '_',
+      );
       await saveBytesToDownload(
         bytes,
         filename: 'invoice_$safeNumber.pdf',
@@ -184,14 +220,13 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invoice PDF downloaded')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Invoice PDF downloaded')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to download PDF: $e')),
-      );
+      // Was a fire-and-forget SnackBar.
+      setState(() => _error = 'Failed to download PDF: $e');
     }
   }
 
@@ -206,7 +241,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
 
     final meta = publishItem.metadata ?? const <String, dynamic>{};
     final monthlyFee = _n(meta['monthly_fee']);
-    final rate = _n(meta['rate']) == 0.0 ? publishItem.unitPrice : _n(meta['rate']);
+    final rate = _n(meta['rate']) == 0.0
+        ? publishItem.unitPrice
+        : _n(meta['rate']);
     final billedCodes = _n(meta['billable_count']) == 0.0
         ? publishItem.quantity
         : _n(meta['billable_count']);
@@ -223,7 +260,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           children: [
             Text(
               'Billing Breakdown',
-              style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w800),
+              style: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: 12),
             _row2('Codes Published', published.toStringAsFixed(0)),
@@ -259,7 +298,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           children: [
             Text(
               'Line Items',
-              style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w800),
+              style: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: 12),
             LayoutBuilder(
@@ -281,7 +322,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                             DataCell(Text(item.description)),
                             DataCell(Text(item.quantity.toStringAsFixed(2))),
                             DataCell(Text(money.format(item.unitPrice))),
-                            DataCell(Text('${money.format(item.total)} $currency')),
+                            DataCell(
+                              Text('${money.format(item.total)} $currency'),
+                            ),
                           ],
                         );
                       }).toList(),
@@ -310,13 +353,15 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           children: [
             Text(
               'Daily Usage Breakdown',
-              style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w800),
+              style: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: 12),
             FutureBuilder<dynamic>(
-              future: context
-                  .read<ApiClient>()
-                  .get('/admin/billing/invoices/${invoice.id}/usage-breakdown'),
+              future: context.read<ApiClient>().get(
+                '/admin/billing/invoices/${invoice.id}/usage-breakdown',
+              ),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Padding(
@@ -329,7 +374,8 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                 }
 
                 final data = snapshot.data;
-                final rows = (data is Map ? (data['data']?['rows'] as List?) : null) ??
+                final rows =
+                    (data is Map ? (data['data']?['rows'] as List?) : null) ??
                     const [];
                 if (rows.isEmpty) {
                   return const Text('No usage data');
@@ -340,14 +386,17 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                     .map((r) => r.cast<String, dynamic>())
                     .toList();
 
-                final hasUnit = parsed.any((r) => _s(r['code_type']).toLowerCase() == 'unit');
+                final hasUnit = parsed.any(
+                  (r) => _s(r['code_type']).toLowerCase() == 'unit',
+                );
                 final totalsByDay = <String, int>{};
                 var totalUnits = 0;
 
                 for (final r in parsed) {
                   final day = _s(r['day']);
                   final codeType = _s(r['code_type']).toLowerCase();
-                  final count = int.tryParse(_s(r['count'], fallback: '0')) ?? 0;
+                  final count =
+                      int.tryParse(_s(r['count'], fallback: '0')) ?? 0;
                   if (hasUnit && codeType != 'unit') continue;
                   totalsByDay[day] = (totalsByDay[day] ?? 0) + count;
                   totalUnits += count;
@@ -359,7 +408,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                     Text(
                       'Total Units (${DateFormat('MMM dd, yyyy').format(invoice.periodStart)} - '
                       '${DateFormat('MMM dd, yyyy').format(invoice.periodEnd)}): $totalUnits',
-                      style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w700),
+                      style: AppTypography.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     LayoutBuilder(
@@ -367,7 +418,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                         return SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: ConstrainedBox(
-                            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                            constraints: BoxConstraints(
+                              minWidth: constraints.maxWidth,
+                            ),
                             child: DataTable(
                               columns: const [
                                 DataColumn(label: Text('Date')),
@@ -405,7 +458,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           children: [
             Text(
               'Payments',
-              style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w800),
+              style: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: 12),
             if (payments.isEmpty)
@@ -448,7 +503,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           Expanded(
             child: Text(
               label,
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           Text(value, style: valueStyle ?? AppTypography.bodyMedium),
@@ -463,4 +520,3 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     super.dispose();
   }
 }
-
