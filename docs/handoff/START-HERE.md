@@ -4,7 +4,7 @@
 what the owner has decided, how to work here, and what the live bugs are — plus the two runbooks
 that have no other home (credentials, and the streaming fault history).
 
-**Last updated:** 2026-09-30 (items 9, 10, 11 done; the 4th pinch-zoom cause fixed: the white band).
+**Last updated:** 2026-09-30 (items 9, 10, 11 done; the 4th pinch-zoom cause fixed: the white band; admin-host caching + per-build bootstrap URL stamping).
 
 **The plan lives in `docs/handoff/MASTER-TASK-LIST.md`** — the single ordered queue. This file is
 how you work; that file is what to do.
@@ -21,7 +21,7 @@ how you work; that file is what to do.
 
 **Copy-error status (item 7, for reference):** done for Factory admin, Sub-Admin, Super Admin, Reseller, Cricket, **Store Keeper** and the **Bus** panel. **Not yet swept:** the goods/truck panel, and `marketplace_public` / landing error surfaces — check them when you pass those panels.
 
-**Do NOT re-do these (all landed):** #9–#13 marketplace work · the error-banner sweep (items 5–8) · the Sub-Admin full edit form · `subadmin.traceodd.com` vhost · the error-copy fix · A1/A3 · B1 · C0/C1/C2/C2b/C3 · the provider split · the `/sub-admin/*` guard · **Group Vertical #10 recorded** (spec Module 20 + plan item 49) · **item 9** (the factory plan-limits endpoint + the real-plan gating of the Transport tab — `3e1fe3d2`) · **item 10** (the deleted-service-worker reference: `--pwa-strategy none` for admin/reseller/driver + the guard in `version-web-build.sh` — `352e53a4`) · **item 11** (the analytics 500: the pgsql-unsupported `PDO::ATTR_CONNECTION_STATUS` + its regression test — `d309d9ac`).
+**Do NOT re-do these (all landed):** #9–#13 marketplace work · the error-banner sweep (items 5–8) · the Sub-Admin full edit form · `subadmin.traceodd.com` vhost · the error-copy fix · A1/A3 · B1 · C0/C1/C2/C2b/C3 · the provider split · the `/sub-admin/*` guard · **Group Vertical #10 recorded** (spec Module 20 + plan item 49) · **item 9** (the factory plan-limits endpoint + the real-plan gating of the Transport tab — `3e1fe3d2`) · **item 10** (the deleted-service-worker reference: `--pwa-strategy none` for admin/reseller/driver + the guard in `version-web-build.sh` — `352e53a4`) · **item 11** (the analytics 500: the pgsql-unsupported `PDO::ATTR_CONNECTION_STATUS` + its regression test — `d309d9ac`) · **the admin-host `Cache-Control` fix + the per-build bootstrap URL stamp** (`43006e99`, `4506980f`).
 
 ### ⚠️ FIRST TASK — verify the pinch-zoom, and WHY it kept failing
 
