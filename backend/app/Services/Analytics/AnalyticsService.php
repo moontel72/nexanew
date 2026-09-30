@@ -230,7 +230,7 @@ class AnalyticsService
             DB::table('companies')->where('status', 'active')->count() > 0 ? 20 : 0,
             DB::table('base_codes')->whereDate('generated_at', '>=', now()->subDay())->count() > 0 ? 20 : 0,
             $this->redisAvailable() ? 20 : 0,
-            DB::getPdo()->getAttribute(\PDO::ATTR_CONNECTION_STATUS) ? 20 : 0,
+            $this->databaseAvailable() ? 20 : 0,
             now()->diffInHours(DB::table('base_codes')->max('generated_at') ?? now()) < 2 ? 20 : 0,
         ];
         return array_sum($scores);
@@ -239,6 +239,29 @@ class AnalyticsService
     private function redisAvailable(): bool
     {
         try { return $this->cache->isAvailable(); } catch (\Throwable) { return false; }
+    }
+
+    /**
+     * Driver-agnostic connectivity check for the health score.
+     *
+     * WHY THIS EXISTS (MASTER-TASK-LIST.md item 11)
+     * ---------------------------------------------
+     * This used to be `DB::getPdo()->getAttribute(\PDO::ATTR_CONNECTION_STATUS)`.
+     * pdo_pgsql does NOT implement that attribute, so it raised
+     * `PDOException: ... Driver does not support this function` — and because
+     * computeHealthScore() runs on every realtime-dashboard request (systemMetrics
+     * and computeRealtimeDashboard both call it), `GET
+     * /api/v1/admin/analytics/dashboard` answered 500 for everyone. `SELECT 1` is
+     * supported by every driver this app uses.
+     */
+    private function databaseAvailable(): bool
+    {
+        try {
+            DB::select('SELECT 1');
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private function safeAvg($collection, callable $fn): float
