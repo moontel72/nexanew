@@ -18,11 +18,9 @@ how you work; that file is what to do.
 
 **The next work, in this order (the plan's own order — do not re-order):**
 1. **⚠️ FIRST: deep-verify the pinch-zoom fix on BOTH sites** (see below). It has been "fixed" three times and phones still could not zoom, so verify it on a real device *before* touching anything else.
-2. **item 10** — `flutter_service_worker.js` served as `text/html`.
-3. **item 11** — `/api/v1/admin/analytics/dashboard` → 500 (read `laravel.log` first).
-4. **item 12** — the two literal-IP bugs · **item 13** — the CORS log flood.
-5. **item 14** — decide the **location plugin + map SDK** (one decision unblocks Pillar B/C/E **and** items 48/49).
-6. …then continue straight down `MASTER-TASK-LIST.md` §3 (item 9's remainder — the factory plan-limits endpoint + Transport-tab gating — sits inside Stage 1/Stage 2 and is small).
+2. **Then follow `MASTER-TASK-LIST.md` §3 strictly from its own START HERE** — currently **item 9's remainder** (the factory plan-limits endpoint + gating the Transport tab on the real subscription; recorded in item 9), then **item 10** (`flutter_service_worker.js` as `text/html`), **item 11** (the analytics 500 — read `laravel.log` first), **item 12** (the two literal-IP bugs), **item 13** (the CORS log flood), **item 14** (the location-plugin + map-SDK decision — it unblocks Pillar B/C/E **and** items 48/49), and straight down the queue. State the item number you are doing and record the commit hash next to it when it lands.
+
+**Copy-error status (item 7, for reference):** done for Factory admin, Sub-Admin, Super Admin, Reseller, Cricket, **Store Keeper** and the **Bus** panel. **Not yet swept:** the goods/truck panel, and `marketplace_public` / landing error surfaces — check them when you pass those panels.
 
 **Do NOT re-do these (all landed):** #9–#13 marketplace work · the error-banner sweep (items 5–8) · the Sub-Admin full edit form · `subadmin.traceodd.com` vhost · the error-copy fix · A1/A3 · B1 · C0/C1/C2/C2b/C3 · the provider split · the `/sub-admin/*` guard · **Group Vertical #10 recorded** (spec Module 20 + plan item 49).
 
