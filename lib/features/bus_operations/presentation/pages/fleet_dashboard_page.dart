@@ -36,6 +36,7 @@ import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_event.da
 import 'package:trace_odd/shared/models/transport/bus_dimensions.dart';
 import 'package:trace_odd/shared/models/transport/feet_inches.dart';
 import 'package:trace_odd/shared/models/transport/component_registry.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_presenter.dart';
 
 abstract class FleetColors {
   static const bg = Color(0xFF0D1B2A);
@@ -99,11 +100,11 @@ class _FleetDashboardView extends StatelessWidget {
 
         if (state.staffActionError != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            ScaffoldMessenger.of(ctx).showSnackBar(
-              SnackBar(
-                content: Text(state.staffActionError!),
-                backgroundColor: Colors.redAccent,
-              ),
+            // A failure must stay, be copyable and be closable.
+            showStickyError(
+              ctx,
+              state.staffActionError!,
+              source: 'Bus Fleet · Staff action',
             );
             bloc.add(const ClearStaffError());
           });
@@ -1312,8 +1313,12 @@ class _DispatchListPageState extends State<_DispatchListPage> {
                               ),
                               decoration: BoxDecoration(
                                 color: status == 'active'
-                                    ? const Color(0xFF16A34A).withValues(alpha: 0.2)
-                                    : const Color(0xFFF97316).withValues(alpha: 0.2),
+                                    ? const Color(
+                                        0xFF16A34A,
+                                      ).withValues(alpha: 0.2)
+                                    : const Color(
+                                        0xFFF97316,
+                                      ).withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -1456,11 +1461,10 @@ class _DispatchListPageState extends State<_DispatchListPage> {
         _load();
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Delete failed: $e'),
-              backgroundColor: Colors.redAccent,
-            ),
+          showStickyError(
+            context,
+            'Delete failed: $e',
+            source: 'Bus Fleet · Dispatch · DELETE assignment',
           );
         }
       }

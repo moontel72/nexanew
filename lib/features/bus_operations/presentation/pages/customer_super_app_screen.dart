@@ -7,6 +7,7 @@ import 'package:trace_odd/features/bus_operations/presentation/bloc/customer/cus
 import 'package:trace_odd/features/bus_operations/presentation/bloc/customer/customer_event.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/customer/customer_state.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 class CustomerSuperAppScreen extends StatelessWidget {
   const CustomerSuperAppScreen({super.key});
@@ -178,9 +179,15 @@ class _TransitHub extends StatelessWidget {
             ),
           if (status == CustomerStatus.error)
             Center(
-              child: Text(
-                error ?? 'Failed to load',
-                style: const TextStyle(color: Colors.redAccent),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                // Was plain red Text - not selectable, so the failure could never be
+                // reported. The banner is copyable (+ the manual-copy fallback over
+                // plain http://).
+                child: StickyErrorBanner(
+                  message: error ?? 'Failed to load',
+                  source: 'Universal Customer · Bus transit hub',
+                ),
               ),
             ),
           if (status == CustomerStatus.loaded && layouts.isEmpty)

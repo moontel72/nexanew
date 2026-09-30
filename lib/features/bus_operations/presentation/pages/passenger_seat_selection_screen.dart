@@ -17,6 +17,7 @@ import 'package:trace_odd/features/bus_operations/data/services/ticket_vault_ser
 import 'package:trace_odd/features/bus_operations/presentation/bloc/seat_selection/seat_selection_bloc.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/passenger_seat_painter.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/seat_booking_sheet.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_presenter.dart';
 
 class PassengerSeatSelectionScreen extends StatefulWidget {
   final String layoutId;
@@ -477,40 +478,27 @@ class _PassengerSeatSelectionScreenState
   void _onStateChanged(BuildContext context, SeatSelectionState state) {
     if (state.status == SeatSelectionStatus.holdFailed &&
         state.errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(state.errorMessage!),
-          backgroundColor: const Color(0xFFD97706),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
-        ),
+      showStickyError(
+        context,
+        state.errorMessage!,
+        source: 'Bus · Seat selection · hold failed',
       );
     } else if (state.status == SeatSelectionStatus.holdExpired &&
         state.errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(state.errorMessage!),
-          backgroundColor: Colors.red.shade700,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
-        ),
+      showStickyError(
+        context,
+        state.errorMessage!,
+        source: 'Bus · Seat selection · hold expired',
       );
     } else if (state.status == SeatSelectionStatus.bookingSuccess &&
         state.bookingResult != null) {
       _saveAndShowSuccess(state);
     } else if (state.status == SeatSelectionStatus.bookingFailure &&
         state.errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(state.errorMessage!),
-          backgroundColor: Colors.red.shade700,
-          behavior: SnackBarBehavior.floating,
-          action: SnackBarAction(
-            label: 'Dismiss',
-            textColor: Colors.white,
-            onPressed: () {},
-          ),
-        ),
+      showStickyError(
+        context,
+        state.errorMessage!,
+        source: 'Bus · Seat selection · booking failed',
       );
     }
   }
