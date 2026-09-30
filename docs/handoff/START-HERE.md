@@ -4,7 +4,7 @@
 what the owner has decided, how to work here, and what the live bugs are — plus the two runbooks
 that have no other home (credentials, and the streaming fault history).
 
-**Last updated:** 2026-09-30 (items 9–13 done; the 4th pinch-zoom cause fixed: the white band; admin-host caching + per-build bootstrap URL stamping).
+**Last updated:** 2026-09-30 (items 9–13 done; item 14 DECIDED — Mapbox; the 4th pinch-zoom cause fixed: the white band; admin-host caching + per-build bootstrap URL stamping).
 
 **The plan lives in `docs/handoff/MASTER-TASK-LIST.md`** — the single ordered queue. This file is
 how you work; that file is what to do.
@@ -13,11 +13,11 @@ how you work; that file is what to do.
 
 ## 0. ⏭ RESUME HERE — for a fresh chat
 
-**Where the work stopped:** the "errors stay + copy" sweep is finished for every panel the owner has worked on — **items 5, 6, 7, 8 are ✅ done**, and the sweep also closed **Store Keeper** and the **Bus panel** (`fleet_dashboard_page`, `passenger_seat_selection_screen`, `bus_operations/.../customer_super_app_screen.dart`). `MASTER-TASK-LIST.md` §4 has the done-ledger.
+**Where the work stopped:** the "errors stay + copy" sweep is finished for every panel the owner has worked on — **items 5, 6, 7, 8 are ✅ done**, and the sweep also closed **Store Keeper** and the **Bus panel** (`fleet_dashboard_page`, `passenger_seat_selection_screen`, `bus_operations/.../customer_super_app_screen.dart`). Since then the queue's **items 9, 10, 11, 12 and 13 are ✅ done** and **item 14 is ✅ DECIDED (Mapbox)** — see the list below. `MASTER-TASK-LIST.md` §4 has the done-ledger.
 
 **The next work, in this order (the plan's own order — do not re-order):**
 1. **Zoom: DONE and confirmed on a phone** (owner tested a second phone). A fourth cause was then found and fixed — zoomed panning left a growing WHITE band on the right/bottom (`3e1fe3d2`: a `visualViewport` shim + a page background). The served HTML on both hosts now carries all five markers; **re-check the white band on a phone** (see below) and report.
-2. **Then follow `MASTER-TASK-LIST.md` §3 strictly from its own START HERE** — **items 9, 10, 11, 12 and 13 are ✅ done (`3e1fe3d2`, `352e53a4`, `d309d9ac`, `e4fd7193`)**, so the START HERE is now **item 14** (the location-plugin + map-SDK decision — it unblocks Pillar B/C/E **and** items 48/49), then item 15 (the dev-environment `node.exe` rename) and straight down the queue. State the item number you are doing and record the commit hash next to it when it lands.
+2. **Then follow `MASTER-TASK-LIST.md` §3 strictly from its own START HERE** — **items 9–13 are ✅ done (`3e1fe3d2`, `352e53a4`, `d309d9ac`, `e4fd7193`)**, and **item 14 is ✅ DECIDED: Mapbox everywhere** (owner, 2026-09-30) — it now waits only on the owner's Mapbox token (see item 14). The next dev items are **item 15** (the `node.exe` rename — owner's machine) and then **item 16** (B2B's own login page), on down the queue. State the item number you are doing and record the commit hash next to it when it lands.
 
 **Copy-error status (item 7, for reference):** done for Factory admin, Sub-Admin, Super Admin, Reseller, Cricket, **Store Keeper** and the **Bus** panel. **Not yet swept:** the goods/truck panel, and `marketplace_public` / landing error surfaces — check them when you pass those panels.
 
