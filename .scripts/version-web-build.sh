@@ -32,6 +32,26 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Version the BOOTSTRAP URL too.
+#
+# index.html points at `flutter_bootstrap.js?v=1.0.3` — a fixed version, so the URL
+# never changes. The zone's Cloudflare "Browser Cache TTL" rewrites .js responses to
+# `max-age=14400` (measured live on every host in this zone, 2026-09-30), so a
+# returning browser can reuse an OLD bootstrap for four hours — and the bootstrap is
+# what carries the versioned bundle name, so that browser keeps running the old
+# build. index.html itself is served no-cache, so stamping the URL here is picked up
+# immediately.
+# ─────────────────────────────────────────────────────────────────────────────
+if [ -f "$DIR/index.html" ]; then
+  sed -i -E "s|flutter_bootstrap\.js\?v=[^\"]*|flutter_bootstrap.js?v=$STAMP|g" "$DIR/index.html"
+  if grep -q "flutter_bootstrap\.js?v=$STAMP" "$DIR/index.html"; then
+    echo "✅ Versioned bootstrap URL: ?v=$STAMP"
+  else
+    echo "⚠ No 'flutter_bootstrap.js?v=' found in $DIR/index.html — bootstrap URL not versioned."
+  fi
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
 # No build may tell the loader to register a service worker that is not shipped.
 # (MASTER-TASK-LIST.md item 10.)
 #
