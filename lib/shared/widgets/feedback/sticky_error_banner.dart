@@ -24,8 +24,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:trace_odd/core/utils/clipboard_guard.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
-import 'package:trace_odd/shared/widgets/feedback/copyable_error_surface.dart';
 
 class StickyErrorBanner extends StatefulWidget {
   /// The message to show. If it comes from an exception, prefer `fromError` below.

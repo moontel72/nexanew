@@ -24,28 +24,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:trace_odd/core/utils/clipboard_guard.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
 /// Last error seen by the global handlers, so the panel can show a stack even
 /// when `ErrorWidget.builder` is handed only the exception.
 FlutterErrorDetails? lastUncaughtErrorDetails;
-
-/// True when the browser Clipboard API cannot be trusted.
-///
-/// The Clipboard API only exists in a SECURE context. On the plain `http://` raw
-/// IP used for testing, `navigator.clipboard` is undefined — and Flutter's web
-/// implementation does **not** throw in that case, it just does nothing. So the
-/// old try/catch fallback never fired: the button looked like it had copied while
-/// the clipboard stayed empty (owner, 2026-09-29: "neither before nor now does it
-/// copy"). Detect the insecure context up front instead of waiting for an
-/// exception that never comes.
-bool get clipboardLikelyUnavailable {
-  if (!kIsWeb) return false;
-  final base = Uri.base;
-  if (base.scheme == 'https') return false;
-  final host = base.host;
-  return host != 'localhost' && host != '127.0.0.1';
-}
 
 /// The text the Copy action puts on the clipboard.
 String _reportText(Object error, {StackTrace? stack, String? app}) {

@@ -10,6 +10,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:trace_odd/core/config/environment.dart';
 import 'package:trace_odd/features/nexa_admin/data/repositories/site_content_repository.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 class SiteContentScreen extends StatefulWidget {
   const SiteContentScreen({super.key, this.inShell = false});
@@ -36,6 +37,10 @@ class _SiteContentScreenState extends State<SiteContentScreen> {
   bool _saving = false;
   bool _uploading = false;
   String? _imageUrl;
+
+  /// A failed load/save/delete — copyable banner (see `_snack`).
+  String? _error;
+  String? _dismissedError;
 
   bool get _isLanding => _selectedSlug == 'landing';
 
@@ -234,11 +239,14 @@ class _SiteContentScreenState extends State<SiteContentScreen> {
 
   void _snack(String message, {bool isError = false}) {
     if (!mounted) return;
+    // A FAILURE must stay, be copyable and be closable — not a SnackBar that
+    // vanishes. Success/info messages keep the toast.
+    if (isError) {
+      setState(() => _error = message);
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red.shade700 : null,
-      ),
+      SnackBar(content: Text(message)),
     );
   }
 
@@ -255,12 +263,28 @@ class _SiteContentScreenState extends State<SiteContentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(width: 300, child: _buildBlockList()),
-        const VerticalDivider(width: 1),
-        Expanded(child: _buildEditor()),
+        if (_error != null && _error != _dismissedError)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: StickyErrorBanner(
+              message: _error!,
+              source: 'Super Admin · Site Content',
+              onDismiss: () => setState(() => _dismissedError = _error),
+            ),
+          ),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(width: 300, child: _buildBlockList()),
+              const VerticalDivider(width: 1),
+              Expanded(child: _buildEditor()),
+            ],
+          ),
+        ),
       ],
     );
   }

@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:trace_odd/core/utils/clipboard_guard.dart';
 import 'app_exceptions.dart';
 import 'error_logger.dart';
 
@@ -143,14 +144,46 @@ class ErrorHandler {
         actions: [
           TextButton(
             onPressed: () async {
-              await Clipboard.setData(
-                ClipboardData(text: copyText ?? '$title\n\n$message'),
-              );
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Error copied to clipboard')),
-                );
+              final report = copyText ?? '$title\n\n$message';
+              // Over plain http:// the clipboard API does not exist — and it does
+              // NOT throw, it silently does nothing, so a try/catch is not enough
+              // (owner, 2026-09-29: "neither before nor now does it copy"). Skip it
+              // and show the text pre-selected instead.
+              if (!clipboardLikelyUnavailable) {
+                try {
+                  await Clipboard.setData(ClipboardData(text: report));
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Error copied to clipboard')),
+                    );
+                  }
+                  return;
+                } catch (_) {
+                  // Fall through to the manual path.
+                }
               }
+              if (!context.mounted) return;
+              await showDialog<void>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Copy this manually'),
+                  content: SizedBox(
+                    width: 560,
+                    child: SingleChildScrollView(
+                      child: SelectableText(
+                        report,
+                        style: const TextStyle(fontSize: 12.5),
+                      ),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text('Close'),
+                    ),
+                  ],
+                ),
+              );
             },
             child: const Text('Copy Error'),
           ),
