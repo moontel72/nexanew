@@ -107,7 +107,13 @@ jobs:
 
       - name: Build Admin Panel (main.dart)
         run: |
-          flutter build web --release
+          # --pwa-strategy none (MASTER-TASK-LIST.md item 10): without it Flutter
+          # generated flutter_service_worker.js AND baked its version into
+          # flutter_bootstrap.js, while the `rm -f` below deleted the file - so every
+          # visitor's loader registered a file that 404s as text/html. This panel
+          # ships its own worker (web/sw.js, registered by the template) instead.
+          # version-web-build.sh now fails the build if this is ever regressed.
+          flutter build web --release --pwa-strategy none
           rm -f build/web/flutter_service_worker.js
           bash .scripts/version-web-build.sh build/web
           # Admin-branded PWA manifest (name/icons) for installs from this host
@@ -220,7 +226,10 @@ jobs:
 
       - name: Build Reseller App (main_reseller.dart)
         run: |
-          flutter build web --release --target=lib/main_reseller.dart --base-href "/reseller/"
+          # --pwa-strategy none: same as the admin panel (item 10) - the template
+          # registers web/sw.js itself, and Flutter's removed worker must never be
+          # referenced by the loader (version-web-build.sh enforces this).
+          flutter build web --release --target=lib/main_reseller.dart --base-href "/reseller/" --pwa-strategy none
           rm -f build/web/flutter_service_worker.js
           bash .scripts/version-web-build.sh build/web
 
@@ -235,7 +244,10 @@ jobs:
 
       - name: Build Driver App (main_driver.dart)
         run: |
-          flutter build web --release --target=lib/main_driver.dart --base-href "/driver/"
+          # --pwa-strategy none: same as the admin panel (item 10) - the template
+          # registers web/sw.js itself, and Flutter's removed worker must never be
+          # referenced by the loader (version-web-build.sh enforces this).
+          flutter build web --release --target=lib/main_driver.dart --base-href "/driver/" --pwa-strategy none
           rm -f build/web/flutter_service_worker.js
           bash .scripts/version-web-build.sh build/web
 

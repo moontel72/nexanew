@@ -31,4 +31,24 @@ else
   echo "⚠ No main.dart.js found in $DIR — skipping versioning."
 fi
 
+# ─────────────────────────────────────────────────────────────────────────────
+# No build may tell the loader to register a service worker that is not shipped.
+# (MASTER-TASK-LIST.md item 10.)
+#
+# Every panel deletes Flutter's `flutter_service_worker.js` (the panels ship their
+# own worker instead: `web/sw.js`). But a build made with the DEFAULT
+# `--pwa-strategy` still bakes the file's version into `flutter_bootstrap.js`, so
+# the loader registers a file that 404s as `text/html` — a MIME error and no
+# worker at all. `--pwa-strategy none` is the fix; this is the regression guard.
+#
+# `serviceWorkerVersion: "…"` is the CONFIG marker (the loader's library code also
+# mentions the name, but unquoted), so this pattern matches the config only.
+# ─────────────────────────────────────────────────────────────────────────────
+if [ -f "$DIR/flutter_bootstrap.js" ] && grep -qE 'serviceWorkerVersion:[[:space:]]*"' "$DIR/flutter_bootstrap.js"; then
+  echo "❌ $DIR/flutter_bootstrap.js tells the loader to register flutter_service_worker.js,"
+  echo "   but that file is deleted after every build — the registration would 404 as text/html."
+  echo "   Build this target with --pwa-strategy none (see frontend-deploy.yml)."
+  exit 1
+fi
+
 exit 0
