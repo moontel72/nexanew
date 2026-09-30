@@ -10,6 +10,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/bus_config_setup_screen.dart';
 import 'package:trace_odd/features/nexa_admin/data/models/company/bus_company_model.dart';
@@ -39,6 +40,12 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   Company? _company;
   Map<String, dynamic>? _profile;
   String? _error;
+
+  /// A failed ACTION (link/unlink request, etc.). Kept separate from `_error`, which
+  /// is the full-page 'cannot load the company' failure — an action failure must not
+  /// blank the whole dashboard.
+  String? _actionError;
+  String? _dismissedActionError;
   bool _isLoading = true;
   String _currentPage = 'dashboard';
   bool _sidebarOpen = true;
@@ -161,7 +168,12 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
             children: [
               const Icon(Icons.error_outline, size: 48, color: Colors.red),
               const SizedBox(height: 12),
-              Text(_error!),
+              // Copyable, not just visible (was plain Text).
+              StickyErrorBanner(
+                message: _error!,
+                source: 'Super Admin · Bus Fleet · load company',
+                onDismiss: _loadAll,
+              ),
               const SizedBox(height: 12),
               ElevatedButton(onPressed: _loadAll, child: const Text('Retry')),
             ],
@@ -173,7 +185,26 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
       body: Row(
         children: [
           if (_sidebarOpen || isWide) _sidebar(isWide),
-          Expanded(child: _mainContent()),
+          Expanded(
+            child: Column(
+              children: [
+                // An action failure stays on screen, copyable, without hiding the
+                // dashboard (the full-page error above is for a failed company load).
+                if (_actionError != null &&
+                    _actionError != _dismissedActionError)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: StickyErrorBanner(
+                      message: _actionError!,
+                      source: 'Super Admin · Bus Fleet · action',
+                      onDismiss: () =>
+                          setState(() => _dismissedActionError = _actionError),
+                    ),
+                  ),
+                Expanded(child: _mainContent()),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -608,7 +639,10 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 4,
+              ),
             ],
           ),
           child: Row(
@@ -1783,6 +1817,14 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
 
   void _snackBar(String msg, Color bg) {
     if (!mounted) return;
+    // Red is this screen's error colour (green = success, orange = info). A FAILURE
+    // must stay, be copyable and be closable — not a SnackBar that vanishes after
+    // 4 seconds. Every failure call site already passes `Colors.red`, so routing it
+    // here fixes them all at once.
+    if (bg == Colors.red) {
+      setState(() => _actionError = msg);
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
@@ -2032,6 +2074,18 @@ class _FleetListViewState extends State<_FleetListView> {
   List<Map<String, dynamic>> _items = [];
   bool _loading = true;
   String? _error;
+  String? _errorSource;
+  String? _dismissedError;
+
+  /// Record a failure for the banner (see `StickyErrorBanner`).
+  void _fail(Object e, String source) {
+    if (!mounted) return;
+    setState(() {
+      _error = e.toString();
+      _errorSource = source;
+    });
+  }
+
   int _total = 0;
 
   @override
@@ -2184,13 +2238,7 @@ class _FleetListViewState extends State<_FleetListView> {
           ),
         );
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+      _fail(e, 'Super Admin · Fleet ${widget.type} · POST');
     }
   }
 
@@ -2285,13 +2333,7 @@ class _FleetListViewState extends State<_FleetListView> {
           ),
         );
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+      _fail(e, 'Super Admin · Fleet ${widget.type} · PUT');
     }
   }
 
@@ -2327,13 +2369,7 @@ class _FleetListViewState extends State<_FleetListView> {
           ),
         );
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+      _fail(e, 'Super Admin · Fleet ${widget.type} · DELETE');
     }
   }
 
@@ -2367,13 +2403,22 @@ class _FleetListViewState extends State<_FleetListView> {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null)
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(_error!),
-            const SizedBox(height: 12),
-            ElevatedButton(onPressed: _load, child: const Text('Retry')),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Copyable, not just visible (was plain Text).
+              if (_error != _dismissedError)
+                StickyErrorBanner(
+                  message: _error!,
+                  source: _errorSource,
+                  onDismiss: () => setState(() => _dismissedError = _error),
+                ),
+              const SizedBox(height: 12),
+              ElevatedButton(onPressed: _load, child: const Text('Retry')),
+            ],
+          ),
         ),
       );
 
@@ -2599,6 +2644,17 @@ class _LayoutListViewState extends State<_LayoutListView> {
   List<Map<String, dynamic>> _layouts = [];
   bool _loading = true;
   String? _error;
+  String? _errorSource;
+  String? _dismissedError;
+
+  /// Record a failure for the banner (see `StickyErrorBanner`).
+  void _fail(Object e, String source) {
+    if (!mounted) return;
+    setState(() {
+      _error = e.toString();
+      _errorSource = source;
+    });
+  }
 
   @override
   void initState() {
@@ -2741,13 +2797,22 @@ class _LayoutListViewState extends State<_LayoutListView> {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null)
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(_error!),
-            const SizedBox(height: 12),
-            ElevatedButton(onPressed: _load, child: const Text('Retry')),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Copyable, not just visible (was plain Text).
+              if (_error != _dismissedError)
+                StickyErrorBanner(
+                  message: _error!,
+                  source: _errorSource,
+                  onDismiss: () => setState(() => _dismissedError = _error),
+                ),
+              const SizedBox(height: 12),
+              ElevatedButton(onPressed: _load, child: const Text('Retry')),
+            ],
+          ),
         ),
       );
 
@@ -2967,13 +3032,10 @@ class _LayoutListViewState extends State<_LayoutListView> {
           ),
         );
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+      _fail(
+        e,
+        'Super Admin · Bus Fleet Layouts · POST /bus-fleet/absolute-layouts/{id}/publish',
+      );
     }
   }
 
@@ -3009,13 +3071,10 @@ class _LayoutListViewState extends State<_LayoutListView> {
           ),
         );
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+      _fail(
+        e,
+        'Super Admin · Bus Fleet Layouts · DELETE /bus-fleet/absolute-layouts/{id}',
+      );
     }
   }
 }
