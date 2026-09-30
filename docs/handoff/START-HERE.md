@@ -4,8 +4,7 @@
 what the owner has decided, how to work here, and what the live bugs are — plus the two runbooks
 that have no other home (credentials, and the streaming fault history).
 
-**Last updated:** 2026-09-29 (handoff folder consolidated 12 files → 2; marketplace live;
-Sub-Admin full edit done; error-banner sweep in progress).
+**Last updated:** 2026-09-30 (item 9 done — factory plan-limits endpoint + real-plan gating; the 4th pinch-zoom cause fixed: the white band).
 
 **The plan lives in `docs/handoff/MASTER-TASK-LIST.md`** — the single ordered queue. This file is
 how you work; that file is what to do.
@@ -17,12 +16,12 @@ how you work; that file is what to do.
 **Where the work stopped:** the "errors stay + copy" sweep is finished for every panel the owner has worked on — **items 5, 6, 7, 8 are ✅ done**, and the sweep also closed **Store Keeper** and the **Bus panel** (`fleet_dashboard_page`, `passenger_seat_selection_screen`, `bus_operations/.../customer_super_app_screen.dart`). `MASTER-TASK-LIST.md` §4 has the done-ledger.
 
 **The next work, in this order (the plan's own order — do not re-order):**
-1. **⚠️ FIRST: deep-verify the pinch-zoom fix on BOTH sites** (see below). It has been "fixed" three times and phones still could not zoom, so verify it on a real device *before* touching anything else.
-2. **Then follow `MASTER-TASK-LIST.md` §3 strictly from its own START HERE** — currently **item 9's remainder** (the factory plan-limits endpoint + gating the Transport tab on the real subscription; recorded in item 9), then **item 10** (`flutter_service_worker.js` as `text/html`), **item 11** (the analytics 500 — read `laravel.log` first), **item 12** (the two literal-IP bugs), **item 13** (the CORS log flood), **item 14** (the location-plugin + map-SDK decision — it unblocks Pillar B/C/E **and** items 48/49), and straight down the queue. State the item number you are doing and record the commit hash next to it when it lands.
+1. **Zoom: DONE and confirmed on a phone** (owner tested a second phone). A fourth cause was then found and fixed — zoomed panning left a growing WHITE band on the right/bottom (`3e1fe3d2`: a `visualViewport` shim + a page background). The served HTML on both hosts now carries all five markers; **re-check the white band on a phone** (see below) and report.
+2. **Then follow `MASTER-TASK-LIST.md` §3 strictly from its own START HERE** — **item 9 is ✅ done (`3e1fe3d2`)**, so the START HERE is now **item 10** (`flutter_service_worker.js` as `text/html`), then **item 11** (the analytics 500 — read `laravel.log` first), **item 12** (the two literal-IP bugs), **item 13** (the CORS log flood), **item 14** (the location-plugin + map-SDK decision — it unblocks Pillar B/C/E **and** items 48/49), and straight down the queue. State the item number you are doing and record the commit hash next to it when it lands.
 
 **Copy-error status (item 7, for reference):** done for Factory admin, Sub-Admin, Super Admin, Reseller, Cricket, **Store Keeper** and the **Bus** panel. **Not yet swept:** the goods/truck panel, and `marketplace_public` / landing error surfaces — check them when you pass those panels.
 
-**Do NOT re-do these (all landed):** #9–#13 marketplace work · the error-banner sweep (items 5–8) · the Sub-Admin full edit form · `subadmin.traceodd.com` vhost · the error-copy fix · A1/A3 · B1 · C0/C1/C2/C2b/C3 · the provider split · the `/sub-admin/*` guard · **Group Vertical #10 recorded** (spec Module 20 + plan item 49).
+**Do NOT re-do these (all landed):** #9–#13 marketplace work · the error-banner sweep (items 5–8) · the Sub-Admin full edit form · `subadmin.traceodd.com` vhost · the error-copy fix · A1/A3 · B1 · C0/C1/C2/C2b/C3 · the provider split · the `/sub-admin/*` guard · **Group Vertical #10 recorded** (spec Module 20 + plan item 49) · **item 9** (the factory plan-limits endpoint + the real-plan gating of the Transport tab — `3e1fe3d2`).
 
 ### ⚠️ FIRST TASK — verify the pinch-zoom, and WHY it kept failing
 
