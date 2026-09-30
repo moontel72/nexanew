@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:trace_odd/core/config/api_config.dart';
 import 'package:trace_odd/features/bus_operations/data/services/bus_tracking_models.dart';
 import 'package:trace_odd/features/bus_operations/data/services/jwt_encoder.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/bus_tracking/bus_tracking_bloc.dart';
@@ -45,7 +46,11 @@ class _LiveBusTrackingScreenState extends State<LiveBusTrackingScreen>
       ConnectTracking(
         widget.tripId,
         busId: widget.busId,
-        baseUrl: 'http://135.181.46.27/api/v1',
+        // Resolved at runtime (same-origin on web). It used to be the literal
+        // 'http://135.181.46.27/api/v1': the socket URL is derived from this by
+        // swapping http→ws, so on an HTTPS panel the browser blocks it as mixed
+        // content and live tracking could never connect (MASTER-TASK-LIST.md item 12).
+        baseUrl: ApiConfig.apiBaseUrl,
         authToken: token,
       ),
     );

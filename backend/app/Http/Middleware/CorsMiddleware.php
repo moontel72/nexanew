@@ -11,42 +11,29 @@ class CorsMiddleware
 {
     /**
      * Handle an incoming request.
+     *
+     * LOGGING RULE (MASTER-TASK-LIST.md item 13)
+     * ------------------------------------------
+     * This used to emit three INFO lines for EVERY request — "CORS Request" (with a
+     * full header dump), "CORS Response" and "CORS Headers Added" — plus two more for
+     * each preflight. Healthy traffic therefore buried the real errors in
+     * laravel.log and grew the disk, while telling nobody anything: a normal CORS
+     * exchange is not news. A successful exchange is now SILENT. Only a rejected
+     * origin is logged (warning), because refusing a client is the one case that
+     * needs a human.
      */
     public function handle(Request $request, Closure $next): Response
     {
         $origin = $request->headers->get("Origin");
-        $allowedOrigin = $this->resolveAllowedOrigin($origin);
-
-        // Log request for debugging
-        Log::info("CORS Request", [
-            "method" => $request->getMethod(),
-            "path" => $request->path(),
-            "full_url" => $request->fullUrl(),
-            "origin" => $origin,
-            "allowed_origin" => $allowedOrigin,
-            "user_agent" => $request->userAgent(),
-            "headers" => $request->headers->all(),
-        ]);
+        $allowedOrigin = $this->resolveAllowedOrigin($request, $origin);
 
         // Handle preflight requests
         if ($request->getMethod() === "OPTIONS") {
-            Log::info("CORS Preflight Request Handled", [
-                "path" => $request->path(),
-                "origin" => $origin,
-            ]);
             return $this->createPreflightResponse($request, $allowedOrigin);
         }
 
         // Handle actual request
         $response = $next($request);
-
-        // Log response
-        Log::info("CORS Response", [
-            "method" => $request->getMethod(),
-            "path" => $request->path(),
-            "status" => $response->getStatusCode(),
-            "origin" => $origin,
-        ]);
 
         return $this->addCorsHeaders($request, $response, $allowedOrigin);
     }
@@ -54,8 +41,10 @@ class CorsMiddleware
     /**
      * Resolve allowed origin based on request origin.
      */
-    private function resolveAllowedOrigin(?string $origin): ?string
-    {
+    private function resolveAllowedOrigin(
+        Request $request,
+        ?string $origin,
+    ): ?string {
         if (!$origin) {
             return null;
         }
@@ -93,9 +82,11 @@ class CorsMiddleware
             return $origin;
         }
 
-        // Log rejected origins for debugging
+        // A rejected origin is worth exactly one log line — the path is what makes
+        // it actionable (which endpoint was refused for whom).
         Log::warning("CORS Origin Rejected", [
             "origin" => $origin,
+            "path" => $request->path(),
             "pattern" =>
                 '#^https?://(localhost|127\.0\.0\.1|135\.181\.46\.27)(:\d+)?$#',
         ]);
@@ -139,12 +130,7 @@ class CorsMiddleware
             "Authorization, Content-Type, X-Total-Count, X-RateLimit-Limit, X-RateLimit-Remaining, Content-Disposition"
         );
 
-        // Log preflight response headers for debugging
-        Log::info("CORS Preflight Response Headers", [
-            "headers" => $response->headers->all(),
-            "path" => $request->path(),
-        ]);
-
+        // NOTE: no success log here on purpose — see the logging rule in handle().
         return $response;
     }
 
@@ -191,24 +177,7 @@ class CorsMiddleware
             );
         }
 
-        // Log CORS headers for debugging
-        Log::info("CORS Headers Added", [
-            "method" => $request->getMethod(),
-            "path" => $request->path(),
-            "status" => $response->getStatusCode(),
-            "cors_headers" => [
-                "Access-Control-Allow-Origin" => $response->headers->get(
-                    "Access-Control-Allow-Origin",
-                ),
-                "Access-Control-Allow-Methods" => $response->headers->get(
-                    "Access-Control-Allow-Methods",
-                ),
-                "Access-Control-Allow-Headers" => $response->headers->get(
-                    "Access-Control-Allow-Headers",
-                ),
-            ],
-        ]);
-
+        // NOTE: no success log here on purpose — see the logging rule in handle().
         return $response;
     }
 }

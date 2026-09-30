@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:trace_odd/core/config/api_config.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/reseller_management/reseller_management_bloc.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
@@ -462,8 +463,12 @@ class _ResellerManagementListScreenState
   }
 
   void _copyEcomLink(String id) {
-    const link = 'http://135.181.46.27/reseller/login';
-    Clipboard.setData(const ClipboardData(text: link));
+    // The reseller app is served beside this panel at /reseller/, so the link must
+    // follow whatever origin the panel is actually on. It used to be the literal
+    // 'http://135.181.46.27/reseller/login', which is wrong over HTTPS (and not even
+    // this panel's host) — MASTER-TASK-LIST.md item 12.
+    final link = '${ApiConfig.baseUrl}/reseller/login';
+    Clipboard.setData(ClipboardData(text: link));
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(
