@@ -1,5 +1,4 @@
 ﻿import 'package:flutter/material.dart' hide SearchBar;
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +7,7 @@ import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 import 'package:trace_odd/shared/widgets/empty_states/empty_state_widget.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_presenter.dart';
 import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 
 class DriversListScreen extends StatefulWidget {
@@ -19,13 +19,6 @@ class DriversListScreen extends StatefulWidget {
 class _DriversListScreenState extends State<DriversListScreen> {
   final _searchController = TextEditingController();
   String? _statusFilter;
-
-  /// Puts the error on the clipboard so the operator can paste it into a bug report.
-  ///
-  /// Not awaited on purpose: the copy needs no follow-up, and a SnackBarAction callback is not async.
-  void _copyError(String message) {
-    Clipboard.setData(ClipboardData(text: message));
-  }
 
   @override
   void initState() {
@@ -149,20 +142,12 @@ class _DriversListScreenState extends State<DriversListScreen> {
             }
             if (state.status == DriversStatus.error &&
                 state.errorMessage != null) {
-              // STAYS on screen instead of flashing for a second. This is the stopgap for the 'stay'
-              // half of the owner's request; the shared StickyErrorBanner (which also adds Copy + X)
-              // replaces it when this screen is converted. See docs: StickyErrorBanner.
-              ScaffoldMessenger.of(this.context).showSnackBar(
-                SnackBar(
-                  content: Text(state.errorMessage!),
-                  backgroundColor: AppColors.error,
-                  duration: const Duration(days: 1),
-                  action: SnackBarAction(
-                    label: 'Copy',
-                    textColor: Colors.white,
-                    onPressed: () => _copyError(state.errorMessage!),
-                  ),
-                ),
+              // The shared StickyErrorBanner (sticky + Copy + X), not the old
+              // day-long SnackBar stopgap. Copy also works over plain http:// there.
+              showStickyError(
+                this.context,
+                state.errorMessage!,
+                source: 'Factory · Drivers · update',
               );
             }
           },
@@ -386,17 +371,11 @@ class _DriversListScreenState extends State<DriversListScreen> {
           if (state.status == DriversStatus.error &&
               state.errorMessage != null) {
             // STAYS on screen - see the note on the other error handler in this file.
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.errorMessage!),
-                backgroundColor: AppColors.error,
-                duration: const Duration(days: 1),
-                action: SnackBarAction(
-                  label: 'Copy',
-                  textColor: Colors.white,
-                  onPressed: () => _copyError(state.errorMessage!),
-                ),
-              ),
+            // Same shared banner as the edit dialog above.
+            showStickyError(
+              context,
+              state.errorMessage!,
+              source: 'Factory · Drivers · action',
             );
           }
         },
