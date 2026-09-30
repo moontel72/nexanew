@@ -1965,6 +1965,30 @@
 - All payouts through the **§10.5 idempotent split engine** — **no second ledger**.
 - **Built:** Not started.
 
+### MODULE 20 / GROUP VERTICAL #10 — TRACE CARE & UNIFIED SERVICES GRID
+**Domain:** Healthcare · Legal · General services · Technicians · Civic (waste) · **Server:** its **OWN dedicated cluster + separate data vault** (health records + token traffic must never load the B2B market server)
+**Status:** ⏳ planned — **item 49** in `docs/handoff/MASTER-TASK-LIST.md` §3. Full module spec, the schema/reuse map and the RBAC/EHR state machine are in `MASTER-TASK-LIST.md` §8.
+
+> The owner's decision (2026-09-30): the service verticals are **one group**, not scattered panels. Provider onboarding happens on **`market.traceodd.com`** under a single **`service_provider`** role (doctor · lawyer · technician · waste collector · salon/consultant), and that role is **100% LOCKED** from wholesaler / factory / reseller catalogs and all B2B trading data. The consumer side stays in the **Universal Customer App** (B2C).
+
+#### 20A — Medical Care & Patient EHR (strict permission matrix)
+- **EHR upload lock:** a patient can NEVER upload a record, X-Ray or test themselves — only a **verified degree-holder doctor** can open the upload/consent gate.
+- **History immutability:** once a doctor writes it (with consent), only **another verified doctor** may edit/delete it. The patient cannot.
+- **Token & appointment:** patient picks department → doctor → date → time slot → ticket/token number, from the patient app.
+
+#### 20B — Unified Token / Appointment Engine (one core, many sectors)
+- ONE engine for doctor, lawyer, salon, consultant and general services.
+- Mode A (medical: + EHR lock, consent) · Mode B (legal: + case-document vault) · Mode C (general: slot/token only).
+
+#### 20C — Technicians & Custom Skill Open Entry
+- Free-text `skill_title` + 100-character description beside the fixed dropdowns; the typed title becomes an auto category/tag in the Universal App.
+
+#### 20D — Waste Management & Civic Grid
+- Consumer sends a request with a garbage photo + rate; on accept it auto-drops from the list (the freight-bid matcher logic). Collector broadcasts a street/time slot; nearby followers get a map + alert.
+
+#### 20E — Isolation & Data Vault
+- All providers are `service_provider` under the B2B gateway; the dedicated cluster holds EHR + tokens, scoped by its own API prefix and nginx 403 (same LOCK pattern as every other panel).
+
 ## 4. CROSS-CUTTING ARCHITECTURAL CONCERNS (12A–12O)
 
 #### 15F — Passenger Terminal NFC Check-In (Hardware Gateway)
