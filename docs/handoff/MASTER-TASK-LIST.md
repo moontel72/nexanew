@@ -5,7 +5,7 @@ should be done, with what is already finished recorded so nothing is re-done and
 skipped. A **fresh session** reads `START-HERE.md` first, then this file, and **continues from
 the first ⏳ item in §3**.
 
-**Last updated:** 2026-09-30 (item 9 ✅ done — `3e1fe3d2`).
+**Last updated:** 2026-09-30 (items 9 ✅ `3e1fe3d2` and 10 ✅ `352e53a4` done).
 
 **Consolidated on 2026-09-29 — this file now owns the material that used to live in:**
 `PANEL-SEPARATION-PLAN.md` · `PANEL-SEPARATION-RECOMMENDATIONS.md` · `GROUP-INCHARGE-MODEL.md` ·
@@ -112,8 +112,8 @@ Old item numbers from the previous `MASTER-TASK-LIST.md` are given in brackets w
 
 | # | Task | Notes |
 |---|---|---|
-| **10** | `flutter_service_worker.js` served as `text/html` ⏳ **[START HERE (dev)]** [old #25] | nginx falls through to `index.html`, so the file is missing from the deployed dir (or its `location` block is absent). Cosmetic but it disables Flutter's own cache-busting. Check the deployed bundle + `.nginx/*.conf` |
-| **11** | `GET /api/v1/admin/analytics/dashboard` → **500** ⏳ [old #26] | Pre-existing `AnalyticsService` (Module 1D). Get the real exception from `laravel.log` first. Prime suspect: the pgsql-unsupported `PDO::ATTR_CONNECTION_STATUS` at `AnalyticsService.php:233`; second: `base_codes.generated_at` |
+| **10** | `flutter_service_worker.js` served as `text/html` ✅ **done (352e53a4)** [old #25] | **Diagnosis (live):** the file is genuinely absent — a clean **404**, not a fall-through to `index.html` (so nginx was never the problem), and nothing in `index.html` references it. The reference lived in the generated **`flutter_bootstrap.js`**: the **admin, reseller and driver** builds used Flutter's DEFAULT `--pwa-strategy`, so the bootstrap carried `serviceWorkerVersion: "…"` and told the loader to register `flutter_service_worker.js` — which the next build line (`rm -f`) deletes. Verified against the live admin panel: its `flutter_bootstrap.js` contained `serviceWorkerVersion: "3115247453"`, so every visitor got an unsupported-MIME-type error and no worker at all. **Fix:** those three targets now build with `--pwa-strategy none` (like the other six); the panels' own `web/sw.js` (registered by the template) is the only worker. **Regression guard:** `.scripts/version-web-build.sh` (runs after every build) now fails the build if any `flutter_bootstrap.js` still carries the `serviceWorkerVersion` config. `.nginx/*.conf` needed no change |
+| **11** | `GET /api/v1/admin/analytics/dashboard` → **500** ⏳ **[START HERE (dev)]** [old #26] | Pre-existing `AnalyticsService` (Module 1D). Get the real exception from `laravel.log` first. Prime suspect: the pgsql-unsupported `PDO::ATTR_CONNECTION_STATUS` at `AnalyticsService.php:233`; second: `base_codes.generated_at` |
 | **12** | Two remaining **literal-IP** bugs ⏳ [old #27] | `live_bus_tracking_screen.dart:48` and the reseller link copy in `reseller_management_list_screen.dart` |
 | **13** | **Log flood** ⏳ [old #28] | The CORS logger writes 3 INFO lines per request, hiding real errors and growing the disk |
 | **14** | **⭐ Decide the location plugin + map SDK** ⏳ | **One decision.** No map SDK, no API key and no "nearby" radius query exist anywhere today. This single choice unblocks **Pillar B** (velocity check), **Pillar C** (real bus telemetry), **Pillar E** (IoT), and **Module 19** (nearby workers). Recommended: `google_maps_flutter` + a real PostGIS/Redis-GEO radius query (see §14 appendix §13 note) |
