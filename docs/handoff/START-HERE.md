@@ -14,21 +14,41 @@ how you work; that file is what to do.
 
 ## 0. ⏭ RESUME HERE — for a fresh chat
 
-**Where the work stopped:** the "errors stay + copy" sweep. Items **1–4** of
-`MASTER-TASK-LIST.md` §3 are owner-side (server); **item 5 (Sub-Admin panel screens) is ✅ done** —
-the dashboard's list/form errors, the login screen and the Cricket Manager pages now use
-`StickyErrorBanner`. **The next developer item is item 6 — "Errors stay + Copy — Super Admin
-screens"**, which also picks up `sub_admin_list_screen.dart` + `add_sub_admin_screen.dart`
-(Super-Admin-side, despite the folder). After that: item 7 (other apps), item 8 (drivers list),
-item 9 (dead placeholder buttons).
+**Where the work stopped:** the "errors stay + copy" sweep is finished for every panel the owner has worked on — **items 5, 6, 7, 8 are ✅ done**, and the sweep also closed **Store Keeper** and the **Bus panel** (`fleet_dashboard_page`, `passenger_seat_selection_screen`, `bus_operations/.../customer_super_app_screen.dart`). `MASTER-TASK-LIST.md` §4 has the done-ledger.
 
-**Do NOT re-do these (all landed, all green)** — full ledger with commit hashes in
-`MASTER-TASK-LIST.md` §4:
-the whole marketplace upload flow + the 6 published products · the three panel Marketplace sections
-· the public site `market.traceodd.com` · cart + buying door (cart is built, the **order** is
-parked as item 19) · the 15 Factory-panel error screens · the Sub-Admin full edit form ·
-`subadmin.traceodd.com` vhost · the canonical brand lockup · the error-copy fix ·
-A1/A3 · B1 factory auth split · C0/C1/C2/C2b/C3 · the §15b provider split · the `/sub-admin/*` guard.
+**The next work, in this order (the plan's own order — do not re-order):**
+1. **⚠️ FIRST: deep-verify the pinch-zoom fix on BOTH sites** (see below). It has been "fixed" three times and phones still could not zoom, so verify it on a real device *before* touching anything else.
+2. **item 10** — `flutter_service_worker.js` served as `text/html`.
+3. **item 11** — `/api/v1/admin/analytics/dashboard` → 500 (read `laravel.log` first).
+4. **item 12** — the two literal-IP bugs · **item 13** — the CORS log flood.
+5. **item 14** — decide the **location plugin + map SDK** (one decision unblocks Pillar B/C/E **and** items 48/49).
+6. …then continue straight down `MASTER-TASK-LIST.md` §3 (item 9's remainder — the factory plan-limits endpoint + Transport-tab gating — sits inside Stage 1/Stage 2 and is small).
+
+**Do NOT re-do these (all landed):** #9–#13 marketplace work · the error-banner sweep (items 5–8) · the Sub-Admin full edit form · `subadmin.traceodd.com` vhost · the error-copy fix · A1/A3 · B1 · C0/C1/C2/C2b/C3 · the provider split · the `/sub-admin/*` guard · **Group Vertical #10 recorded** (spec Module 20 + plan item 49).
+
+### ⚠️ FIRST TASK — verify the pinch-zoom, and WHY it kept failing
+
+Owner, 2026-09-30: on a phone `traceodd.com` and `market.traceodd.com` are "stuck" — two-finger pinch does not zoom and the text stays tiny. An earlier agent twice said it was fixed; it was not. **Three separate causes, and a `user-scalable=yes` meta alone fixes none of them:**
+
+1. **No viewport at all** → Flutter's engine injected its own restrictive one (`maximum-scale=1.0, user-scalable=no`). *(fixed: the template declares one now)*
+2. **The engine replaces it at runtime** → a static meta can be overwritten while the app boots, so the file looks right and the phone still will not zoom. *(fixed: a `MutationObserver` keeps re-asserting it)*
+3. **`touch-action: none` on Flutter's canvas** → even with a permissive viewport, the engine owns every gesture, so the browser is not allowed to zoom. *(fixed: a `pinch-zoom`-only override — NOT `pan-x pan-y`, which would steal in-app scrolling)*
+
+**Verify it, don't assume it.** The served file is the only truth (browser cache and Cloudflare can hide a good deploy):
+
+```sh
+# both hosts: the three markers must ALL be present in the SERVED html
+for u in https://traceodd.com/ https://market.traceodd.com/; do
+  echo "== $u"
+  curl -s "$u" | grep -o 'content="width=device-width[^"]*"' | head -1
+  curl -s "$u" | grep -c 'MutationObserver'          # expect >= 1
+  curl -s "$u" | grep -c 'touch-action: pinch-zoom'   # expect >= 1
+done
+```
+
+If a marker is missing, in this order: ① the deploy did not run (check the Actions run) ② **Cloudflare/browser cached the old `index.html`** (the conf sends `no-cache`, but verify with `curl -H 'Cache-Control: no-cache'`) ③ the PWA service worker is serving a cached shell — hard-reload / unregister the SW ④ **an installed PWA** (Add to Home Screen) can ignore zoom even when the page is correct — test in a normal browser tab ⑤ then **test on a real phone** with two fingers, and check whether the app's own scrolling still works (it must).
+
+**Then** report the result; only after zoom is confirmed working move to item 10.
 
 ### The loop (this is the whole workflow)
 
@@ -45,6 +65,14 @@ A1/A3 · B1 factory auth split · C0/C1/C2/C2b/C3 · the §15b provider split ·
    **Wait ~10 minutes and read the result** — red or green. That is faster and more reliable than
    building locally.
 3. **Only if red**, read the log and fix.
+
+**Heavy commands are automatic — never run them locally.** The push itself starts them:
+`frontend-deploy.yml` runs `flutter build web` for every app + rsync + nginx, `deploy.yml` runs
+`migrate`/seeders, `media-engine-build.yml` builds the Rust image, and `tests.yml` runs the tests.
+All of them are already running by the time your push returns, and they report red/green in ~10–12
+minutes. So: **edit → push → read the CI result**. Do not run `flutter build`, `composer install`,
+`cargo build`, or a whole-tree `dart analyze` in the IDE (they take 15–25 minutes here and are the
+reason turns used to time out).
 
 ### Commands: which may run in the IDE, and which may NOT
 

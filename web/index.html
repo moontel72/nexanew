@@ -51,6 +51,28 @@
         <title>Trace Odd</title>
         <link rel="manifest" href="manifest.json" />
 
+        <!-- SECOND, EASIER-TO-MISS CAUSE of "pinch-zoom does nothing" (owner, 2026-09-30).
+
+             Even with a permissive viewport, Flutter's web engine sets
+             `touch-action: none` on its canvas/glass pane so IT owns every gesture —
+             the browser is then not allowed to zoom, no matter what the meta tag
+             says. That is why the viewport-only fix could look correct and still
+             change nothing on a phone.
+
+             `pinch-zoom` (NOT `pan-x pan-y`) is the surgical value: the browser may
+             only handle the two-finger pinch, while single-finger pan/drag still
+             goes to Flutter, so in-app scrolling keeps working.
+             `!important` is needed because the engine writes its value inline. -->
+        <style>
+            html,
+            body,
+            flutter-view,
+            flt-glass-pane,
+            flt-scene-host {
+                touch-action: pinch-zoom !important;
+            }
+        </style>
+
         <!-- Keep the zoomable viewport above (see the comment there).
 
              Flutter's engine may set its own restrictive viewport at runtime; this

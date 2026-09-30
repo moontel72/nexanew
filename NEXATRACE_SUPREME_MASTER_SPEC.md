@@ -1989,6 +1989,18 @@
 #### 20E — Isolation & Data Vault
 - All providers are `service_provider` under the B2B gateway; the dedicated cluster holds EHR + tokens, scoped by its own API prefix and nginx 403 (same LOCK pattern as every other panel).
 
+#### 20F — Recommendations (agent's advice, owner-approved 2026-09-30)
+**Modern touches per sub-area:** EHR in **FHIR-style resource naming** (future hospital integration) · **signed consent** stored with the doctor's verification snapshot · a **video-consult** slot type beside in-person · an **LLM triage** that only *routes* to a department (never diagnoses, never writes to the record) · waste: **route optimization** (TSP ordering of one collector's street slots) · technicians: **SLA + ratings**.
+
+**The B2B / B2C split (do not mix these):**
+| Side | Gets |
+|---|---|
+| **B2B — `market.traceodd.com`** | provider onboarding, degree/approval + **verification queue**, provider dashboard (bookings, fees, payouts), case-document vault, payments/settlement, KYC |
+| **B2C — Universal Customer App** | token + slot booking, doctor/clinic search + map, report view/download **only when the doctor's consent covers it**, link-share tracking, alerts, technician custom-skill category, waste photo + rate request |
+| **Never in the Universal App** | provider registration/verification, catalogs, pricing setup, EHR **writing**, settlement — all B2B |
+
+**Dependency first:** item **14** (map/location decision) + item **35** (Phase 6 request-time enforcement). Without those, the LOCK is only on paper.
+
 ## 4. CROSS-CUTTING ARCHITECTURAL CONCERNS (12A–12O)
 
 #### 15F — Passenger Terminal NFC Check-In (Hardware Gateway)
