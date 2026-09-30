@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
 import 'package:trace_odd/features/cricket/presentation/widgets/cricket_image_resolver.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_presenter.dart';
 
 class MediaManagementPage extends StatefulWidget {
   const MediaManagementPage({super.key});
@@ -33,8 +34,16 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
           _loading = false;
         });
       }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      // Was swallowed: a failed team load looked like 'no teams yet'.
+      if (mounted) {
+        setState(() => _loading = false);
+        showStickyError(
+          context,
+          e.toString().replaceFirst('Exception: ', ''),
+          source: 'Cricket · Media · GET teams',
+        );
+      }
     }
   }
 
@@ -44,13 +53,11 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
       return RepositoryProvider.of<CricketRepository>(context);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Service unavailable — please go back and try again.',
-            ),
-            backgroundColor: Color(0xFFEF4444),
-          ),
+        // A failure must stay and be copyable, not flash and vanish.
+        showStickyError(
+          context,
+          'Service unavailable — please go back and try again.',
+          source: 'Cricket · Media · service',
         );
       }
       return null;
@@ -105,7 +112,9 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
                   const SizedBox(height: 16),
                   Text(
                     'No teams found',
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.5),
+                    ),
                   ),
                 ],
               ),
@@ -193,11 +202,10 @@ class _TeamMediaCard extends StatelessWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed: $e'),
-          backgroundColor: const Color(0xFFEF4444),
-        ),
+      showStickyError(
+        context,
+        'Failed: $e',
+        source: 'Cricket · Media · team logo upload',
       );
     }
   }

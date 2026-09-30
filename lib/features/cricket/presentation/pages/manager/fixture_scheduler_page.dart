@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_presenter.dart';
 
 import '../../../data/models/cricket_models.dart';
 import '../../blocs/fixture/fixture_bloc.dart';
@@ -103,15 +104,23 @@ class FixtureSchedulerPage extends StatelessWidget {
     return BlocListener<FixtureBloc, FixtureState>(
       listener: (context, state) {
         if (state is FixtureNotice && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: state.success
-                  ? const Color(0xFF10B981)
-                  : const Color(0xFFEF4444),
-              duration: Duration(seconds: state.success ? 3 : 10),
-            ),
-          );
+          if (state.success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: const Color(0xFF10B981),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          } else {
+            // A FAILURE must stay, be copyable and be closable — the old red
+            // SnackBar vanished after 10 seconds and could not be copied.
+            showStickyError(
+              context,
+              state.message,
+              source: 'Cricket · Fixture Scheduler',
+            );
+          }
         }
       },
       child: Scaffold(

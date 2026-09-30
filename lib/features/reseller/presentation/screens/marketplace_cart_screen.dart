@@ -11,6 +11,7 @@ import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 import 'package:trace_odd/shared/widgets/empty_states/empty_state_widget.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 class MarketplaceCartScreen extends StatefulWidget {
   const MarketplaceCartScreen({super.key});
@@ -21,6 +22,10 @@ class MarketplaceCartScreen extends StatefulWidget {
 
 class _MarketplaceCartScreenState extends State<MarketplaceCartScreen> {
   String? _placingFactoryId;
+
+  /// A failed order (or an expired session) — copyable banner.
+  String? _error;
+  String? _dismissedError;
 
   // ── Factory name lookup ──────────────────────────────────────────
   String _factoryName(String factoryId) {
@@ -47,9 +52,8 @@ class _MarketplaceCartScreenState extends State<MarketplaceCartScreen> {
     final resellerId = prefs.getString('reseller_current_user_id') ?? '';
 
     if (tenantId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Session expired. Please re-login.')),
-      );
+      // A failure: show it as a copyable banner, not a vanishing SnackBar.
+      setState(() => _error = 'Session expired. Please re-login.');
       return;
     }
 
@@ -139,18 +143,10 @@ class _MarketplaceCartScreenState extends State<MarketplaceCartScreen> {
 
     // Failure
     if (state.status == OrderStatus.failure) {
-      setState(() => _placingFactoryId = null);
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              state.errorMessage ?? 'Order failed. Please try again.',
-            ),
-            backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 4),
-          ),
-        );
+      setState(() {
+        _placingFactoryId = null;
+        _error = state.errorMessage ?? 'Order failed. Please try again.';
+      });
     }
   }
 
@@ -158,61 +154,75 @@ class _MarketplaceCartScreenState extends State<MarketplaceCartScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(title: 'Your Cart', showBackButton: true),
-      body: BlocListener<ResellerOrderBloc, ResellerOrderState>(
-        listener: _listenOrderResult,
-        child: BlocBuilder<ResellerCartBloc, ResellerCartState>(
-          builder: (context, cart) {
-            if (cart.itemsByFactory.isEmpty) {
-              return EmptyState(
-                title: 'Cart is Empty',
-                description:
-                    'You haven\'t added any products yet.\nBrowse factories and add items to your cart.',
-                icon: Icons.shopping_cart_outlined,
-                actionButton: PrimaryButton(
-                  text: 'Go Back to Shopping',
-                  onPressed: () => context.go('/marketplace'),
-                ),
-              );
-            }
+      body: Column(
+        children: [
+          if (_error != null && _error != _dismissedError)
+            Padding(
+              padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 0),
+              child: StickyErrorBanner(
+                message: _error!,
+                source: 'Reseller · Cart · place order',
+                onDismiss: () => setState(() => _dismissedError = _error),
+              ),
+            ),
+          Expanded(
+            child: BlocListener<ResellerOrderBloc, ResellerOrderState>(
+              listener: _listenOrderResult,
+              child: BlocBuilder<ResellerCartBloc, ResellerCartState>(
+                builder: (context, cart) {
+                  if (cart.itemsByFactory.isEmpty) {
+                    return EmptyState(
+                      title: 'Cart is Empty',
+                      description:
+                          'You haven\'t added any products yet.\nBrowse factories and add items to your cart.',
+                      icon: Icons.shopping_cart_outlined,
+                      actionButton: PrimaryButton(
+                        text: 'Go Back to Shopping',
+                        onPressed: () => context.go('/marketplace'),
+                      ),
+                    );
+                  }
 
-            final entries = cart.itemsByFactory.entries.toList();
+                  final entries = cart.itemsByFactory.entries.toList();
 
-            return Column(
-              children: [
-                // ── Summary strip ───────────────────────────────
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 16.w,
-                    vertical: 10.h,
-                  ),
-                  color: AppColors.gray50,
-                  child: Text(
-                    '${cart.itemCount} items • '
-                    'Total: ${cart.totalAmount.toStringAsFixed(0)} PKR',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
+                  return Column(
+                    children: [
+                      // ── Summary strip ───────────────────────────────
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16.w,
+                          vertical: 10.h,
+                        ),
+                        color: AppColors.gray50,
+                        child: Text(
+                          '${cart.itemCount} items • '
+                          'Total: ${cart.totalAmount.toStringAsFixed(0)} PKR',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ),
 
-                // ── Factory groups ──────────────────────────────
-                Expanded(
-                  child: ListView.separated(
-                    padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 100.h),
-                    itemCount: entries.length,
-                    separatorBuilder: (_, __) => SizedBox(height: 14.h),
-                    itemBuilder: (_, i) {
-                      final factoryId = entries[i].key;
-                      final items = entries[i].value;
-                      return _factoryGroup(factoryId, items, cart);
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
+                      // ── Factory groups ──────────────────────────────
+                      Expanded(
+                        child: ListView.separated(
+                          padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 100.h),
+                          itemCount: entries.length,
+                          separatorBuilder: (_, __) => SizedBox(height: 14.h),
+                          itemBuilder: (_, i) {
+                            final factoryId = entries[i].key;
+                            final items = entries[i].value;
+                            return _factoryGroup(factoryId, items, cart);
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
