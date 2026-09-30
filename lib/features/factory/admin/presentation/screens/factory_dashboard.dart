@@ -2,6 +2,9 @@
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/shared/models/subscription/plan_limit_model.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
+import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
+import 'package:trace_odd/features/factory/admin/data/repositories/subscription_repository.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/billing/billing_dashboard_screen.dart';
 
 class FactoryDashboard extends StatefulWidget {
@@ -19,14 +22,67 @@ class FactoryDashboard extends StatefulWidget {
 }
 
 class _FactoryDashboardState extends State<FactoryDashboard> {
+  final SubscriptionRepository _subscriptionRepository =
+      SubscriptionRepository();
+
+  /// The factory's real plan limits. Null while the first fetch is in flight (or
+  /// after it failed), because the plan decides the dashboard's shape now.
+  PlanLimitModel? _limits;
+  bool _loadingLimits = true;
+  String? _limitsError;
+  String? _limitsErrorStack;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLimits();
+  }
+
+  /// Fetch the plan limits that gate this dashboard (MASTER-TASK-LIST.md item 9).
+  ///
+  /// This replaces a hardcoded `const PlanLimitModel(... maxLoadsPerMonth: 5 ...)`
+  /// that made every factory look identically entitled.
+  Future<void> _loadLimits() async {
+    try {
+      final limits = await _subscriptionRepository.getPlanLimits();
+      if (!mounted) return;
+      setState(() {
+        _limits = limits;
+        _loadingLimits = false;
+      });
+    } catch (e, stack) {
+      if (!mounted) return;
+      setState(() {
+        _loadingLimits = false;
+        _limitsError = e.toString();
+        _limitsErrorStack = stack.toString();
+      });
+    }
+  }
+
+  void _retryLoadLimits() {
+    setState(() {
+      _loadingLimits = true;
+      _limitsError = null;
+      _limitsErrorStack = null;
+    });
+    _loadLimits();
+  }
+
   @override
   Widget build(BuildContext context) {
-    const limits = PlanLimitModel(
-      canContactDriversDirectly: true,
-      canContactOwnersDirectly: true,
-      canUseGoodsCompanies: true,
-      maxLoadsPerMonth: 5,
-    );
+    final limits = _limits;
+
+    // Wait for the real limits before drawing tabs: the subscription decides how
+    // many there are, so guessing first would draw the wrong shape — and (before
+    // this change) crash on a tab/view count mismatch for a plan without transport.
+    if (limits == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Factory Dashboard')),
+        body: _buildLimitsGate(),
+      );
+    }
+
     final canAccessTransport = _canAccessTransport(limits);
 
     return DefaultTabController(
@@ -37,6 +93,39 @@ class _FactoryDashboardState extends State<FactoryDashboard> {
           bottom: TabBar(tabs: _buildTabs(canAccessTransport)),
         ),
         body: TabBarView(children: _buildTabViews(canAccessTransport, limits)),
+      ),
+    );
+  }
+
+  /// Loading / failure surface for the limits fetch. A failure must stay, be
+  /// copyable and be closable (owner's rule), hence StickyErrorBanner.
+  Widget _buildLimitsGate() {
+    if (_loadingLimits) {
+      return const Center(child: LoadingIndicator());
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_limitsError != null)
+            StickyErrorBanner(
+              message: _limitsError!,
+              source:
+                  'Factory · Dashboard · GET /api/v1/factory/subscription/limits',
+              stack: _limitsErrorStack,
+              onDismiss: () => setState(() => _limitsError = null),
+            ),
+          const SizedBox(height: 12),
+          Center(
+            child: ElevatedButton.icon(
+              onPressed: _retryLoadLimits,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -57,30 +146,37 @@ class _FactoryDashboardState extends State<FactoryDashboard> {
 
   List<Widget> _buildTabViews(bool canAccessTransport, PlanLimitModel limits) {
     final views = [
-      _buildOverviewTab(),
+      _buildOverviewTab(canAccessTransport: canAccessTransport),
       _buildProductsTab(),
       _buildBillingTab(),
     ];
 
     if (canAccessTransport) {
       views.add(_buildTransportTab(limits));
-    } else {
-      views.add(_buildUpgradePrompt());
     }
 
     return views;
   }
 
+  /// Item 9 — the Transport tab is gated by the REAL subscription, so the tab
+  /// count and the view count always agree (they did not before: a plan without
+  /// transport produced 3 tabs but 4 views).
   bool _canAccessTransport(PlanLimitModel limits) {
-    return limits.canContactDriversDirectly || limits.canUseGoodsCompanies;
+    return limits.hasTransportAccess;
   }
 
-  Widget _buildOverviewTab() {
+  Widget _buildOverviewTab({required bool canAccessTransport}) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // No transport in the plan → no Transport tab, so the upgrade path
+          // lives here rather than vanishing with the tab.
+          if (!canAccessTransport) ...[
+            _buildUpgradePrompt(),
+            const SizedBox(height: 20),
+          ],
           Card(
             elevation: 4,
             child: Padding(

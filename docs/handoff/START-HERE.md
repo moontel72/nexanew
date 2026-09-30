@@ -26,23 +26,28 @@ how you work; that file is what to do.
 
 ### ⚠️ FIRST TASK — verify the pinch-zoom, and WHY it kept failing
 
-Owner, 2026-09-30: on a phone `traceodd.com` and `market.traceodd.com` are "stuck" — two-finger pinch does not zoom and the text stays tiny. An earlier agent twice said it was fixed; it was not. **Three separate causes, and a `user-scalable=yes` meta alone fixes none of them:**
+Owner, 2026-09-30: on a phone `traceodd.com` and `market.traceodd.com` are "stuck" — two-finger pinch does not zoom and the text stays tiny. An earlier agent twice said it was fixed; it was not. **Four separate causes, and a `user-scalable=yes` meta alone fixes none of them:**
 
 1. **No viewport at all** → Flutter's engine injected its own restrictive one (`maximum-scale=1.0, user-scalable=no`). *(fixed: the template declares one now)*
 2. **The engine replaces it at runtime** → a static meta can be overwritten while the app boots, so the file looks right and the phone still will not zoom. *(fixed: a `MutationObserver` keeps re-asserting it)*
 3. **`touch-action: none` on Flutter's canvas** → even with a permissive viewport, the engine owns every gesture, so the browser is not allowed to zoom. *(fixed: a `pinch-zoom`-only override — NOT `pan-x pan-y`, which would steal in-app scrolling)*
+4. **The engine mistakes zoom for a resize** → once zoom worked, panning left a growing WHITE band on the right/bottom (owner, 2026-09-30: *"jitna ziada qareeb karo itna ziada white"*). Flutter's web engine reads `window.visualViewport`, sees the zoomed (smaller) view as "the window shrank", re-lays the app out to `screen / zoom` and shrinks its canvas — while the browser still lets you pan the full LAYOUT viewport, so everything beyond the shrunken canvas is empty. 2× zoom ⇒ ~half the screen white, which is exactly what the screenshots showed. *(fixed: a `visualViewport` shim that reports the layout-viewport size but keeps the real `scale`)*
 
 **Verify it, don't assume it.** The served file is the only truth (browser cache and Cloudflare can hide a good deploy):
 
 ```sh
-# both hosts: the three markers must ALL be present in the SERVED html
+# both hosts: the four markers must ALL be present in the SERVED html
 for u in https://traceodd.com/ https://market.traceodd.com/; do
   echo "== $u"
   curl -s "$u" | grep -o 'content="width=device-width[^"]*"' | head -1
   curl -s "$u" | grep -c 'MutationObserver'          # expect >= 1
   curl -s "$u" | grep -c 'touch-action: pinch-zoom'   # expect >= 1
+  curl -s "$u" | grep -c 'visualViewport'             # expect >= 1
+  curl -s "$u" | grep -c 'background-color: #0a0e21'  # expect >= 1
 done
 ```
+
+**On the phone, zoom must do all three:** pinch in → text gets bigger, **and** panning around shows app content the whole way (no white band at the right/bottom), **and** one-finger in-app scrolling still works.
 
 If a marker is missing, in this order: ① the deploy did not run (check the Actions run) ② **Cloudflare/browser cached the old `index.html`** (the conf sends `no-cache`, but verify with `curl -H 'Cache-Control: no-cache'`) ③ the PWA service worker is serving a cached shell — hard-reload / unregister the SW ④ **an installed PWA** (Add to Home Screen) can ignore zoom even when the page is correct — test in a normal browser tab ⑤ then **test on a real phone** with two fingers, and check whether the app's own scrolling still works (it must).
 

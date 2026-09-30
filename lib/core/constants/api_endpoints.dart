@@ -224,6 +224,12 @@ class ApiEndpoints {
   static const String factoryLogout = '/factory/auth/logout';
   static const String factoryProfile = '/factory/auth/profile';
 
+  /// The factory's REAL plan/subscription limits (MASTER-TASK-LIST.md item 9).
+  /// Read-only. Drives the dashboard's Transport tab so it reflects what the
+  /// factory actually pays for instead of a hardcoded client-side `const`.
+  static const String factorySubscriptionLimits =
+      '/factory/subscription/limits';
+
   static const String products = '/factory/products';
   static const String createProduct = '/factory/products';
   static const String productDetails = '/factory/products/{id}';

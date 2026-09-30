@@ -71,7 +71,88 @@
             flt-scene-host {
                 touch-action: pinch-zoom !important;
             }
+
+            /* Never let an uncovered strip show as WHITE. If a browser still pans
+               past the app (see the visualViewport shim below), paint the page the
+               way the app paints itself instead of the browser's white default. */
+            html,
+            body {
+                background-color: #0a0e21;
+            }
         </style>
+
+        <!-- THIRD cause of "zoomed, but a WHITE band appears on the right/bottom"
+             (owner, 2026-09-30). This one is NOT about the gesture being blocked —
+             zoom already worked; the page just slid off and left a growing white gap.
+
+             What happens: when the phone is zoomed, Flutter's web engine reads
+             `window.visualViewport` and treats the ZOOMED (smaller) view as "the
+             window shrank", so it re-lays the app out to `screen / zoom` CSS pixels
+             and shrinks its canvas to match, anchored top-left. The browser still
+             lets you pan across the full LAYOUT viewport, so everything right of and
+             below that shrunken canvas is empty. That is the white band, and it grows
+             with zoom (2x zoom leaves about half the screen white — exactly what the
+             owner's screenshots show).
+
+             The fix: stop the engine from mistaking zoom for a resize. Report the
+             LAYOUT viewport (which zoom does not change) as the view size, while
+             leaving `scale` real so the engine still renders at full resolution
+             (sharp when magnified, not blurry). The app then keeps filling the screen
+             and the browser magnifies it normally — no uncovered area to pan into. -->
+        <script>
+            (function () {
+                var real = window.visualViewport;
+                // No visualViewport (or no zoom support): nothing to correct.
+                if (!real || !real.scale) return;
+
+                function layoutSize(prop, fallback) {
+                    var el = document.documentElement;
+                    var v = el ? el[prop] : 0;
+                    return v || window[fallback];
+                }
+
+                var shim = {
+                    // The REAL zoom factor, so the engine's render resolution stays
+                    // correct (this is what makes zoomed text sharp).
+                    get scale() {
+                        return real.scale;
+                    },
+                    // The layout viewport in CSS px — deliberately independent of
+                    // zoom, so the engine does not shrink the app when pinching.
+                    get width() {
+                        return layoutSize("clientWidth", "innerWidth");
+                    },
+                    get height() {
+                        return layoutSize("clientHeight", "innerHeight");
+                    },
+                    get offsetLeft() {
+                        return real.offsetLeft;
+                    },
+                    get offsetTop() {
+                        return real.offsetTop;
+                    },
+                    // Flutter subscribes to "resize" here; keep forwarding it so it
+                    // still updates its device-pixel ratio (crispness) on zoom.
+                    addEventListener: function () {
+                        return real.addEventListener.apply(real, arguments);
+                    },
+                    removeEventListener: function () {
+                        return real.removeEventListener.apply(real, arguments);
+                    },
+                };
+
+                try {
+                    Object.defineProperty(window, "visualViewport", {
+                        configurable: true,
+                        get: function () {
+                            return shim;
+                        },
+                    });
+                } catch (e) {
+                    /* locked-down property: fall back to the real one */
+                }
+            })();
+        </script>
 
         <!-- Keep the zoomable viewport above (see the comment there).
 

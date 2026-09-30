@@ -624,6 +624,15 @@ $registerRoutes = function (): void {
         });
 
         Route::middleware("auth:factory")->group(function (): void {
+            // The factory's REAL plan/subscription limits (MASTER-TASK-LIST.md item 9).
+            // Drives the dashboard's Transport tab + its four cards, which used to run
+            // on a hardcoded Flutter `const`. Only /admin/plans/limits existed before,
+            // and a factory cannot call that. Read-only; the plan is the source of truth.
+            Route::get("subscription/limits", [
+                \App\Http\Controllers\Factory\FactorySubscriptionController::class,
+                "limits",
+            ]);
+
             // Billing routes
             Route::prefix("billing")->group(function (): void {
                 Route::get("summary", [
