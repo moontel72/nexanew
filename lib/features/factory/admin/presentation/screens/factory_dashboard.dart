@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:trace_odd/shared/models/subscription/plan_limit_model.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/billing/billing_dashboard_screen.dart';
@@ -122,26 +123,18 @@ class _FactoryDashboardState extends State<FactoryDashboard> {
                     spacing: 12,
                     runSpacing: 12,
                     children: [
-                      _buildActionButton(
-                        'Manage Products',
-                        Icons.inventory,
-                        () {
-                          // Navigate to products management
-                          _showSnackbar('Navigate to products management');
-                        },
-                      ),
+                      _buildActionButton('Manage Products', Icons.inventory, () {
+                        // Real route (was a dead `_showSnackbar` placeholder).
+                        context.go('/factory/products');
+                      }),
                       _buildActionButton('Generate Codes', Icons.qr_code, () {
-                        // Navigate to code generation
-                        _showSnackbar('Navigate to code generation');
+                        // Unit (auth) codes are the base of the code hierarchy; the
+                        // sidebar offers every other type. Was a dead placeholder.
+                        context.go('/factory/codes/unit/generate');
                       }),
-                      _buildActionButton('View Reports', Icons.analytics, () {
-                        // Navigate to reports
-                        _showSnackbar('Navigate to reports');
-                      }),
-                      _buildActionButton('Settings', Icons.settings, () {
-                        // Navigate to settings
-                        _showSnackbar('Navigate to settings');
-                      }),
+                      // 'View Reports' and 'Settings' were removed (owner, 2026-09-29):
+                      // no such route exists in this panel, so they were dead buttons.
+                      // Re-add them when there is a real destination.
                     ],
                   ),
                 ],
@@ -178,8 +171,8 @@ class _FactoryDashboardState extends State<FactoryDashboard> {
                       ),
                       ElevatedButton.icon(
                         onPressed: () {
-                          // Add new product
-                          _showSnackbar('Add new product');
+                          // Real route (was a dead `_showSnackbar` placeholder).
+                          context.go('/factory/products/create');
                         },
                         icon: const Icon(Icons.add),
                         label: const Text('Add Product'),

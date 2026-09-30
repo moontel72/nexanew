@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_codes_bloc.dart';
+import 'package:trace_odd/features/factory/factory_auth_cache.dart';
 import 'package:trace_odd/shared/models/code/code_generation_request.dart';
 import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
@@ -94,8 +95,10 @@ class _BundleCodeGenerateScreenState extends State<BundleCodeGenerateScreen> {
   void _generateCodes() {
     if (_formKey.currentState!.validate()) {
       final request = BundleCodeGenerationRequest(
-        factoryId: 'factory_123', // TODO: Get from auth state
-        subscriptionPlanId: 'plan_premium', // TODO: Get from subscription state
+        // Was hardcoded 'factory_123'. Uses the logged-in factory, the same way
+        // unit_code_generate_screen already does.
+        factoryId: FactoryAuthCache.instance.factoryId ?? '',
+        subscriptionPlanId: '',
         count: int.parse(_countController.text),
         prefix: 'B',
         includeInternationalCodes: true,

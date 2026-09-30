@@ -282,7 +282,9 @@ class _BundleCodesListScreenState extends State<BundleCodesListScreen> {
           actionButton: PrimaryButton(
             text: 'Generate Codes',
             onPressed: () {
-              // TODO: Navigate to generate screen
+              // Was an empty `// TODO: Navigate to generate screen` — a button that
+              // looked wired and did nothing.
+              context.go('/factory/codes/bundle/generate');
             },
           ),
         ),
