@@ -5,15 +5,28 @@ import 'package:trace_odd/features/nexa_admin/data/repositories/transport_admin_
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/transport_admin/transport_admin_bloc.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
-class FraudPreventionAdminScreen extends StatelessWidget {
+class FraudPreventionAdminScreen extends StatefulWidget {
   const FraudPreventionAdminScreen({super.key});
+
+  @override
+  State<FraudPreventionAdminScreen> createState() =>
+      _FraudPreventionAdminScreenState();
+}
+
+class _FraudPreventionAdminScreenState
+    extends State<FraudPreventionAdminScreen> {
+  /// The dismissed failure message (see `StickyErrorBanner`).
+  String? _dismissedError;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => TransportAdminBloc(
-        repository: TransportAdminRepository(apiClient: context.read<ApiClient>()),
+        repository: TransportAdminRepository(
+          apiClient: context.read<ApiClient>(),
+        ),
       )..add(const LoadFraudAdminStats()),
       child: BlocBuilder<TransportAdminBloc, TransportAdminState>(
         builder: (context, state) {
@@ -33,40 +46,38 @@ class FraudPreventionAdminScreen extends StatelessWidget {
                         children: [
                           Text(
                             'Fraud Prevention',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
+                            style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             'Review fraud reports, run pattern checks, and apply penalties as defined in PROJECT_MASTER.md.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: AppColors.textSecondary),
                           ),
                         ],
                       ),
                       PrimaryButton(
                         text: 'Refresh',
-                        onPressed: () => context
-                            .read<TransportAdminBloc>()
-                            .add(const LoadFraudAdminStats()),
+                        onPressed: () => context.read<TransportAdminBloc>().add(
+                          const LoadFraudAdminStats(),
+                        ),
                         width: 120,
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  if (state.fraudStatus == TransportAdminStatus.error)
+                  if (state.fraudStatus == TransportAdminStatus.error &&
+                      state.fraudError != _dismissedError)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        state.fraudError ?? 'Failed to load fraud stats',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(color: AppColors.error),
+                      // Plain red Text could not be selected or copied.
+                      child: StickyErrorBanner(
+                        message:
+                            state.fraudError ?? 'Failed to load fraud stats',
+                        source: 'Super Admin · Transport · Fraud stats',
+                        onDismiss: () =>
+                            setState(() => _dismissedError = state.fraudError),
                       ),
                     ),
                   Row(
@@ -112,9 +123,7 @@ class FraudPreventionAdminScreen extends StatelessWidget {
                         child: Center(
                           child: Text(
                             'Wire report list + actions next: check-pattern, apply-penalty, and report handling.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: AppColors.textSecondary),
                             textAlign: TextAlign.center,
                           ),
@@ -174,18 +183,16 @@ class _KpiTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: AppColors.textSecondary),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     value,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w800),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ],
               ),
@@ -196,4 +203,3 @@ class _KpiTile extends StatelessWidget {
     );
   }
 }
-

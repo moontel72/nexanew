@@ -5,15 +5,28 @@ import 'package:trace_odd/features/nexa_admin/data/repositories/transport_admin_
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/transport_admin/transport_admin_bloc.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
-class TransportWalletAdminScreen extends StatelessWidget {
+class TransportWalletAdminScreen extends StatefulWidget {
   const TransportWalletAdminScreen({super.key});
+
+  @override
+  State<TransportWalletAdminScreen> createState() =>
+      _TransportWalletAdminScreenState();
+}
+
+class _TransportWalletAdminScreenState
+    extends State<TransportWalletAdminScreen> {
+  /// The dismissed failure message (see `StickyErrorBanner`).
+  String? _dismissedError;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => TransportAdminBloc(
-        repository: TransportAdminRepository(apiClient: context.read<ApiClient>()),
+        repository: TransportAdminRepository(
+          apiClient: context.read<ApiClient>(),
+        ),
       )..add(const LoadWalletAdminStats()),
       child: BlocBuilder<TransportAdminBloc, TransportAdminState>(
         builder: (context, state) {
@@ -34,39 +47,38 @@ class TransportWalletAdminScreen extends StatelessWidget {
                         children: [
                           Text(
                             'Wallet Operations',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
+                            style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             'Monitor balances, top-ups, withdrawals, and suspicious transactions.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: AppColors.textSecondary),
                           ),
                         ],
                       ),
                       PrimaryButton(
                         text: 'Refresh',
-                        onPressed: () =>
-                            context.read<TransportAdminBloc>().add(const LoadWalletAdminStats()),
+                        onPressed: () => context.read<TransportAdminBloc>().add(
+                          const LoadWalletAdminStats(),
+                        ),
                         width: 120,
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  if (state.walletStatus == TransportAdminStatus.error)
+                  if (state.walletStatus == TransportAdminStatus.error &&
+                      state.walletError != _dismissedError)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        state.walletError ?? 'Failed to load wallet stats',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(color: AppColors.error),
+                      // Plain red Text could not be selected or copied.
+                      child: StickyErrorBanner(
+                        message:
+                            state.walletError ?? 'Failed to load wallet stats',
+                        source: 'Super Admin · Transport · Wallet stats',
+                        onDismiss: () =>
+                            setState(() => _dismissedError = state.walletError),
                       ),
                     ),
                   Row(
@@ -125,9 +137,7 @@ class TransportWalletAdminScreen extends StatelessWidget {
                           children: [
                             Text(
                               'Recent Transactions',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
+                              style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(fontWeight: FontWeight.w700),
                             ),
                             const SizedBox(height: 12),
@@ -135,10 +145,10 @@ class TransportWalletAdminScreen extends StatelessWidget {
                               child: Center(
                                 child: Text(
                                   'Wire the transaction list after backend exposes a platform-level wallet transactions endpoint.',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(color: AppColors.textSecondary),
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -200,18 +210,16 @@ class _KpiTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: AppColors.textSecondary),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     value,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w800),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ],
               ),
@@ -222,4 +230,3 @@ class _KpiTile extends StatelessWidget {
     );
   }
 }
-

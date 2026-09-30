@@ -5,15 +5,29 @@ import 'package:trace_odd/features/nexa_admin/data/repositories/transport_admin_
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/transport_admin/transport_admin_bloc.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
-class TransportDriversAdminScreen extends StatelessWidget {
+class TransportDriversAdminScreen extends StatefulWidget {
   const TransportDriversAdminScreen({super.key});
+
+  @override
+  State<TransportDriversAdminScreen> createState() =>
+      _TransportDriversAdminScreenState();
+}
+
+class _TransportDriversAdminScreenState
+    extends State<TransportDriversAdminScreen> {
+  /// The dismissed failure message (see `StickyErrorBanner`): the same failure
+  /// stays closed, a different one shows again.
+  String? _dismissedError;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => TransportAdminBloc(
-        repository: TransportAdminRepository(apiClient: context.read<ApiClient>()),
+        repository: TransportAdminRepository(
+          apiClient: context.read<ApiClient>(),
+        ),
       )..add(const LoadDriversAdminStats()),
       child: BlocBuilder<TransportAdminBloc, TransportAdminState>(
         builder: (context, state) {
@@ -33,40 +47,41 @@ class TransportDriversAdminScreen extends StatelessWidget {
                         children: [
                           Text(
                             'Drivers',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
+                            style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             'Manage driver registrations, trip acceptance lifecycle, and earnings.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: AppColors.textSecondary),
                           ),
                         ],
                       ),
                       PrimaryButton(
                         text: 'Refresh',
-                        onPressed: () => context
-                            .read<TransportAdminBloc>()
-                            .add(const LoadDriversAdminStats()),
+                        onPressed: () => context.read<TransportAdminBloc>().add(
+                          const LoadDriversAdminStats(),
+                        ),
                         width: 120,
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  if (state.driversStatus == TransportAdminStatus.error)
+                  if (state.driversStatus == TransportAdminStatus.error &&
+                      state.driversError != _dismissedError)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        state.driversError ?? 'Failed to load drivers stats',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(color: AppColors.error),
+                      // Plain red Text could not be selected or copied, so this
+                      // failure could never be reported.
+                      child: StickyErrorBanner(
+                        message:
+                            state.driversError ??
+                            'Failed to load drivers stats',
+                        source: 'Super Admin · Transport · Drivers stats',
+                        onDismiss: () => setState(
+                          () => _dismissedError = state.driversError,
+                        ),
                       ),
                     ),
                   Row(
@@ -123,9 +138,7 @@ class TransportDriversAdminScreen extends StatelessWidget {
                         child: Center(
                           child: Text(
                             'Wire driver list + actions next: verify, suspend, view earnings, and trip history.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: AppColors.textSecondary),
                             textAlign: TextAlign.center,
                           ),
@@ -185,18 +198,16 @@ class _KpiTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: AppColors.textSecondary),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     value,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w800),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ],
               ),
@@ -207,4 +218,3 @@ class _KpiTile extends StatelessWidget {
     );
   }
 }
-
