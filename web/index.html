@@ -18,6 +18,21 @@
 
         <meta charset="UTF-8" />
         <meta content="IE=Edge" http-equiv="X-UA-Compatible" />
+
+        <!-- PHONES MUST BE ABLE TO PINCH-ZOOM (owner, 2026-09-29).
+
+             The template used to declare no viewport at all, so Flutter's web engine
+             injected its own restrictive one (`width=device-width, initial-scale=1.0,
+             maximum-scale=1.0, user-scalable=no`) — text stays tiny and pinching does
+             nothing. Declaring ours here is NOT enough on its own: the engine can
+             replace it again while the app boots, which is why an earlier "fix"
+             looked correct in the file yet the site still would not zoom.
+
+             So: declare it, and keep re-asserting it (see the script below). -->
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, minimum-scale=0.25, maximum-scale=5.0, user-scalable=yes"
+        />
         <meta
             name="description"
             content="Trace Odd — live sports broadcasting, fleet, factory and commerce operations on one platform."
@@ -35,6 +50,44 @@
 
         <title>Trace Odd</title>
         <link rel="manifest" href="manifest.json" />
+
+        <!-- Keep the zoomable viewport above (see the comment there).
+
+             Flutter's engine may set its own restrictive viewport at runtime; this
+             re-asserts ours whenever that happens, so pinch-zoom and pan keep working
+             on phones for every app built from this template (landing, admin, cricket,
+             marketplace, ...). It only writes when the value actually differs, so it
+             cannot loop. -->
+        <script>
+            (function () {
+                var WANT =
+                    "width=device-width, initial-scale=1.0, minimum-scale=0.25, maximum-scale=5.0, user-scalable=yes";
+                function fixViewport() {
+                    var meta = document.querySelector('meta[name="viewport"]');
+                    if (!meta) {
+                        meta = document.createElement("meta");
+                        meta.setAttribute("name", "viewport");
+                        document.head.appendChild(meta);
+                    }
+                    if (meta.getAttribute("content") !== WANT) {
+                        meta.setAttribute("content", WANT);
+                    }
+                }
+                fixViewport();
+                document.addEventListener("DOMContentLoaded", fixViewport);
+                window.addEventListener("load", fixViewport);
+                try {
+                    new MutationObserver(fixViewport).observe(document.documentElement, {
+                        childList: true,
+                        subtree: true,
+                        attributes: true,
+                        attributeFilter: ["content"],
+                    });
+                } catch (e) {
+                    /* very old browser: the static meta above still applies */
+                }
+            })();
+        </script>
 
         <!-- PWA: register the minimal service worker (network-first) so the
              site is installable and gets an offline shell. The version query

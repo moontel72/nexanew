@@ -112,6 +112,9 @@ jobs:
           bash .scripts/version-web-build.sh build/web
           # Admin-branded PWA manifest (name/icons) for installs from this host
           cp web/manifest-admin.json build/web/manifest.json
+          # Phones must be able to pinch-zoom (owner, 2026-09-29). Fail loudly if the
+          # template lost the viewport, instead of shipping a site nobody can zoom.
+          grep -q 'user-scalable=yes' build/web/index.html || { echo '❌ viewport is not zoomable in build/web/index.html'; exit 1; }
 
       - name: Verify Admin Panel build
         run: |
@@ -135,6 +138,10 @@ jobs:
           flutter build web --release --target=lib/main_landing.dart --pwa-strategy none
           rm -f build/web/flutter_service_worker.js
           bash .scripts/version-web-build.sh build/web
+          # Phones must be able to pinch-zoom (owner, 2026-09-29) - traceodd.com was
+          # the site with NO protection at all. Fail loudly rather than ship it broken.
+          grep -q 'user-scalable=yes' build/web/index.html || { echo '❌ landing viewport is not zoomable'; exit 1; }
+          grep -q 'MutationObserver' build/web/index.html || { echo '❌ landing is missing the viewport re-assert script'; exit 1; }
 
       - name: Deploy Landing Page to /landing/
         run: |
