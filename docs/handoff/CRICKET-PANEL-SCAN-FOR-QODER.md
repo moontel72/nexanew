@@ -1,0 +1,239 @@
+# CRICKET PANELS — live-video errors + history, and the scan brief for a Qoder expert
+
+**Created:** 2026-10-01 (during the live incident on `cricket-manager.traceodd.com`).
+**Status:** the original red error is **fixed and deployed**; two more states surfaced after a
+hard restart and are catalogued below.
+**Purpose of this file:** give a fresh **Qoder (VS Code) expert** (a) every error text the
+Cricket Manager / broadcaster actually produced, (b) the full history of this issue so nothing
+is re-learned, and (c) a concrete **scan task across every cricket panel**.
+
+> Owner's brief (2026-10-01): *"AAP LATEST TAMMAM ERROR AND IS ISSUE KI HISTORY Qoder expert ke
+> lye ek file mein update karain, mein Qoder se kehta hoon woh cricket ke sare panels scan kare."*
+
+---
+
+## 1. The errors, verbatim (newest first)
+
+These are the strings the **Cricket Manager panel** (Flutter web) and the **Todd Broadcaster**
+(Android) actually showed. Every one has a precise origin — no guessing needed.
+
+| # | On-screen text | Panel state | Where it comes from | What it really means |
+|---|---|---|---|---|
+| 1 | `pipeline reached end-of-stream` | `stopped` | `media-engine/crates/todd-transcode/src/forwarder.rs:843-847` — `watch_bus()` `MessageView::Eos(..)` calls `on_fail("pipeline reached end-of-stream")`; the engine stores it (`media-engine/crates/todd-sfu/src/engine.rs:1983`) | The pipeline's **input ended**: the camera's router subscription closed (publisher dropped / WHIP session torn down), **or the engine was restarted** and the camera had not re-published. Not a playback problem. |
+| 2 | `engine reports the forwarder running, but SRS is receiving no media for this feed` | `stale` | `backend/app/Services/Cricket/CricketStreamSyncService.php` → `farEndProblem()` (`!$srs['receiving']`), where `receiving = kbps.recv_30s > 0` | **FALSE NEGATIVE** (see §2). SRS reports flow over a **30 s** window; a just-rebuilt forwarder reads `0` while media actually flows. **Fixed — `ef4d97ec`.** |
+| 3 | `engine reports the forwarder running, but SRS has no active publish for this feed` | `stale` | same method, `!$srs['active']` | SRS has no publisher for the derived stream name `cricket_match_{matchId}_cam1`. |
+| 4 | `bad request: no RTP received; camera is inactive` | `failed` | `media-engine/crates/todd-common/src/error.rs` (`BadRequest` renders as **`bad request: {0}`**) + `media-engine/crates/todd-transcode/src/forwarder.rs:441-443` | The forwarder was created but its router video channel **closed before the first video chunk arrived**. Two distinct causes: (a) the build raced a camera-session teardown; (b) **a stale engine row shadowed a live one** — see §2/§3. **Fixed — `e18a58ff`.** |
+| 5 | `check the engine base URL and connectivity` (broadcaster) | HTTP **502** | `apps/broadcaster-android/app/src/main/java/com/todd/broadcaster/whip/WhipClient.kt:132` — the `else` arm of `hintFor()`, i.e. **any status other than 401/403/404/409/429** | nginx had **no upstream**: `todd-studio` was down. 502 is not a token/URL problem even though the message says "engine base URL". |
+| 6 | `ingest token expired or invalid — generate a fresh one in the Studio` (broadcaster) | HTTP **401** | `WhipClient.kt:127` | The publisher **ingest token's TTL elapsed** (`INGEST_TOKEN_TTL_SECS=21600` = 6 h). Mint a fresh one (§6). |
+| 7 | `Null check operator used on a null value` (Flutter web, minified `main.dart.js` stack) | crash / console | unknown throw site; recorded as an open item — START-HERE Appendix B §6.3 | Fires when navigating back to the dashboard. **Still unlocated** — part of this scan. |
+
+**Note on the "stopped + error" combination (error #1).** `stop_forwarder()` marks a forwarder
+`Stopped` **but keeps its previous `error` string** (`engine.rs:1097-1126`). So a forwarder that
+ended normally (camera went away, match torn down) still displays its last error. That is why the
+panel showed `state: stopped` **with** `pipeline reached end-of-stream` — see §4 item 1.
+
+---
+
+## 2. History of this issue (so it is never re-learned)
+
+### The chain (unchanged)
+```
+Todd Broadcaster (Android, WHIP)
+  → Todd Studio engine (todd-signaling + todd-sfu)      <- camera + SFU; Studio plays via WHEP
+  → GStreamer forwarder (todd-transcode)                 <- engine -> SRS bridge
+  → SRS (1935) -> HLS segments
+  → /var/www/traceodd/cricket-hls/live/*.m3u8
+  → nginx  → https://cricket.traceodd.com/hls/live/{key}.m3u8   (public page, HLS fallback)
+  → WHEP: POST /whep/watch/{room}/{camera}                       (public page, PREFERRED)
+```
+**Asymmetry that keeps confusing people:** Todd Studio consumes **WHEP straight from the SFU**, the
+public page prefers **WHEP** too (`PublicMatchController::streamUrl()` returns `'whep'` first, HLS
+as fallback) — so a *working Studio picture* and a *dark/again-broken public page* are independent.
+The engine→SRS→HLS hop is the **fallback**, and the Manager's "Live Video" screen is (today) an
+**HLS/SRS-centric diagnostic**.
+
+### Timeline (2026-09-30 → 2026-10-01)
+
+1. **Symptom #1 (red, live video page):** `bad request: no RTP received; camera is inactive` while
+   the mobile camera was clearly visible in Todd Studio, after an operator `Cut → Take` (PVW→PGM).
+2. **Diagnosis (code):** the forwarder is created for the on-air camera. `forwarder.rs:441` returns
+   that error when the router video channel closes before the first chunk. The engine **never deletes
+   a terminal status row**, and `list_forwarders()` sorts by key `{room}/{camera}/{url}`, so **several
+   rows for the same target URL** accumulate. `healthForMatch()` took the **first** match — an old
+   dead row (`05904862…/CAM-09`) — and reported its stale error while a live forwarder existed
+   (`f70e619c…/CAM-1`). **Live proof:** 4 rows, one URL, alphabetically-first held the error.
+3. **Fix 1 — `e18a58ff`** (deployed): `healthForMatch()` now prefers the **running** row, else the
+   **newest** by `started_at_ms`; and the Manager page renders its errors through
+   `StickyErrorBanner` (sticky / copyable / closable) — that page had been **missed** by the item-7
+   error-copy sweep.
+4. **Symptom #2 (after a hard restart):** `engine forwarder state: stale` →
+   `SRS has no active publish` then `SRS is receiving no media`.
+5. **Investigation:** `systemctl status todd-studio` showed the service **`disabled`** and the
+   container down (the owner had run `docker restart todd-studio`, which fights the `--rm` +
+   systemd unit). After `systemctl restart todd-studio`, **HLS segments appeared**
+   (`…-72.ts` … `…-77.ts.tmp`, playlist advancing) and the public URL returned **200**.
+6. **Decisive evidence (media IS flowing):** SRS `/api/v1/streams/`:
+   `publish.active=true`, `frames=6616`, `recv_bytes=22683448`, **`kbps.recv_30s=780`**,
+   H264 480x720 + AAC 44100; camera `ROOM-3/CAM-3 active=true`; forwarder single row `running`.
+7. **Root cause of #2:** `recv_30s` is a **30 s** window. The **every-minute** Laravel watchdog
+   (`cricket:stream-watchdog` → `resyncMatch`) judged a freshly-rebuilt forwarder (window still `0`)
+   as dead, tore it down, rebuilt it — resetting the window **again**. A **self-sustaining loop** that
+   reported the bridge broken *forever* while it was working. It also made the public page's
+   `available` flag false.
+8. **Fix 2 — `ef4d97ec`** (deployed): a **`FAR_END_GRACE_MS = 90000`** settle window in
+   `healthForMatch()` — the far-end verdict is applied only to a forwarder older than the grace. A
+   genuinely dead feed is still caught, one grace period later. 3 regression tests added.
+
+### Environment facts learned the hard way
+
+- `todd-studio` runs as a **systemd unit** wrapping `docker run --rm --network host`
+  (`media-engine/deploy/systemd/todd-studio.service`). **Always** `systemctl restart todd-studio`;
+  **never** `docker restart todd-studio`.
+- Health: `curl -fsS http://localhost:8082/healthz`. Public: `https://studio.traceodd.com/healthz`.
+- The service was **`disabled`** → it does not come back on boot.
+- The engine's forwarder/room state is **in memory**; a restart clears forwarders. **A WHIP publisher
+  does NOT survive an engine restart — the broadcaster must re-publish.**
+- `MEDIA_ENGINE_JWT_SECRET` (Laravel `.env`) and `JWT_SECRET` (`/opt/todd-media-engine/.env`) must
+  match; ingest/viewer tokens are HS256 and verified locally by the engine.
+- Ingest token TTL is 6 h (`INGEST_TOKEN_TTL_SECS=21600`); the broadcaster just 401s when it expires.
+
+### ⚠️ Security incident found during the same session (context for the Qoder expert)
+
+`crontab -l -u root` contained **two every-5-minute jobs** that downloaded a script from
+`https://pastefy.app/vmoat1ic/raw` and used `https://pastefy.app/ekj0ynna/raw` to **append an
+unrecognised RSA key into `/root/.ssh/authorized_keys`**, then made the cron spool immutable
+(`chattr +ia`) to resist removal. It is **not** part of this project (nothing in the repo references
+`pastefy`/`rsync-update`) and has **nothing to do with video**. It was removed by the owner; the
+rogue key's fingerprint is `SHA256:MH5CE8TCaHjz6wzi1l50jxZe8Nh4HeW7Kut1GuJ8Twc` (RSA, no comment).
+Auth logs showed **no login** with it (only `picks@pick`), but **assume compromise and rotate
+secrets** (DB, `MEDIA_ENGINE_JWT_SECRET`, `APP_KEY`, GitHub secrets, Cloudflare). The cleanup also
+emptied `authorized_keys` → **CI's deploy SSH key must be re-added** or deploys fail.
+
+---
+
+## 3. What is fixed (do not redo)
+
+| Commit | Change | Tests |
+|---|---|---|
+| `e18a58ff` | `healthForMatch()` prefers the running/newest row (stale row no longer shadows a live one); `live_video_page.dart` uses `StickyErrorBanner` + an explanatory hint for `no RTP received` | `backend/tests/Feature/CricketStreamHealthTest.php` (4 cases) |
+| `ef4d97ec` | `FAR_END_GRACE_MS` settle window so a freshly-rebuilt forwarder is not judged by SRS's 30 s window | +3 cases (young trusted / mature-no-media stale / mature-with-flow running) |
+
+Suite: **35 tests, 131 assertions — green.** `dart analyze` clean on the touched page.
+
+---
+
+## 4. Still open (ranked)
+
+1. **Engine marks a stopped forwarder with its old error.** `stop_forwarder()` sets `Stopped` but
+   keeps `error` (`engine.rs:1097-1126`), so a forwarder that ended because the camera left still
+   shows `pipeline reached end-of-stream`. → Clear `error` on stop, or add a terminal reason
+   (`stopped_at`, `stop_reason`) and let the panel distinguish *"match ended / camera gone"* from
+   *"bridge failed"*. **This is what the owner saw after the hard restart.**
+2. **The Manager "Live Video" page is HLS/SRS-centric while viewers use WHEP.** Owner's directive
+   (2026-10-01): *"HUM NE STREAM KO HLS PAR NAHEEN CHALANA."* → Make the page report **WHEP viewer
+   readiness** (`whepViewerFor()` already exists) and keep the SRS/HLS bridge as a secondary line.
+3. **Engine fan-out cross-delivers media types.** Log:
+   `appsrc=video_src codec=Opus expected=[H264, Vp8, Vp9]` — the router's rid-scoped fan-out puts
+   audio and video on one subscription. Currently **contained** by the forwarder's codec filter.
+   Real fix belongs in `media-engine/crates/todd-sfu/src/router.rs` (scope fan-out by media type).
+4. **`todd-studio.service` is `disabled`** → `systemctl enable todd-studio todd-turn todd-redis
+   todd-broadcaster`. Same check for the other media units.
+5. **TURN allocation failures** (seen 2026-10-01): `Failed to allocate on turn.Client
+   172.17.0.1:3478 attribute not found`, `pingAllCandidates called with no candidate pairs`.
+   Video worked afterwards (likely direct host candidates), but this must be verified — it breaks
+   publishers on networks that need the relay. Check `todd-turn` / coturn credentials.
+6. **Deploy SSH key removed** during the security cleanup → re-add (own key + the CI deploy key).
+7. **The frontend `Null check operator used on a null value` crash** (error #7) — still unlocated.
+8. **`forwarder.rs` registry race (suspected, unconfirmed):** `spawn_input_pump()` removes the whole
+   shared subscription by key on exit (`forwarder.rs:315`), while `register_inputs()` is idempotent
+   per track name (skips + **drops the new router receiver**, `forwarder.rs:235-268`). A dying pump
+   can therefore remove an entry a freshly-registered pipeline depends on. Needs a stable
+   generation/ownership token before removal. *(Do not change blindly — needs the gst build to verify.)*
+
+---
+
+## 5. THE SCAN TASK — what the Qoder expert must do
+
+**Scope:** **every Cricket panel**, i.e. `lib/features/cricket/presentation/pages/**`.
+
+| Group | Files (all under `lib/features/cricket/presentation/pages/`) |
+|---|---|
+| Manager | `manager/live_video_page.dart` · `manager/manager_dashboard_page.dart` · `manager/manager_login_page.dart` · `manager/manager_score_page.dart` · `manager/manager_replay_page.dart` · `manager/voice_score_page.dart` · `manager/media_management_page.dart` · `manager/fixture_scheduler_page.dart` · `manager/match_form_sheet.dart` · `manager/generate_fixtures_sheet.dart` · `manager/player_register_page.dart` · `manager/players_list_page.dart` · `manager/squad_setup_page.dart` · `manager/team_register_page.dart` · `manager/teams_list_page.dart` · `manager/tournament_setup_page.dart` · `manager/sponsor_manage_page.dart` · `manager/sponsor_form_sheet.dart` · `manager/assign_sponsor_sheet.dart` · `manager/dls_calculator_page.dart` |
+| Public | `public/live_match_page.dart` · `public/scorecard_page.dart` · `public/tournament_home_page.dart` · `public/tournament_hub_page.dart` · `public/club_home_page.dart` · `public/match_analytics_page.dart` · `public/player_profile_page.dart` · `public/best_xi_page.dart` |
+| Data layer | `lib/features/cricket/data/repositories/cricket_repository.dart` · `lib/features/cricket/presentation/bloc/**` |
+| Backend | `backend/app/Http/Controllers/Cricket/**` · `backend/app/Services/Cricket/**` · `backend/routes/panels/cricket.php` |
+
+### Defect classes to hunt (each has bitten this module already)
+
+1. **A failure that is not sticky / not copyable.** Every error surface must use
+   `StickyErrorBanner` (`lib/shared/widgets/feedback/`) — a fire-and-forget SnackBar is a bug.
+   *(`live_video_page.dart` was missed; fixed in `e18a58ff`.)*
+2. **Swallowed errors.** `catch (_) {}` or `catch (e) { /* ignore */ }` that turns a failure into a
+   fake empty state. (`media_management_page`, `players_list_page` had this — see MASTER-TASK item 7.)
+3. **Errors set but never rendered.** A bloc sets `_error` / `error` and the builder has no branch
+   for it → the screen just looks empty.
+4. **Stale/terminal state shown as current.** Rows or statuses that are never removed (see §4 item 1);
+   matching a single item by a non-unique key; "first match wins" instead of "best match wins".
+5. **Hardcoded / demo values** and **dead buttons** (MASTER-TASK items 9). Flag any hardcoded match
+   id, camera id, URL, or plan limit.
+6. **Raw engine/backend error strings shown to the operator with no explanation.** E.g.
+   `bad request: no RTP received; camera is inactive` is meaningless to a match operator; pair every
+   engine error with a one-line human hint.
+7. **Null-check crashes** (`!` on a nullable that can be null), especially around navigation and
+   list indexing — the `Null check operator` crash (error #7) is still open.
+8. **State that does not survive / recover**: "offline" shown for any 404, no retry, no reconnect.
+
+### Deliverable for the Qoder expert
+
+For each file above: list the error surfaces found, the class (1–8) it falls into, and a patch.
+Add a regression test where the backend is involved (`backend/tests/Feature/`). Record the commit
+hash next to each item in `MASTER-TASK-LIST.md` as it lands.
+
+---
+
+## 6. Commands (diagnose + operate)
+
+```bash
+# Engine state (correct way: systemd, never `docker restart`)
+systemctl status todd-studio --no-pager -l        # watch for: disabled
+systemctl enable todd-studio todd-turn todd-redis todd-broadcaster
+journalctl -u todd-studio --no-pager -n 120
+curl -fsS http://localhost:8082/healthz
+
+# Forwarders + cameras + program (admin token)
+TOKEN=$(cd /var/www/traceodd/admin-panel && php artisan tinker --execute="echo app(App\Services\MediaEngineTokenService::class)->mint(role:'admin', subject:'diag', perms:['studio_director'], ttlSeconds:180);")
+curl -s -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8082/api/v1/forward/list | python3 -m json.tool
+curl -s -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8082/api/v1/room/list    | python3 -m json.tool
+
+# Is media actually flowing (the only truth)
+curl -s http://127.0.0.1:1985/api/v1/streams/ | python3 -m json.tool     # publish.active + kbps.recv_30s
+ls -la /var/www/traceodd/cricket-hls/live/ ; sleep 10 ; ls -la /var/www/traceodd/cricket-hls/live/
+curl -s -o /dev/null -w "%{http_code}\n" "https://cricket.traceodd.com/hls/live/cricket_match_<MATCH_ID>_cam1.m3u8"
+docker logs --since 5m todd-studio 2>&1 | grep -aiE "forwarder started|forwarder running|pipeline build failed|EOS|not-negotiated|no RTP|keyframe"
+
+# Fresh ingest token for a publisher (route: media-engine/crates/todd-signaling/src/app.rs:71)
+curl -s -X POST -H "Authorization: Bearer $TOKEN" \
+  "http://127.0.0.1:8082/api/v1/room/<ROOM_ID>/camera/<CAMERA_ID>/token" | python3 -m json.tool
+
+# Laravel side
+cd /var/www/traceodd/admin-panel && php artisan cricket:stream-watchdog
+tail -30 storage/logs/laravel.log
+php artisan tinker --execute="print_r(app(App\Services\Cricket\CricketStreamSyncService::class)->healthForMatch('<MATCH_ID>'));"
+```
+
+---
+
+## 7. Do NOT re-chase (false leads)
+
+- **HLS latency / segment length is not a fault.** SRS runs pure remux; a segment ends only on a
+  keyframe, so `#EXTINF` of 5–10 s (even 30–70 s) is normal and must not trigger a teardown.
+- **`bad request: no RTP received` is not a camera problem** when the picture is fine in Studio — it
+  is the engine→SRS forwarder's channel closing (see §1 #4).
+- **502 on the broadcaster is not a token/URL problem** despite the message text — it means the
+  engine was down (nginx had no upstream).
+- **`state: stopped` with an old error is not necessarily broken** — `stop_forwarder` keeps the last
+  error (§4 item 1).
+- **Do not trust a green `cargo check --workspace`** for the forwarder: `forwarder.rs`, `mixer_gst.rs`
+  and `audio.rs` sit behind `#[cfg(feature = "gst")]`. Use
+  `cargo check -p todd-signaling -p todd-sfu --features gst` (needs GStreamer ≥ 1.24).
+- **The `appsrc=video_src codec=Opus` warning is contained**, not the cause.

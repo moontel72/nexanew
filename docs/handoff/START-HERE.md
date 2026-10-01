@@ -910,6 +910,12 @@ drop.
    404; the stinger `uridecodebin` caps fix was never functionally verified; `ForwardKind::WebRtcViewer`
    is deliberately not implemented.
 
+**→ Live-issue catalogue + the Qoder scan brief:** `docs/handoff/CRICKET-PANEL-SCAN-FOR-QODER.md`.
+Every current Cricket Manager / broadcaster error **with its source line**, the 2026-10-01 incident
+history, the fixes `e18a58ff` (stale-row shadowing + copyable error) and `ef4d97ec` (far-end settle
+window), the still-open items, the command set, and a **per-panel scan checklist**. Read it before
+touching any cricket panel.
+
 ### §6 (Qoder brief) — the requested WHEP work (sub-second public screen)
 
 The brief asked for a **confirmation/refutation** of the §6 stall and a **WHEP** public path. Server
