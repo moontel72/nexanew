@@ -274,13 +274,46 @@ class CricketStreamSyncService
         $state = 'missing';
         $error = null;
 
-        foreach ($this->listForwarders() as $forwarder) {
-            if (($forwarder['url'] ?? '') !== $url) {
-                continue;
-            }
-            $state = (string) ($forwarder['state'] ?? 'unknown');
-            $error = $forwarder['error'] ?? null;
-            break;
+        // The engine never drops a terminal status row: a forwarder that failed
+        // or was stopped keeps its row — and its old error text — under the same
+        // URL, and `list_forwarders` sorts by key (`{room}/{camera}/{url}`). So
+        // once the camera id changes (the phone republishes, or a different
+        // camera is put on air) the same target URL can carry several rows, and
+        // taking the FIRST match reported a dead one as current: a red error on
+        // the manager panel while a healthy bridge was actually running.
+        //
+        // Pick the row that best describes reality — a running forwarder wins,
+        // otherwise the most recent attempt, whose error is the relevant one.
+        $matches = array_values(array_filter(
+            $this->listForwarders(),
+            static fn ($forwarder): bool => is_array($forwarder)
+                && ($forwarder['url'] ?? '') === $url,
+        ));
+
+        if ($matches !== []) {
+            $best = array_reduce(
+                $matches,
+                static function (?array $best, array $candidate): array {
+                    if ($best === null) {
+                        return $candidate;
+                    }
+
+                    $candidateRunning = ($candidate['state'] ?? '') === 'running';
+                    $bestRunning = ($best['state'] ?? '') === 'running';
+
+                    if ($candidateRunning !== $bestRunning) {
+                        return $candidateRunning ? $candidate : $best;
+                    }
+
+                    return (int) ($candidate['started_at_ms'] ?? 0)
+                        > (int) ($best['started_at_ms'] ?? 0)
+                            ? $candidate
+                            : $best;
+                },
+            );
+
+            $state = (string) ($best['state'] ?? 'unknown');
+            $error = $best['error'] ?? null;
         }
 
         // `running` is the engine's *intent*, not evidence: it is published as

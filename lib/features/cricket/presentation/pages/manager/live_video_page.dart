@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/shared/theme/cricket_colors.dart';
+import 'package:trace_odd/shared/widgets/feedback/sticky_error_banner.dart';
 
 import '../../../data/repositories/cricket_repository.dart';
 
@@ -31,6 +32,11 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
   String? _error;
   Map<String, dynamic>? _health;
   String? _notice;
+  // The engine keeps a terminal status row (with its old error text) for every
+  // forwarder it ever built, so the health call can report an error even when a
+  // newer, healthy forwarder exists. The engine error is copyable and can be
+  // dismissed; a refresh re-reads it, so a still-broken bridge reappears.
+  bool _forwarderErrorDismissed = false;
 
   @override
   void initState() {
@@ -50,6 +56,7 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
       if (!mounted) return;
       setState(() {
         _health = health;
+        _forwarderErrorDismissed = false;
         _loading = false;
       });
     } catch (e) {
@@ -115,7 +122,14 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
                   const SizedBox(height: 16),
                 ],
                 if (_error != null) ...[
-                  _Banner(text: _error!, color: CricketColors.wicket),
+                  StickyErrorBanner(
+                    message: _error!,
+                    source:
+                        'Cricket · Live Video · match ${widget.matchId} · '
+                        'GET /cricket/manager/matches/${widget.matchId}'
+                        '/video-health',
+                    onDismiss: () => setState(() => _error = null),
+                  ),
                   const SizedBox(height: 16),
                 ],
 
@@ -125,9 +139,31 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
                 // The engine's own failure text. Without it the screen says
                 // "BROKEN" and nothing else — the dead end that made a dead
                 // forwarder look like a playback problem.
-                if (!healthy && forwarderError != null) ...[
+                if (!healthy &&
+                    forwarderError != null &&
+                    !_forwarderErrorDismissed) ...[
                   const SizedBox(height: 12),
-                  _Banner(text: forwarderError, color: CricketColors.wicket),
+                  StickyErrorBanner(
+                    message: forwarderError,
+                    source:
+                        'Cricket · Live Video · match ${widget.matchId} · '
+                        'engine forwarder state: $state',
+                    onDismiss: () =>
+                        setState(() => _forwarderErrorDismissed = true),
+                  ),
+                  if (forwarderError.contains('no RTP received')) ...[
+                    const SizedBox(height: 6),
+                    const Text(
+                      'The bridge subscribed to a camera session that has since '
+                      'ended (the phone reconnected, or the camera was re-taken '
+                      'in Todd Studio), so it never received video. Tap '
+                      '"Reconnect live video" below.',
+                      style: TextStyle(
+                        color: CricketColors.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ],
 
                 const SizedBox(height: 16),
