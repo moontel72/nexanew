@@ -145,4 +145,87 @@ class CricketStreamHealthTest extends TestCase
         $this->assertNull($health['forwarder_error']);
         $this->assertStringContainsString('cricket_match_m1_cam1', $url);
     }
+
+    public function test_a_just_rebuilt_forwarder_is_not_judged_by_the_far_end(): void
+    {
+        $service = app(CricketStreamSyncService::class);
+        $url = $service->rtmpUrlFor('m1');
+
+        config(['cricket.streaming.srs_api_url' => 'http://srs.test']);
+
+        Http::fake([
+            '*forward/list*' => Http::response([[
+                'url' => $url,
+                'state' => 'running',
+                'error' => null,
+                'started_at_ms' => (int) (microtime(true) * 1000),
+            ]]),
+            // SRS reports a publish with no flow yet — the normal state for the
+            // ~30s after a rebuild, when its 30s window has not filled up.
+            '*api/v1/streams*' => Http::response(['streams' => [[
+                'name' => $service->streamNameFor('m1'),
+                'publish' => ['active' => true],
+                'kbps' => ['recv_30s' => 0],
+            ]]]),
+        ]);
+
+        $health = $service->healthForMatch('m1');
+
+        $this->assertSame('running', $health['forwarder_state']);
+        $this->assertNull($health['forwarder_error']);
+    }
+
+    public function test_a_mature_forwarder_with_no_media_is_reported_stale(): void
+    {
+        $service = app(CricketStreamSyncService::class);
+        $url = $service->rtmpUrlFor('m1');
+
+        config(['cricket.streaming.srs_api_url' => 'http://srs.test']);
+
+        Http::fake([
+            '*forward/list*' => Http::response([[
+                'url' => $url,
+                'state' => 'running',
+                'error' => null,
+                'started_at_ms' => (int) (microtime(true) * 1000) - 600000,
+            ]]),
+            '*api/v1/streams*' => Http::response(['streams' => [[
+                'name' => $service->streamNameFor('m1'),
+                'publish' => ['active' => true],
+                'kbps' => ['recv_30s' => 0],
+            ]]]),
+        ]);
+
+        $health = $service->healthForMatch('m1');
+
+        $this->assertSame('stale', $health['forwarder_state']);
+        $this->assertStringContainsString('no media', (string) $health['forwarder_error']);
+    }
+
+    public function test_a_mature_forwarder_with_flowing_media_is_running(): void
+    {
+        $service = app(CricketStreamSyncService::class);
+        $url = $service->rtmpUrlFor('m1');
+
+        config(['cricket.streaming.srs_api_url' => 'http://srs.test']);
+
+        Http::fake([
+            '*forward/list*' => Http::response([[
+                'url' => $url,
+                'state' => 'running',
+                'error' => null,
+                'started_at_ms' => (int) (microtime(true) * 1000) - 600000,
+            ]]),
+            '*api/v1/streams*' => Http::response(['streams' => [[
+                'name' => $service->streamNameFor('m1'),
+                'publish' => ['active' => true],
+                'kbps' => ['recv_30s' => 780],
+            ]]]),
+        ]);
+
+        $health = $service->healthForMatch('m1');
+
+        $this->assertSame('running', $health['forwarder_state']);
+        $this->assertNull($health['forwarder_error']);
+    }
 }

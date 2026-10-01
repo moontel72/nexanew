@@ -52,6 +52,26 @@ class CricketStreamSyncService
      */
     private const HLS_STALE_AFTER_SECONDS = 180;
 
+    /**
+     * How long a freshly (re)built forwarder may settle before the far-end
+     * check is allowed to judge it.
+     *
+     * WHY THIS EXISTS (live incident, 2026-10-01). SRS reports media flow as
+     * `kbps.recv_30s` — a **30-second** window. A forwarder that has just been
+     * rebuilt reconnects its RTMP publish, so that window reads 0 for up to
+     * ~30s even though media is flowing perfectly. The check treated that as
+     * "SRS is receiving no media", so `healthForMatch()` answered `stale`, so
+     * the watchdog (which runs every minute) tore the forwarder down and rebuilt
+     * it — which reset the window again. The result was a self-sustaining loop
+     * that reported the bridge as broken *forever* while the HLS playlist kept
+     * advancing and the public page returned 200.
+     *
+     * A settle window breaks the loop: a young forwarder is trusted, and only a
+     * mature one is judged — so a genuinely dead feed is still caught, one grace
+     * period later.
+     */
+    private const FAR_END_GRACE_MS = 90000;
+
     public function __construct(
         private readonly MediaEngineTokenService $tokens,
     ) {
@@ -273,6 +293,7 @@ class CricketStreamSyncService
         $url = $this->rtmpUrlFor($matchId, $cameraNumber);
         $state = 'missing';
         $error = null;
+        $startedAtMs = 0;
 
         // The engine never drops a terminal status row: a forwarder that failed
         // or was stopped keeps its row — and its old error text — under the same
@@ -314,6 +335,7 @@ class CricketStreamSyncService
 
             $state = (string) ($best['state'] ?? 'unknown');
             $error = $best['error'] ?? null;
+            $startedAtMs = (int) ($best['started_at_ms'] ?? 0);
         }
 
         // `running` is the engine's *intent*, not evidence: it is published as
@@ -322,10 +344,20 @@ class CricketStreamSyncService
         // `resyncMatch()` returns early, the watchdog prints `ok`, and the
         // engine's own watchdogs skip "already running", so nothing recovers.
         if ($state === 'running') {
-            $reason = $this->farEndProblem($this->streamNameFor($matchId, $cameraNumber));
-            if ($reason !== null) {
-                $state = 'stale';
-                $error ??= $reason;
+            // Let a just-rebuilt forwarder settle before judging it (see
+            // FAR_END_GRACE_MS): a fresh RTMP publish reads `recv_30s = 0` for
+            // a moment, and judging it here is what made the watchdog rebuild
+            // the bridge every minute while it was actually working.
+            $ageMs = $startedAtMs > 0
+                ? (int) (microtime(true) * 1000) - $startedAtMs
+                : PHP_INT_MAX;
+
+            if ($ageMs >= self::FAR_END_GRACE_MS) {
+                $reason = $this->farEndProblem($this->streamNameFor($matchId, $cameraNumber));
+                if ($reason !== null) {
+                    $state = 'stale';
+                    $error ??= $reason;
+                }
             }
         }
 
