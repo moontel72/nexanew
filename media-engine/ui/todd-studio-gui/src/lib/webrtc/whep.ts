@@ -79,8 +79,28 @@ export async function startWhepWatch(opts: {
   }
 
   const pc = new RTCPeerConnection({ iceServers });
-  pc.addTransceiver("video", { direction: "recvonly" });
-  pc.addTransceiver("audio", { direction: "recvonly" });
+  const videoTransceiver = pc.addTransceiver("video", { direction: "recvonly" });
+  const audioTransceiver = pc.addTransceiver("audio", { direction: "recvonly" });
+
+  // Ask for the smallest playout buffer the browser will accept.
+  //
+  // The transport is sub-second, but the decoder's jitter buffer is not: left at
+  // its default it holds 1-3s before handing a frame to the element, which is
+  // most of the "WebRTC is still slow" gap. `jitterBufferTarget` (ms) is the
+  // current API; `playoutDelayHint` is the older one some Chromium builds still
+  // require. Both are best-effort and ignored where unsupported.
+  for (const transceiver of [videoTransceiver, audioTransceiver]) {
+    const receiver = transceiver.receiver as unknown as {
+      jitterBufferTarget?: number;
+      playoutDelayHint?: number;
+    };
+    try {
+      if ("jitterBufferTarget" in receiver) receiver.jitterBufferTarget = 0;
+      if ("playoutDelayHint" in receiver) receiver.playoutDelayHint = 0;
+    } catch {
+      /* unsupported — keep the browser default */
+    }
+  }
 
   // Bind the track listener and the media element *before* the SDP
   // exchange: the answer may arrive while ICE is still warming, and a

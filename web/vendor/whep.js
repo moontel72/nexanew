@@ -96,8 +96,34 @@
     var pc = new RTCPeerConnection({ iceServers: opts.iceServers || [] });
     var closed = false;
 
-    pc.addTransceiver("video", { direction: "recvonly" });
-    pc.addTransceiver("audio", { direction: "recvonly" });
+    var videoTransceiver = pc.addTransceiver("video", { direction: "recvonly" });
+    var audioTransceiver = pc.addTransceiver("audio", { direction: "recvonly" });
+
+    // Ask for the smallest playout buffer the browser will accept.
+    //
+    // The transport here is sub-second, but the DECODER's jitter buffer is not:
+    // left at its default it holds 1-3s of video before handing a frame to the
+    // element, which is the bulk of the "WHEP is still slow" gap (measured ~2.4s
+    // glass-to-glass on the public page). `jitterBufferTarget` (ms) is the
+    // current API; `playoutDelayHint` is the older one and is still the only one
+    // some Chromium builds honour. Both are best-effort — a browser that does
+    // not support either simply keeps its default.
+    [videoTransceiver, audioTransceiver].forEach(function (transceiver) {
+      try {
+        var receiver = transceiver && transceiver.receiver;
+        if (!receiver) {
+          return;
+        }
+        if ("jitterBufferTarget" in receiver) {
+          receiver.jitterBufferTarget = 0;
+        }
+        if ("playoutDelayHint" in receiver) {
+          receiver.playoutDelayHint = 0;
+        }
+      } catch (e) {
+        /* unsupported — keep the browser default */
+      }
+    });
 
     // Bind the track handler and the media element *before* the SDP exchange:
     // the answer can arrive while ICE is still warming, and a track fires as

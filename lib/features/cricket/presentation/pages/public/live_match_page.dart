@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/shared/theme/cricket_colors.dart';
@@ -38,6 +40,15 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
   /// bridge (which the HLS playlist depends on) is down.
   Map<String, dynamic>? _whep;
 
+  /// Retry handle for [_loadWhepTarget].
+  ///
+  /// The engine only reports a WHEP target once a broadcaster camera is
+  /// actually live, and a fan can easily open this page *before* the operator
+  /// goes live. Without a retry the viewer is pinned to the HLS fallback —
+  /// seconds behind live — for the whole session, even after the camera comes
+  /// up. (Observed 2026-10-01: a page left at 6.4s behind Todd Studio.)
+  Timer? _whepRetry;
+
   @override
   void initState() {
     super.initState();
@@ -53,11 +64,27 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
   }
 
   Future<void> _loadWhepTarget() async {
-    final whep = await context.read<CricketRepository>().getWhepTarget(
-      widget.match.id,
-    );
-    if (!mounted || whep == null) return;
-    setState(() => _whep = whep);
+    try {
+      final whep = await context.read<CricketRepository>().getWhepTarget(
+        widget.match.id,
+      );
+      if (!mounted) return;
+      if (whep != null) {
+        _whepRetry?.cancel();
+        _whepRetry = null;
+        setState(() => _whep = whep);
+        return;
+      }
+    } catch (_) {
+      // Transient (engine restarting, network): fall through to the retry.
+    }
+
+    if (!mounted || _whep != null) return;
+
+    // Keep asking until a live camera appears, so the page upgrades itself from
+    // the HLS fallback to WHEP instead of staying seconds behind.
+    _whepRetry?.cancel();
+    _whepRetry = Timer(const Duration(seconds: 10), _loadWhepTarget);
   }
 
   /// The player to show: WHEP first (sub-second, and independent of the HLS
@@ -94,6 +121,7 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
 
   @override
   void dispose() {
+    _whepRetry?.cancel();
     context.read<LiveScoreBloc>().add(DisconnectFromMatch());
     super.dispose();
   }
