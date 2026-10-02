@@ -12,6 +12,44 @@ is re-learned, and (c) a concrete **scan task across every cricket panel**.
 
 ---
 
+## 0. UPDATE — the hybrid WHEP+HLS work, 2026-10-01 (read before planning)
+
+Four fixes for the cricket panels landed on `mainnew` in this session. **A fresh Qoder session must
+not re-plan these:**
+
+| Commit | What |
+|---|---|
+| `e18a58ff` | `healthForMatch()` prefers the running/newest forwarder row (a stale row used to shadow a live one); `live_video_page.dart` errors go through `StickyErrorBanner` |
+| `ef4d97ec` | `FAR_END_GRACE_MS` settle window — SRS reports flow over a **30 s** window, so a freshly rebuilt forwarder read `recv_30s = 0` and the every-minute watchdog rebuilt it in a loop, reporting a *working* bridge as `stale` forever |
+| `3a75399a` | this file |
+| `a5da50fb` | WHEP latency: `jitterBufferTarget`/`playoutDelayHint = 0` on the receivers in **both** clients (`web/vendor/whep.js` + `media-engine/ui/todd-studio-gui/src/lib/webrtc/whep.ts`) — no client had asked for a small playout buffer, so the browser's 1-3 s default was the latency |
+| `7146fd7f` | **hybrid WHEP+HLS** (below) |
+
+`7146fd7f` in detail:
+- **Phase 1 (the real WHEP blocker):** `media-engine-deploy.yml` now writes `ICE_PUBLIC_IPS`
+  (`config.rs` → `net.rs` `nat_1to1_ips` → `engine.rs` `set_nat_1to1_ips`) so the engine advertises a
+  routable 1:1 NAT host candidate; without it ICE ends with `no candidate pairs` and WHEP silently
+  falls back to HLS. Its `TURN_SERVERS` default changed from the docker-bridge `172.17.0.1:3478` to
+  `127.0.0.1:3478` because `todd-studio.service` runs the container **`--network host`** — the bridge
+  address is what produced `Failed to allocate on turn.Client 172.17.0.1:3478 attribute not found`.
+- **Phase 3:** `live_match_page.dart` polls `getWhepTarget` for the whole session (was one-shot) and
+  `WhepVideoPlayer` is keyed by the target URL, so a program-camera switch re-POSTs while an unchanged
+  target never tears the live session down.
+- **Design (owner):** the stream fills the screen; everything that used to sit below the player is
+  behind one overlay button opening a scrollable **half-screen** `Match Centre` panel, video still
+  playing in the top half. The camera selector is now a compact strip over the video.
+- **Phase 4 (docs):** `.scripts/CDN-CONFIG.md` — WHEP stays **direct** (a CDN cannot proxy WebRTC);
+  HLS scales via BunnyCDN. Playlist URLs come from the **`CRICKET_HLS_BASE_URL` env lever**, not
+  per-stream DB rows. The stream is a single rendition: `cricket_match_{matchId}_cam{N}.m3u8`
+  (**no** `-master.m3u8`).
+
+Also already verified this session: `whep.js` is **git-tracked** (not blocked by `.zedignore`), and
+nginx already has `location ^~ /whep/` in `.nginx/cricket-public.conf`. **Still open:** TURN
+reachability is a server-side check, the deployed `/whep` proxy needs a live confirm, and the
+`CricketStreamUpdated` realtime event is still inert.
+
+---
+
 ## 1. The errors, verbatim (newest first)
 
 These are the strings the **Cricket Manager panel** (Flutter web) and the **Todd Broadcaster**
