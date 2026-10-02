@@ -50,6 +50,68 @@ reachability is a server-side check, the deployed `/whep` proxy needs a live con
 
 ---
 
+## 0b. NEW live observations, 2026-10-02 — the public screen is NOT playing WHEP
+
+Owner's report, verbatim in substance. **Two earlier theories in this file are now WRONG — do not
+repeat them.**
+
+1. **WRONG: "the laptop needs the TURN relay."** The laptop is on **wired DSL**; the phone is on the
+   *same network's* WiFi. So the laptop/mobile difference is not relay-vs-direct.
+2. **WRONG: "Cloudflare edge-caches the playlist."** Measured on the origin:
+   `curl -sI https://cricket.traceodd.com/hls/live/…_cam1.m3u8` →
+   `cache-control: no-cache, no-store, must-revalidate` and **`cf-cache-status: DYNAMIC`**. The edge is
+   not caching it.
+
+### What actually happens
+
+| # | Observation (owner) | Reading |
+|---|---|---|
+| A | Studio runs in Chrome; opening a **second Chrome window on top** → Studio keeps streaming **30–40 s**, then the tile goes **black**. **No** `Live video unavailable: …` text — the video just freezes/stays on "search". Returning to the window resumes it in ~1 s. | Client-side **Chrome occlusion/background throttling**. The players are **`muted`** (autoplay policy) and Chrome exempts *audible* pages from background timer throttling — a muted page is not exempt. Not a server fault. Engine already has `ICE_DISCONNECTED_GRACE_MS=300000` for exactly this. |
+| B | Even with **nothing overlapping**, the public screen is **≥2 minutes behind** Studio. | 2 min of buffering is **not** WHEP (no playlist, no catch-up window). This is **HLS**. |
+| C | The public video **repeats** and behaves like a **~2-minute recording**: after ~2 min it goes to "**search**" (buffering), and tapping restarts the same ~2 min **from its beginning**. | The signature of **HLS with a stalled segment stream**: the player drains the finite playlist window (≈2 min), hits the end → buffering, then restarts from the window start. |
+| D | When it stalls, the gap grows to ~4 min. | The window kept draining while no new segments arrived. |
+| E | "Public screen must track Todd Studio at run time; it currently starts from behind." | Correct expectation. Owner has decided: **WHEP only — HLS is no longer wanted.** |
+| F | Owner **always waits for the GitHub Actions run to be green** before testing, so reported behaviour reflects the deployed commit. | Trust the commit, not the test timing. |
+| G | Laptop overlay button: clicking it produced **no visible change** (tested before `77eaa923`). To be re-tested. | `77eaa923` fixed a throwing `clamp()` / off-screen panel; still needs a real-device confirm. |
+
+### Hypotheses for Qoder to verify (in this order)
+
+1. **Which transport is the public page actually using?** DevTools → Network: `POST /whep/watch/…`
+   (201) vs `.m3u8`/`.ts`. Then the API:
+   `GET /api/v1/cricket/public/matches/{id}/stream` → is `whep` non-null? If the page is on HLS,
+   **why** is `_whep` null/stale — `whepViewerFor()` returns non-null only when `broadcasterCamera()`
+   finds a camera with `kind == "whip"` **and** `active == true` in `/api/v1/room/list`.
+   (`live_match_page.dart` now polls every 10 s as of `7146fd7f` — confirm the deployed bundle has it.)
+2. **Does the engine→SRS bridge stagnate?** B/C/D describe a bridge that stops producing segments
+   while `healthForMatch()` still says `running`. Sample over time:
+   `curl -s http://127.0.0.1:1985/api/v1/streams/` (`kbps.recv_30s`, `frames`) +
+   `ls -la /var/www/traceodd/cricket-hls/live/` twice, 20 s apart. The **underlying stall is still
+   unfixed**: `forwarder.rs` `register_inputs()` is idempotent **per track name** and silently
+   **drops a newly registered router receiver** (`~L235-268`), and `spawn_input_pump()` removes the
+   **whole shared subscription by key** when it exits (`~L315`) — so a dying pump can remove the entry
+   a freshly rebuilt pipeline depends on. (`ef4d97ec` only stopped the *health check* from flapping;
+   it did not make the pipeline honest.)
+3. **Studio black-on-occlusion:** confirm it is purely client-side (see table row A) by keeping the
+   public page playing on **another device** while the Studio window is covered. Mitigations:
+   ① keep the Studio window uncovered; ② a **silent audio keep-alive** (an audible page is exempt from
+   Chrome's background timer throttling) plus a `visibilitychange` recovery; ③ note that the Studio's
+   watchdog (`useWhepPlayer.ts` `~L111-129`) only restarts on `videoWidth === 0` or `paused`, so a
+   **frozen** frame is never recovered.
+4. **Multi-camera follow** still relies on the 10 s poll — the `CricketStreamUpdated` realtime event
+   was deleted and remains inert.
+
+### Corrections worth recording
+
+- **HLS here is a pure remux (SRS `hls_fragment` only targets; no re-encode), so HLS quality ==
+  WHEP quality.** A "low quality" picture is the **publisher's capture/bitrate** (the phone reports
+  480×720), not the transport.
+- **A CDN cannot proxy WebRTC.** WHIP/WHEP scale per **peer**: server egress ≈ `viewers × stream
+  bitrate`, so a 1 Gbps NIC ≈ 300 viewers at 3 Mbps and 10 Gbps ≈ 3000 — while HLS behind a CDN
+  scales to tens of thousands because it is cacheable. Low latency **and** mass scale needs LL-HLS via
+  CDN, or a WHEP edge cluster (expensive), not a single bigger box.
+
+---
+
 ## 1. The errors, verbatim (newest first)
 
 These are the strings the **Cricket Manager panel** (Flutter web) and the **Todd Broadcaster**
