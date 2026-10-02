@@ -178,8 +178,20 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
       // panel — while the video keeps playing in the top half.
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final maxHeight = constraints.maxHeight;
-          final panelHeight = (maxHeight * 0.5).clamp(240.0, maxHeight);
+          // Guard the panel height. On a wide/short window (a laptop with the
+          // browser at 125-150% zoom, or a small window) the body can be
+          // shorter than the panel's minimum, and `clamp(240, maxHeight)`
+          // THROWS when the lower bound exceeds the upper one — and an
+          // unbounded/non-finite maxHeight made the panel position itself off
+          // the bottom of the screen, which is exactly how it "disappeared" on
+          // a laptop while working on a phone. Use the real viewport as the
+          // fallback and a plain fraction (never a throwing clamp).
+          final viewportHeight = MediaQuery.sizeOf(context).height;
+          final maxHeight = constraints.maxHeight.isFinite &&
+                  constraints.maxHeight > 0
+              ? constraints.maxHeight
+              : viewportHeight;
+          final panelHeight = maxHeight < 520 ? maxHeight * 0.75 : maxHeight * 0.5;
           final videoBottom = _scorePanelOpen ? panelHeight : 0.0;
 
           return Stack(
