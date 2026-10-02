@@ -34,18 +34,16 @@ Widget buildPlatformHlsPlayer({
     ui_web.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
       final video = html.VideoElement()
         ..id = elementId
-        // NO native controls. The control bar is a DOM overlay with its own
-        // full-screen button, and on the public page a tap meant for our Score
-        // button could land on it: the element then went full-screen, covered
-        // the whole app (including the panel) and hid the OS taskbar — the
-        // exact "panel rises for <1s then the video takes over" symptom seen
-        // on a laptop while the phone was fine. Autoplay + loop are driven from
-        // JS, so no controls are needed.
+        // Same as the WHEP player: keep the native play/pause + seek bar, but
+        // remove the bar's FULL-SCREEN button so a stray tap cannot hand the
+        // whole screen (and the OS taskbar) to the element.
+        ..controls = true
         ..autoplay = autoPlay
         ..muted = autoPlay
         ..style.width = '100%'
         ..style.height = '100%'
         ..style.objectFit = 'contain';
+      video.setAttribute('controlslist', 'nofullscreen nodownload');
       video.setAttribute('disablepictureinpicture', '');
 
       _attachHls(elementId, url);
