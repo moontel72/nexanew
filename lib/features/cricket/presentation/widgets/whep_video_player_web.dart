@@ -53,12 +53,18 @@ Widget buildPlatformWhepPlayer({
 
       final video = html.VideoElement()
         ..id = elementId
-        ..controls = true
+        // NO native controls. The control bar is a DOM overlay with its own
+        // full-screen button, and a tap meant for the app's Score button could
+        // land on it: the element then went full-screen, covered the whole app
+        // (panel included) and hid the OS taskbar — the exact "panel rises for
+        // <1s then the video takes over" symptom seen on a laptop while the
+        // phone was fine. Playback is driven from JS, so no controls are needed.
         ..autoplay = autoPlay
         ..muted = autoPlay
         ..style.width = '100%'
         ..style.height = '100%'
         ..style.objectFit = 'contain';
+      video.setAttribute('disablepictureinpicture', '');
       video.setAttribute('playsinline', '');
       video.setAttribute('data-whep-config', config);
 
