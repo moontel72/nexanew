@@ -215,10 +215,29 @@ jobs:
               printf 'TURN_SERVERS=%s\n' '${{ vars.TURN_SERVERS }}' >> /opt/todd-media-engine/.env
             else
               # coturn runs on the HOST (todd-turn.service, external-ip
-              # 135.181.46.27); the engine runs in docker, so loopback is
-              # wrong — use the bridge gateway. UDP only: webrtc-rs cannot
-              # allocate TCP-turn relay candidates.
-              printf 'TURN_SERVERS=%s\n' 'turn:traceodd:traceodd-turn-2026@172.17.0.1:3478?transport=udp' >> /opt/todd-media-engine/.env
+              # 135.181.46.27) and the engine container is HOST-NETWORKED
+              # (`docker run --network host` in todd-studio.service), so the
+              # relay is on plain loopback. `172.17.0.1` (the docker bridge
+              # gateway) is only correct for a bridge-networked container,
+              # and it is exactly what produced
+              # `Failed to allocate on turn.Client 172.17.0.1:3478
+              # attribute not found` — the engine could never allocate a
+              # relay candidate. UDP only: webrtc-rs cannot allocate
+              # TCP-turn relay candidates.
+              printf 'TURN_SERVERS=%s\n' 'turn:traceodd:traceodd-turn-2026@127.0.0.1:3478?transport=udp' >> /opt/todd-media-engine/.env
+            fi
+            # Advertise the VPS public IP as a 1:1 NAT **host** candidate.
+            # Without this the engine only offers candidate addresses from the
+            # host interfaces it can see, so a browser (or the broadcaster)
+            # that cannot reach those directly has NO routable candidate and
+            # ICE ends with `no candidate pairs` — WHEP then silently fails
+            # and the public page falls back to HLS. Field: `ICE_PUBLIC_IPS`
+            # (media-engine/crates/todd-common/src/config.rs) -> `nat_1to1_ips`
+            # (todd-sfu/src/net.rs) -> `set_nat_1to1_ips` (todd-sfu/src/engine.rs).
+            if [ -n '${{ vars.ICE_PUBLIC_IPS }}' ]; then
+              printf 'ICE_PUBLIC_IPS=%s\n' '${{ vars.ICE_PUBLIC_IPS }}' >> /opt/todd-media-engine/.env
+            else
+              printf 'ICE_PUBLIC_IPS=%s\n' '135.181.46.27' >> /opt/todd-media-engine/.env
             fi
             chmod 600 /opt/todd-media-engine/.env
             echo '✅ /opt/todd-media-engine/.env written'

@@ -49,6 +49,13 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
   /// up. (Observed 2026-10-01: a page left at 6.4s behind Todd Studio.)
   Timer? _whepRetry;
 
+  /// Whether the half-screen score panel is open. The stream keeps playing in
+  /// the top half while it is.
+  bool _scorePanelOpen = false;
+
+  /// Drives the score panel's scrollbar.
+  final ScrollController _scoreScroll = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -69,20 +76,22 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
         widget.match.id,
       );
       if (!mounted) return;
-      if (whep != null) {
-        _whepRetry?.cancel();
-        _whepRetry = null;
+      final url = whep?['url']?.toString();
+      if (url != null && url.isNotEmpty && url != _whep?['url']?.toString()) {
         setState(() => _whep = whep);
-        return;
       }
     } catch (_) {
-      // Transient (engine restarting, network): fall through to the retry.
+      // Transient (engine restarting, network): the next poll retries.
     }
 
-    if (!mounted || _whep != null) return;
+    if (!mounted) return;
 
-    // Keep asking until a live camera appears, so the page upgrades itself from
-    // the HLS fallback to WHEP instead of staying seconds behind.
+    // Poll for the whole session. The engine reports a WHEP target only while a
+    // broadcaster camera is live, and the on-air camera can change (program
+    // switch, phone reconnect) — so a one-shot fetch left two holes: a viewer
+    // who arrived before "Go Live" stayed pinned to the HLS fallback (seconds
+    // behind) for the whole session, and a camera switch never reached the
+    // viewer at all.
     _whepRetry?.cancel();
     _whepRetry = Timer(const Duration(seconds: 10), _loadWhepTarget);
   }
@@ -100,6 +109,10 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
         whepToken.isNotEmpty) {
       final ice = whep?['ice_servers'];
       return WhepVideoPlayer(
+        // Keyed by the target: a camera switch must re-register the platform
+        // view and re-POST the offer, while an unchanged target must NOT — a
+        // rebuild would tear the live session down.
+        key: ValueKey(whepUrl),
         url: whepUrl,
         token: whepToken,
         iceServers: ice is List ? ice : const [],
@@ -122,6 +135,7 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
   @override
   void dispose() {
     _whepRetry?.cancel();
+    _scoreScroll.dispose();
     context.read<LiveScoreBloc>().add(DisconnectFromMatch());
     super.dispose();
   }
@@ -142,15 +156,6 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
 
   @override
   Widget build(BuildContext context) {
-    // The published cameras are portrait (the engine reports 480x800) and the
-    // web player letterboxes with `object-fit: contain`, so the visible frame
-    // is limited by height. A fixed 220 px stage therefore rendered a ~130 px
-    // wide strip in the middle of a wide screen; give the stage a share of the
-    // viewport instead, floored for small phones and capped so the scorecard
-    // below keeps its room.
-    final viewportHeight = MediaQuery.sizeOf(context).height;
-    final stageHeight = (viewportHeight * 0.42).clamp(200.0, 620.0);
-
     return Scaffold(
       backgroundColor: CricketColors.background,
       appBar: AppBar(
@@ -168,60 +173,32 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Video player (HLS) with the boundary/wicket celebration
-          // overlay driven by the realtime score stream.
-          SizedBox(
-            height: stageHeight,
-            child: Stack(
-              children: [
-                Positioned.fill(
+      // The stream owns the whole screen. Everything that used to sit below the
+      // player is revealed by ONE overlay button, in a scrollable half-screen
+      // panel — while the video keeps playing in the top half.
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxHeight = constraints.maxHeight;
+          final panelHeight = (maxHeight * 0.5).clamp(240.0, maxHeight);
+          final videoBottom = _scorePanelOpen ? panelHeight : 0.0;
+
+          return Stack(
+            children: [
+              // 1) The stream. Always present and only ever RESIZED (never
+              //    re-created), so toggling the panel cannot restart it.
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: videoBottom,
+                child: ColoredBox(
+                  color: Colors.black,
                   child: BlocBuilder<StreamPlayerBloc, StreamPlayerState>(
                     builder: (context, state) => switch (state) {
-                      StreamPlayerReady(
-                        :final activeStreamUrl,
-                        :final streams,
-                        :final activeCameraIndex,
-                      ) =>
-                        Column(
-                          children: [
-                            Expanded(child: _livePlayer(activeStreamUrl)),
-                            // Multi-camera selector (3-mobile test)
-                            if (streams.length > 1)
-                              SizedBox(
-                                height: 36,
-                                child: ListView.separated(
-                                  scrollDirection: Axis.horizontal,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                  ),
-                                  itemCount: streams.length,
-                                  separatorBuilder: (_, __) =>
-                                      const SizedBox(width: 8),
-                                  itemBuilder: (context, index) {
-                                    final s = streams[index];
-                                    final selected = index == activeCameraIndex;
-                                    return ChoiceChip(
-                                      label: Text(s.cameraLabel),
-                                      selected: selected,
-                                      backgroundColor: CricketColors.inputFill,
-                                      selectedColor: CricketColors.complete,
-                                      labelStyle: TextStyle(
-                                        color: selected
-                                            ? Colors.white
-                                            : CricketColors.textSecondary,
-                                        fontSize: 11,
-                                      ),
-                                      onSelected: (_) => context
-                                          .read<StreamPlayerBloc>()
-                                          .add(SwitchCamera(index)),
-                                    );
-                                  },
-                                ),
-                              ),
-                          ],
-                        ),
+                      StreamPlayerReady(:final activeStreamUrl) =>
+                        _livePlayer(activeStreamUrl),
                       StreamPlayerOffline(:final message) => Center(
                         child: Text(
                           message,
@@ -238,34 +215,210 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
                     },
                   ),
                 ),
-                // Phase 4 — boundary / wicket celebration overlay.
-                Positioned.fill(
+              ),
+
+              // 2) Boundary / wicket celebration, over the video only.
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: videoBottom,
+                child: IgnorePointer(
                   child: BlocBuilder<LiveScoreBloc, LiveScoreState>(
                     builder: (context, state) => BoundaryCelebration(
                       score: state is LiveScoreConnected ? state.score : null,
                     ),
                   ),
                 ),
+              ),
+
+              // 3) Multi-camera selector — over the video so it never costs
+              //    screen space; shown only when there are 2+ cameras.
+              _cameraChipsOverlay(),
+
+              // 4) The overlay button.
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+                right: 16,
+                bottom: videoBottom + 16,
+                child: _scoreToggle(),
+              ),
+
+              // 5) The half-screen, scrollable score panel. Parked off-screen
+              //    (below the viewport) while closed, so nothing overlaps the
+              //    full-screen video.
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+                left: 0,
+                right: 0,
+                height: panelHeight,
+                bottom: _scorePanelOpen ? 0 : -panelHeight - 4,
+                child: _scorePanel(),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// Compact camera selector pinned to the top of the video.
+  Widget _cameraChipsOverlay() {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: BlocBuilder<StreamPlayerBloc, StreamPlayerState>(
+        builder: (context, state) {
+          if (state is! StreamPlayerReady || state.streams.length < 2) {
+            return const SizedBox.shrink();
+          }
+
+          return Container(
+            color: Colors.black.withValues(alpha: 0.35),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: SizedBox(
+              height: 34,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: state.streams.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final s = state.streams[index];
+                  final selected = index == state.activeCameraIndex;
+                  return ChoiceChip(
+                    label: Text(s.cameraLabel),
+                    selected: selected,
+                    backgroundColor: CricketColors.inputFill,
+                    selectedColor: CricketColors.complete,
+                    labelStyle: TextStyle(
+                      color: selected ? Colors.white : CricketColors.textSecondary,
+                      fontSize: 11,
+                    ),
+                    onSelected: (_) => context
+                        .read<StreamPlayerBloc>()
+                        .add(SwitchCamera(index)),
+                  );
+                },
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// The one button that reveals everything below the player.
+  Widget _scoreToggle() {
+    return Material(
+      color: CricketColors.complete,
+      elevation: 6,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: () => setState(() => _scorePanelOpen = !_scorePanelOpen),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _scorePanelOpen ? Icons.keyboard_arrow_down : Icons.leaderboard,
+                size: 18,
+                color: Colors.black,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _scorePanelOpen ? 'Hide details' : 'Score & details',
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Bottom-half, scrollable panel: sponsors + summary + batters + bowlers.
+  Widget _scorePanel() {
+    return Material(
+      color: CricketColors.background,
+      elevation: 16,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 4, 6),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: CricketColors.textTertiary,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Match Centre',
+                    style: TextStyle(
+                      color: CricketColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.close,
+                    size: 20,
+                    color: CricketColors.textSecondary,
+                  ),
+                  tooltip: 'Close',
+                  onPressed: () => setState(() => _scorePanelOpen = false),
+                ),
               ],
             ),
           ),
-
-          // Sponsor banner strip
-          BlocBuilder<SponsorBloc, SponsorState>(
-            builder: (ctx, state) => switch (state) {
-              SponsorLoaded(:final sponsors) => SponsorBanner(
-                sponsors: sponsors,
-              ),
-              _ => const SizedBox.shrink(),
-            },
-          ),
-
-          // 3-partition fan layout: Bowlers | Batters | Match Summary
+          const Divider(height: 1, color: CricketColors.border),
           Expanded(
             child: BlocBuilder<LiveScoreBloc, LiveScoreState>(
               builder: (context, state) => switch (state) {
-                LiveScoreConnected(:final score) => MatchThreeColumnLayout(
-                  score: score,
+                LiveScoreConnected(:final score) => Scrollbar(
+                  controller: _scoreScroll,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _scoreScroll,
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        BlocBuilder<SponsorBloc, SponsorState>(
+                          builder: (ctx, s) => switch (s) {
+                            SponsorLoaded(:final sponsors) => SponsorBanner(
+                              sponsors: sponsors,
+                            ),
+                            _ => const SizedBox.shrink(),
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        MatchSummaryColumn(score: score),
+                        const SizedBox(height: 20),
+                        BattersColumn(score: score),
+                        const SizedBox(height: 20),
+                        BowlersColumn(score: score),
+                      ],
+                    ),
+                  ),
                 ),
                 LiveScoreLoading() => const Center(
                   child: CircularProgressIndicator(

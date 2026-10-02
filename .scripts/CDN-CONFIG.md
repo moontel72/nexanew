@@ -3,6 +3,19 @@
 # =============================================================================
 # This document guides the setup of BunnyCDN for offloading 20,000 concurrent
 # live viewers from the single Hetzner origin server.
+#
+# HYBRID RULE — read this first
+# -----------------------------------------------------------------------------
+#   WHEP (WebRTC) -> DIRECT from the origin. NEVER put it behind a CDN: a CDN
+#                    cannot proxy WebRTC media (nothing to cache, and the ICE
+#                    /UDP path must reach a publicly routable SFU). Serves the
+#                    first ~1-10 viewers at ~1-2s and is what the public page
+#                    prefers.
+#   HLS           -> CDN (BunnyCDN pull zone). Segmented and cacheable, and the
+#                    only transport that scales to thousands of viewers. It is
+#                    the page's FALLBACK, so scaling the CDN changes nothing in
+#                    the player.
+# The two paths share one origin, so the pull zone only ever touches /hls/.
 # =============================================================================
 
 ## QUICK REFERENCE
@@ -52,12 +65,24 @@ Access-Control-Allow-Methods: GET, OPTIONS
 Add a CNAME record:
 - **cricket-cdn.traceodd.com → [BunnyCDN hostname]**
 
-### Step 5: Update Stream Endpoint URLs
+### Step 5: Point the backend's HLS base URL at the CDN
 
-In the Cricket Manager panel, set each stream's `hls_playlist_url` to:
+The playlist URL is a **config lever**, not a per-stream column — one env value
+(`backend/config/cricket.php` → `CRICKET_HLS_BASE_URL`, consumed by
+`CricketStreamSyncService::hlsUrlFor()`):
+
+```bash
+# backend/.env
+CRICKET_HLS_BASE_URL=https://cricket-cdn.traceodd.com/hls/live
 ```
-https://cricket-cdn.traceodd.com/hls/live/{stream_key}-master.m3u8
-```
+
+Then `php artisan config:clear`. No database row and no code change is needed.
+
+Two corrections to what used to be written here:
+- The stream is a **single rendition** directly remuxed by SRS, so the file is
+  `cricket_match_{matchId}_cam{N}.m3u8` — there is **no** `-master.m3u8`.
+- Do **not** point the WHEP path, `CRICKET_TURN_URL` or `CRICKET_STUN_URL` at the
+  CDN. WHEP stays same-origin (`CRICKET_WHEP_BASE_PATH=/whep`).
 
 ---
 
@@ -97,11 +122,15 @@ For <500 concurrent viewers (testing / small tournaments):
 Verify CDN is serving segments:
 
 ```bash
-# Check master playlist
-curl -I https://cricket-cdn.traceodd.com/hls/live/match_12_cam1-master.m3u8
+# HLS via the CDN (single rendition, no -master)
+curl -I https://cricket-cdn.traceodd.com/hls/live/cricket_match_<MATCH_ID>_cam1.m3u8
 
-# Check a .ts segment
-curl -I https://cricket-cdn.traceodd.com/hls/live/match_12_cam1-00001.ts
+# A .ts segment
+curl -I https://cricket-cdn.traceodd.com/hls/live/cricket_match_<MATCH_ID>_cam1-1.ts
+
+# WHEP must NOT go through the CDN — it stays same-origin on the public host
+curl -i -X POST "https://cricket.traceodd.com/whep/watch/probe/probe" \
+  -H "Content-Type: application/sdp" --data "v=0"   # 401/400/404 JSON = proxy live
 ```
 
-Both should return HTTP 200 with `X-Cache: HIT` header.
+Both CDN URLs should return HTTP 200 with an `X-Cache: HIT` header.
