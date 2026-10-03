@@ -335,14 +335,24 @@ class CricketRepository {
       if (res.statusCode != 200) return null;
 
       final data = jsonDecode(res.body);
-      final whep = (data as Map<String, dynamic>)['whep'];
-      if (whep is! Map<String, dynamic>) return null;
+      // Deliberately lenient typing. The old check was
+      // `if (whep is! Map<String, dynamic>) return null;` and `jsonDecode`
+      // returns an internal map type: with dart2js that test can fail even
+      // though the object IS a string-keyed map, which silently turned a
+      // perfectly good `whep` block into `null` — the page then fell back to
+      // HLS and its 10s poll kept reading the same null, so it never upgraded.
+      // Accept any Map and copy it into the exact type the caller wants.
+      if (data is! Map) return null;
 
-      final url = whep['url']?.toString() ?? '';
-      final token = whep['token']?.toString() ?? '';
+      final whep = data['whep'];
+      if (whep is! Map) return null;
+
+      final block = Map<String, dynamic>.from(whep);
+      final url = block['url']?.toString() ?? '';
+      final token = block['token']?.toString() ?? '';
       if (url.isEmpty || token.isEmpty) return null;
 
-      return whep;
+      return block;
     } catch (_) {
       return null;
     }
