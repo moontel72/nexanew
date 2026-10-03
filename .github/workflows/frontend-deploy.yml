@@ -193,6 +193,7 @@ jobs:
           flutter build web --release \
             --target=lib/main_cricket_public.dart \
             --dart-define=API_BASE_URL=https://cricket.traceodd.com \
+            --source-maps \
             --pwa-strategy none
           rm -f build/web/flutter_service_worker.js
           bash .scripts/version-web-build.sh build/web
@@ -257,8 +258,14 @@ jobs:
 
       - name: Build Cricket Manager Panel (main_cricket_manager.dart)
         run: |
+          # --source-maps: so a production crash reports the real Dart file and
+          # line instead of an opaque `main.dart.<stamp>.js:97029` frame. The
+          # Cricket Manager had two `Null check operator used on a null value`
+          # crashes (back-to-dashboard after adding a score, and opening Live
+          # Video) that could not be located from the minified stack at all.
           flutter build web --release \
             --target=lib/main_cricket_manager.dart \
+            --source-maps \
             --pwa-strategy none
           rm -f build/web/flutter_service_worker.js
           bash .scripts/version-web-build.sh build/web
