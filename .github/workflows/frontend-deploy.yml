@@ -183,8 +183,16 @@ jobs:
 
       - name: Build Cricket Public Portal (main_cricket_public.dart)
         run: |
+          # Pin the API origin explicitly. `main_cricket_public.dart` documents
+          # this build with --dart-define=API_BASE_URL=https://cricket.traceodd.com,
+          # but the step was missing it. Without the define the app falls back to
+          # `Uri.base.origin` (fine on the canonical host, but one redirect or an
+          # origin mismatch silently sends every API call — and so every WHEP
+          # lookup — somewhere else, and `getWhepTarget()` then returns null and
+          # the page quietly stays on HLS).
           flutter build web --release \
             --target=lib/main_cricket_public.dart \
+            --dart-define=API_BASE_URL=https://cricket.traceodd.com \
             --pwa-strategy none
           rm -f build/web/flutter_service_worker.js
           bash .scripts/version-web-build.sh build/web
