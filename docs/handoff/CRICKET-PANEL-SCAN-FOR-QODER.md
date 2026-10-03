@@ -113,7 +113,7 @@ repeat them.**
 
 ---
 
-## 0c. 2026-10-02 (second report) — transport PROVEN + 3 score bugs + why Qoder and the repo keep disagreeing
+## 0c. 2026-10-02 (second report) — transport PROVEN, plus why Qoder and the repo keep disagreeing
 
 ### TRANSPORT IS PROVEN: the public page is on **HLS**
 
@@ -129,42 +129,7 @@ So `_livePlayer()` fell through to HLS: **WHEP is not engaging.** Corroboration:
 window was shrunk and Studio was full-size below it, quality looked much better and Studio ran
 **14 minutes** without stopping — i.e. the same HLS path, just no occlusion throttling.
 
-### S1 — Studio shows an impossible over (`8.7`) while the Manager shows `8.4`
-
-- Manager `8.4` = 8 overs + 4 balls = **correct cricket notation**.
-- Studio `8.7` = `52 / 6 = 8.667` rounded to 1 dp = the **float** over count.
-- The engine is already correct: `map_ball_by_ball()` produces **`overs_display`** (notation) *and*
-  `overs` (true float), pinned by tests `partial_over_uses_cricket_notation` and
-  `manager_overs_display_takes_precedence` (`media-engine/crates/todd-signaling/src/scoreboard.rs:1436-1472`).
-- **The Studio GUI renders the wrong field.** `media-engine/ui/todd-studio-gui/src/components/Scoreboard.tsx`
-  must render **`overs_display`**, not `overs`. (The Manager page is right: it shows
-  `Overs: ${score.overs.toStringAsFixed(1)}` from the payload's notation value.)
-
-### S2 — CRR does not match, and the **Manager is the wrong one**
-
-64 runs off 52 balls:
-- Studio `7.38` = `64 / (52/6)` — **correct** (it uses the engine's `runRate`).
-- Manager `7.62` = `64 / 8.4` — the notation string used as a decimal.
-- **Root cause (Laravel):** `backend/app/Services/Cricket/LiveScoreService.php:1028-1030`
-  ```php
-  $crr = $innings->total_overs > 0 ? round($innings->total_runs / $innings->total_overs, 2) : 0.0;
-  ```
-  `total_overs` holds the **cricket notation** (`8.4`), not a true decimal. It must be
-  `runs / (total_balls / 6)`. (`total_balls` is already carried — see the same file's payload.)
-  **One shared rule for both panels:** overs shown as `floor(balls/6).(balls%6)`; CRR/RRR always from
-  **balls**, never from the notation string.
-
-### S3 — Studio's recent-balls row grows without bound and overlaps the right side
-
-Owner's requirement: on the Studio video overlay show **only the CURRENT over — at most 6 balls**
-(which ball produced 0, 2, …). When the next over's first ball is added, the previous over's row must
-**disappear**, so exactly one over is on screen at a time. Today the row keeps appending every ball and
-runs across/over the right-hand panel. **Check both ends:** how many entries the manager's
-`recent_balls` carries (the engine maps it 1:1 into `ScoreboardOverlay`/`recent_balls`) **and** how the
-Studio overlay renders it — the cap belongs at the *current-over* boundary (balls since the last over
-change = `balls % 6`, reset on a new over), not a fixed N of the last deliveries.
-
-### S4/S5 — minor, recorded only
+### Minor notes (recorded, not for Qoder)
 
 - **S4 (a11y):** Chrome warns `aria-hidden` on a focused descendant: the `<video>` keeps focus while
   Flutter's `flt-platform-view` marks it `aria-hidden="true"`. Cosmetic today; note it if the platform
