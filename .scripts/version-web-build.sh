@@ -23,8 +23,25 @@ if [ -f "$DIR/main.dart.js" ]; then
   # earlier targets linger and leak into every rsync destination.
   # Drop stale stamps before creating the new one (bootstrap is
   # re-patched below to point at the fresh bundle).
-  rm -f "$DIR"/main.dart.20*.js
+  # The .map is stamped too, so its stale copies must go with the .js.
+  rm -f "$DIR"/main.dart.20*.js "$DIR"/main.dart.20*.js.map
   mv "$DIR/main.dart.js" "$DIR/main.dart.$STAMP.js"
+
+  # The source map MUST be renamed with the bundle. It used to be left as
+  # `main.dart.js.map` while the bundle became `main.dart.<stamp>.js`, and the
+  # bundle's own `//# sourceMappingURL=main.dart.js.map` no longer described the
+  # file next to it — Chrome then renders every frame as
+  # `main.dart.<stamp>.js:sourcemap:97028`, which names no Dart file, so a
+  # production crash (e.g. the Cricket Manager's null-check) could not be
+  # located at all. Rename the map and repoint the comment in one step.
+  if [ -f "$DIR/main.dart.js.map" ]; then
+    mv "$DIR/main.dart.js.map" "$DIR/main.dart.$STAMP.js.map"
+    sed -i "s|sourceMappingURL=main.dart.js.map|sourceMappingURL=main.dart.$STAMP.js.map|" "$DIR/main.dart.$STAMP.js"
+    echo "✅ Versioned source map: main.dart.$STAMP.js.map"
+  else
+    echo "⚠ No main.dart.js.map — build this target with --source-maps for readable stacks."
+  fi
+
   sed -i "s|mainJsPath\":\"main.dart.js\"|mainJsPath\":\"main.dart.$STAMP.js\"|" "$DIR/flutter_bootstrap.js"
   echo "✅ Versioned bundle: main.dart.$STAMP.js"
 else
