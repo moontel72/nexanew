@@ -196,6 +196,52 @@ jobs:
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --progress build/web/ root@135.181.46.27:/var/www/traceodd/cricket-public-web/
           ssh -o StrictHostKeyChecking=no root@135.181.46.27 "echo \"deployed=\$(date -u +%s)\" > /var/www/traceodd/cricket-public-web/version.txt"
 
+      # ------------------------------------------------------------------ #
+      # Cache guard: prove the PUBLIC site is actually serving THIS build.
+      #
+      # Why this exists: the origin stamps every build (`main.dart.<stamp>.js`
+      # plus `flutter_bootstrap.js?v=<stamp>` in index.html), but the zone can
+      # still hand a returning browser a cached `index.html` — and index.html
+      # is the file that carries the stamp, so the browser then runs an OLD
+      # bundle for hours. That is what made a fully-correct WHEP client look
+      # like it was still on HLS. Failing the deploy here turns "the fix did
+      # not work" into "Cloudflare is caching index.html", which is a different
+      # problem with a different fix (none of them require guessing again).
+      # ------------------------------------------------------------------ #
+      - name: Verify Cricket Public bundle is served (cache guard)
+        run: |
+          STAMP=$(grep -o 'flutter_bootstrap.js?v=[^"]*' build/web/index.html | head -1 || true)
+          if [ -z "$STAMP" ]; then
+            echo 'No flutter_bootstrap.js stamp in the build - skipping the guard.'
+            exit 0
+          fi
+          echo "built stamp: $STAMP"
+
+          ORIGIN=$(ssh -o StrictHostKeyChecking=no root@135.181.46.27 "grep -o 'flutter_bootstrap.js?v=[^\"]*' /var/www/traceodd/cricket-public-web/index.html | head -1 || true")
+          echo "origin stamp: $ORIGIN"
+          if [ "$ORIGIN" != "$STAMP" ]; then
+            echo "FAIL: the origin index.html does not carry the stamp just built ($STAMP)."
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5 6; do
+            LIVE=$(curl -s -H 'Cache-Control: no-cache' "https://cricket.traceodd.com/index.html?cb=$(date +%s)" | grep -o 'flutter_bootstrap.js?v=[^"]*' | head -1 || true)
+            if [ "$LIVE" = "$STAMP" ]; then
+              echo "OK: the public site serves the new stamp ($STAMP)."
+              exit 0
+            fi
+            echo "public stamp not updated yet (attempt $attempt/6): '$LIVE'"
+            sleep 10
+          done
+
+          echo 'FAIL: the PUBLIC index.html is stale although the origin is correct.'
+          echo 'This is a Cloudflare cache problem, not a build problem.'
+          echo 'Fix (once, then no manual purge is ever needed again):'
+          echo '  1. Cloudflare > Caching > Configuration > Browser Cache TTL = Respect Existing Headers'
+          echo '  2. Cloudflare > Caching > Cache Rules > add: hostname eq cricket.traceodd.com AND URI Path equals /index.html -> Bypass cache'
+          echo '  3. (optional, for this once) Caching > Configuration > Purge Everything'
+          exit 1
+
       # ──────────────────────────────────────────────────────────────
       # STEP D: Build & Deploy Cricket Manager Panel
       # (main_cricket_manager.dart) → cricket-manager.traceodd.com
