@@ -155,6 +155,44 @@ session, so the next session sees it.
 
 ---
 
+## 0d. 2026-10-03 — backend is WHEP-ready, but the page still runs HLS (0 frames)
+
+Owner ran the §0c checks with the broadcaster **ON AIR**. Results:
+
+| Check | Result | Reading |
+|---|---|---|
+| Public `GET /api/v1/cricket/public/matches/{id}/stream` | **`whep` POPULATED** — `/whep/watch/2838e471-07ea-4d2f-b9ff-ecc784ba8196/Cam-2` + token + `ice_servers` all pointing at the public `135.181.46.27`; `available: true` | The backend **is** handing the page a WHEP target. No null, no missing ICE. |
+| `GET /api/v1/room/list` (needs the director bearer) | Room `Room-2` (`2838e471…`), camera `Cam-2`, `kind: "whip"`, **`active: true`** | A **live WHIP camera exists** — so `whepViewerFor()` is behaving correctly. |
+| `grep ICE_PUBLIC_IPS /opt/todd-media-engine/.env` | `ICE_PUBLIC_IPS=135.181.46.27` | Phase 1 is live. |
+| SRS `GET :1985/api/v1/streams/` | **`streams: []`** | The **engine→SRS bridge is NOT publishing** → nothing for the HLS fallback to play. |
+| Browser console (`[...document.querySelectorAll('video')].map(v => ({id: v.id, w: v.videoWidth}))`) | **`[{ id: 'hls_video_traceodd_hls_382329251', w: 0 }]`** | The page is on **HLS** and has decoded **0 frames** → it sits on "search" forever (no segments, because of the SRS-empty row above). |
+
+### Therefore, two independent findings
+
+**(1) The page is not taking the WHEP target even though the API offers one.**
+`_livePlayer()` chooses WHEP only when `_whep` is non-null, and `_whep` is filled by `getWhepTarget()`
+(same endpoint as the check above). Since the API returns a full `whep` object, the page should be on
+WHEP. Prime suspects, in order:
+- **The served bundle is stale.** The zone rewrites `.js` cache headers (see the Cloudflare notes in
+  `MASTER-TASK-LIST.md` item 10), so a returning browser can run an OLD `main.dart.js` for hours. The
+  poll that upgrades HLS→WHEP landed in `7146fd7f`; if that bundle is not what the browser executes,
+  the page can never upgrade. **Re-test in an Incognito window with DevTools open and "Disable cache"
+  ticked, wait ~15 s while ON AIR, then re-run the console line.**
+- If, in a fresh incognito window with the current bundle, the console **still** reports `hls_video_…`,
+  then instrument `getWhepTarget()` (log its raw response) — the client is dropping or mis-parsing a
+  `whep` block the API clearly returns.
+
+**(2) The bridge is dead, so the HLS path has nothing to show.** SRS `streams: []` with a live camera =
+the `forwarder.rs` **Engine Track** issue (this is the genuinely-open engine item — see §0b and the
+Engine Track section). It also explains the "2-minute recording / repeat / search" behaviour.
+
+### Owner's instruction (do not override)
+
+**S1–S3 (the three score bugs) are NOT Qoder's** — the owner is fixing them separately, and they were
+deliberately removed from this file in `e432cabd`. Do not add them to a plan.
+
+---
+
 ## 1. The errors, verbatim (newest first)
 
 These are the strings the **Cricket Manager panel** (Flutter web) and the **Todd Broadcaster**
